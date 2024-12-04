@@ -1,6 +1,6 @@
 # mcmc.jl
-using Plots
-using DataFrames
+# using Plots
+# using DataFrames
 
 export timemod!, etr, mcmc!;
 
