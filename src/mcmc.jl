@@ -108,7 +108,7 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
     monitor::Vector{Symbol}=[:C, :mu, :sig, :beta, :mu0, :sig0, :llik_mat],
     slice_max_iter::Int=5000,
     upd_c_mtd::Symbol=:MH,
-    M_newclust::Int=10
+    M_newclust::Real=10
     )
 
     ## output files
@@ -136,7 +136,7 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
         monitor_base = intersect(monitor, fieldnames(typeof(model.state.baseline)))
     end
     # seed empty vector of length n_keep
-    M_vector = Vector{Int}(undef, n_keep * thin)
+    M_vector = Vector{Real}(undef, n_keep * thin)
 
     ## sampling
     for i in 1:n_keep
