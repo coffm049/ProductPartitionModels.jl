@@ -2,7 +2,7 @@
 
 function update_Ci!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, 
     llik_old::Vector{T}, update_lik_params::Vector{Symbol}=[:mu, :sig, :beta],
-    M_newclust::Int=10
+    M_newclust::Real=10
     ) where T <: Real
 
     ## Currently implemented ONLY for the :Reg type model and not the :Mean type
@@ -621,7 +621,7 @@ end
 
 function update_C!(model::Model_PPMx, 
     update_lik_params::Vector{Symbol}=[:mu, :sig, :beta], 
-    method::Symbol=:MH, M_newclust::Int=10)
+    method::Symbol=:MH, M_newclust::Real=10)
     # method one of :MH, :FC (FC mot currently in use--must be corrected)
 
     K = length(model.state.lik_params)
