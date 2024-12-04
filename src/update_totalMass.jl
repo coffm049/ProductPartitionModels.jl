@@ -16,7 +16,7 @@ p(M|ϕ ,k) = πGa(a + k, b-log(ϕ)) + (1-π)Ga(a+k-1, b-log(ϕ))
 return: M
 """
 function sample_totalMass(
-  M::Int, 
+  M::Real, 
   n::Int,
   nclusts::Int,
   a::Real,
