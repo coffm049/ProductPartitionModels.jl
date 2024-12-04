@@ -32,5 +32,6 @@ include("update_baseline.jl")
 include("simulate_prior.jl")
 include("mcmc.jl")
 include("postPred.jl")
+include("update_totalMass.jl")
 
 end # module
