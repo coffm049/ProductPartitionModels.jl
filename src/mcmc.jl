@@ -1,4 +1,6 @@
 # mcmc.jl
+using Plots
+using DataFrames
 
 export timemod!, etr, mcmc!;
 
@@ -133,6 +135,8 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
         monitor_lik = intersect(monitor, fieldnames(typeof(model.state.lik_params[1])))
         monitor_base = intersect(monitor, fieldnames(typeof(model.state.baseline)))
     end
+    # seed empty vector of length n_keep
+    M_vector = Vector{Int}(undef, n_keep * thin)
 
     ## sampling
     for i in 1:n_keep
@@ -150,7 +154,15 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
             if up_baseline
                 update_baseline!(model, update_baseline, slice_max_iter)
                 refresh!(model.state, model.y, model.X, model.obsXIndx, false)
+                
+                # [ ]  update M_newclust
+                # prior on mass param suggested by Clustering consistency with  Dirichlet process mixtures for consistent cluster estimation
+                M_newclust = sample_totalMass(M_newclust, model.state.n, length(unique(model.state.C)), 3, 3)
+                M_vector[(i-1)*thin + j] = M_newclust
             end
+            
+            
+
 
             model.state.iter += 1
             if model.state.iter % report_freq == 0
@@ -189,7 +201,7 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
     end
 
     if save
-        return sims
+    return [sims, M_vector]
     else
         return model.state.iter
     end
