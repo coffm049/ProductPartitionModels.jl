@@ -159,6 +159,7 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
                 # prior on mass param suggested by Clustering consistency with  Dirichlet process mixtures for consistent cluster estimation
                 M_newclust = sample_totalMass(M_newclust, model.state.n, length(unique(model.state.C)), 3, 3)
                 M_vector[(i-1)*thin + j] = M_newclust
+                print(M_newclust)
             end
             
             
@@ -201,7 +202,7 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
     end
 
     if save
-    return [sims, M_vector]
+    return sims
     else
         return model.state.iter
     end
