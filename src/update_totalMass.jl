@@ -15,7 +15,13 @@ p(M|ϕ ,k) = πGa(a + k, b-log(ϕ)) + (1-π)Ga(a+k-1, b-log(ϕ))
 
 return: M
 """
-function sample_totalMass(M, n, nclusts, a, b)
+function sample_totalMass(
+  M::Int, 
+  n::Int,
+  nclusts::Int,
+  a::Real,
+  b::Real)
+
   ϕ = rand(Beta(M+1, n))
   π = (a+nclusts-1)/(n * (b- log(ϕ)) + a + nclusts - 1)
   
@@ -26,5 +32,3 @@ function sample_totalMass(M, n, nclusts, a, b)
   end
   return rand(newM)
 end
-
-
