@@ -151,15 +151,18 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
                 # update_lik_params!(model.state, model.prior, model.y, update_mixcomps, n_procs=n_procs) # if we want to go parallel at some point
             end
 
-            if up_baseline
-                update_baseline!(model, update_baseline, slice_max_iter)
-                refresh!(model.state, model.y, model.X, model.obsXIndx, false)
-                
-                # [ ]  update M_newclust
-                # prior on mass param suggested by Clustering consistency with  Dirichlet process mixtures for consistent cluster estimation
-                M_newclust = sample_totalMass(M_newclust, model.n, length(unique(model.state.C)), 3.0, 3.0)
-                #M_vector[(i-1)*thin + j] = M_newclust
-            end
+            # if up_baseline
+            #     update_baseline!(model, update_baseline, slice_max_iter)
+            #     refresh!(model.state, model.y, model.X, model.obsXIndx, false)
+            #     
+            # end
+
+
+
+            # update M_newclust
+            # prior on mass param suggested by Clustering consistency with  Dirichlet process mixtures for consistent cluster estimation
+            M_newclust = sample_totalMass(M_newclust, model.n, length(unique(model.state.C)), 3.0, 3.0)
+            #M_vector[(i-1)*thin + j] = M_newclust
             
             
 
