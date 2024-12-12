@@ -48,8 +48,8 @@ end
 function update_baseline!(model::Model_PPMx, update_params::Vector{Symbol}, sliceiter::Int)
 
     K = length(model.state.lik_params)
-    #mu_vec = [ model.state.lik_params[k].mu for k in 1:K ]
-    mu_vec = [ 0.0 for k in 1:K ]
+    mu_vec = [ model.state.lik_params[k].mu for k in 1:K ]
+    #mu_vec = [ 0.0 for k in 1:K ]
 
     if :mu0 in update_params
         update_mu0!(model.state.baseline, mu_vec, model.prior.baseline)
