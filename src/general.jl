@@ -262,7 +262,7 @@ end
 # Bar(Foo(0.0, 1.0))
 
 mutable struct Model_PPMx{T <: Real}
-    y::Union(Vector{T}, Matrix{T}}
+    y::Union{Vector{T}, Matrix{T}}
     X::Union{Matrix{T}, Matrix{Union{T, Missing}}, Matrix{Missing}}
 
     obsXIndx::Vector{ObsXIndx}
