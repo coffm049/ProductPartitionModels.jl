@@ -95,7 +95,7 @@ function init_PPMx(y::Union{Vector{T}, Matrix{T}}, X::Union{Matrix{T}, Matrix{Un
     lik_rand::Bool=true) where T <: Real
 
     n, p = size(X)
-    n == length(y) || throw("X, y dimension mismatch.")
+    #n == length(y) || throw("X, y dimension mismatch.")
 
     if C_init == 0
         C = collect(1:n)
