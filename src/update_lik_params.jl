@@ -75,7 +75,7 @@ function update_lik_params!(model::Model_PPMx,
         indx_k = findall(model.state.C.==k)
 
         if typeof(model.state.lik_params[k]) <: LikParams_PPMxReg
-            if ( :beta in update )
+            if ( :beta in update ) & (typeof(model.y) <: Vector))
                 ## update betas, produces vectors of obs-specific means and variances
                 prior_var_beta = model.state.lik_params[k].beta_hypers.tau^2 .* model.state.lik_params[k].sig^2 .*
                     model.state.baseline.tau0^2 .*
@@ -105,6 +105,10 @@ function update_lik_params!(model::Model_PPMx,
                 model.state.lik_params[k].beta_hypers.phi = update_ϕ(model.state.lik_params[k].beta ./ model.state.baseline.tau0 ./ model.state.lik_params[k].sig,
                     1.0/model.p
                 )
+            elseif ( :beta in update ) & (typeof(model.y) <: Matrix))
+                # [ ] Might need to have update stats and iters_eslice
+                model.state.lik_params[k].beta = sampleMultiNorm(model.X[indx_k, :], model.y[indx_k, :])
+
             else
                 beta_upd_stats = llik_k(model.y[indx_k], model.X[indx_k,:], model.obsXIndx[indx_k],
                     model.state.lik_params[k], model.state.Xstats[k], model.state.similarity)
