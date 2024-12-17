@@ -1,17 +1,9 @@
-using LinearAlgebra
-using Random
-using Distributions
-using ProductPartitionModels
+# using LinearAlgebra
+# using Random
+# using Distributions
+# using ProductPartitionModels
 
-# Simulated data
-n = 100  # Number of samples
-p = 3    # Number of predictors
-q = 2    # Number of responses
-
-X = randn(n, p)  # Design matrix
-true_beta = [2.0 1.5; -1.0 0.5; 1.0 -1.5]  # True coefficients (p x q)
-true_sigma = [1.0 0.3; 0.3 1.0]  # True covariance matrix (q x q)
-Y = X * true_beta + rand(MvNormal(zeros(q), true_sigma), n)'
+export sampleMultiNorm;
 
 function sampleMultiNorm(X, Y)
   (n, p) = size(X)
@@ -33,7 +25,3 @@ function sampleMultiNorm(X, Y)
   beta = rand(MatrixNormal(M_post, Matrix(V_post), Matrix(sigma)))
   return beta, sigma
 end
-
-test2 = sampleMultiNorm(X, Y)
-model = Model_PPMx(Y, X, 1, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=true)
-sim = mcmc!(model, 1000)
