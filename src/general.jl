@@ -294,7 +294,7 @@ function Model_PPMx(y::Union{Matrix{T}, Vector{T}}, X::Union{Matrix{T}, Matrix{U
     init_lik_rand::Bool=true) where T <: Real
 
     n, p = size(X)
-    n == length(y) || error("PPMx model initialization: X, y dimension mismatch.")
+    #n == size(y)[1] || error("PPMx model initialization: X, y dimension mismatch.")
     obsXIndx = [ ObsXIndx(X[i,:]) for i in 1:n ]
 
     prior = init_PPMx_prior(sampling_model)
