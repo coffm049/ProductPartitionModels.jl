@@ -88,7 +88,7 @@ Sampling models include `:Reg` (regression in the sampling model), `:Mean` (no r
 
 If `lik_rand` is true, generate cluster-specific parameters from the baseline.
 """
-function init_PPMx(y::Vector{T}, X::Union{Matrix{T}, Matrix{Union{T, Missing}}, Matrix{Missing}},
+function init_PPMx(y::Union{Vector{T}, Matrix{T}}, X::Union{Matrix{T}, Matrix{Union{T, Missing}}, Matrix{Missing}},
     C_init::Union{Int, Vector{Int}}=0;
     similarity_type::Symbol=:NN,
     sampling_model::Symbol=:Reg,
