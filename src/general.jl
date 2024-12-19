@@ -287,11 +287,14 @@ Sampling models include `:Reg` (regression in the sampling model), `:Mean` (no r
 
 If `lik_rand` is true, generate cluster-specific parameters from the baseline.
 """
-function Model_PPMx(y::Union{Matrix{T}, Vector{T}}, X::Union{Matrix{T}, Matrix{Union{T, Missing}}, Matrix{Missing}},
+function Model_PPMx(
+    y::Union{Matrix{T}, Vector{T}},
+    X::Union{Matrix{T}, Matrix{Union{T, Missing}}, Matrix{Missing}},
     C_init::Union{Int, Vector{Int}}=0;
     similarity_type::Symbol=:NN,
     sampling_model::Symbol=:Reg, # one of :Reg or :Mean
-    init_lik_rand::Bool=true) where T <: Real
+    init_lik_rand::Bool=true
+) where T <: Real
 
     n, p = size(X)
     #n == size(y)[1] || error("PPMx model initialization: X, y dimension mismatch.")
@@ -307,6 +310,8 @@ function Model_PPMx(y::Union{Matrix{T}, Vector{T}}, X::Union{Matrix{T}, Matrix{U
     state.baseline.sig0 < prior.baseline.sig0_upper || error("sig0 in the baseline must be initialized below its prior upper bound.")
     all([ state.lik_params[j].sig for j in 1:maximum(state.C) ] .<= state.baseline.sig_upper) || error("error sd (sig) must be at or below sig_upper for all clusters.")
     all([ state.lik_params[j].sig for j in 1:maximum(state.C) ] .>= state.baseline.sig_lower) || error("error sd (sig) must be at or above sig_lower for all clusters.")
+    
+    state.prior_mean_beta = zeros(model.p)
 
     return Model_PPMx(deepcopy(y), deepcopy(X), obsXIndx, n, p, prior, state)
 end

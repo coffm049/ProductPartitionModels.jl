@@ -68,7 +68,10 @@ function update_lik_params!(model::Model_PPMx,
     sliceiter::Int=5000)
 
     K = maximum(model.state.C)
-    prior_mean_beta = zeros(model.p)
+
+
+    # [ ] Update this 
+    prior_mean_beta = state.prior_mean_beta
 
     for k in 1:K ## can parallelize; would need to pass rng through updates (including slice functions and hyper updates)
 
@@ -105,6 +108,8 @@ function update_lik_params!(model::Model_PPMx,
                 model.state.lik_params[k].beta_hypers.phi = update_ϕ(model.state.lik_params[k].beta ./ model.state.baseline.tau0 ./ model.state.lik_params[k].sig,
                     1.0/model.p
                 )
+
+            state.prior_mean_beta =  ..... FILL IN WITH N-N updater
             elseif ( :beta in update ) & (typeof(model.y) <: Matrix)
                 # [ ] Might need to have update stats and iters_eslice
                 model.state.lik_params[k].beta = sampleMultiNorm(model.X[indx_k, :], model.y[indx_k, :])
