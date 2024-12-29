@@ -109,7 +109,7 @@ function update_lik_params!(model::Model_PPMx,
                     1.0/model.p
                 )
 
-            state.prior_mean_beta =  ..... FILL IN WITH N-N updater
+            #state.prior_mean_beta =  ..... FILL IN WITH N-N updater
             elseif ( :beta in update ) & (typeof(model.y) <: Matrix)
                 # [ ] Might need to have update stats and iters_eslice
                 model.state.lik_params[k].beta = sampleMultiNorm(model.X[indx_k, :], model.y[indx_k, :])
