@@ -311,7 +311,7 @@ function Model_PPMx(
     all([ state.lik_params[j].sig for j in 1:maximum(state.C) ] .<= state.baseline.sig_upper) || error("error sd (sig) must be at or below sig_upper for all clusters.")
     all([ state.lik_params[j].sig for j in 1:maximum(state.C) ] .>= state.baseline.sig_lower) || error("error sd (sig) must be at or above sig_lower for all clusters.")
     
-    state.prior_mean_beta = zeros(model.p)
+    state.prior_mean_beta = zeros(p)
 
     return Model_PPMx(deepcopy(y), deepcopy(X), obsXIndx, n, p, prior, state)
 end
