@@ -70,8 +70,9 @@ function update_lik_params!(model::Model_PPMx,
     K = maximum(model.state.C)
 
 
-    # [ ] Update this 
-    prior_mean_beta = state.prior_mean_beta
+    # [ ] Update this as the average of betas (N-Jeffries)
+    prior_mean_beta = zeros(model.p)
+    #prior_mean_beta = state.prior_mean_beta
 
     for k in 1:K ## can parallelize; would need to pass rng through updates (including slice functions and hyper updates)
 
