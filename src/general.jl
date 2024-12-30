@@ -37,8 +37,14 @@ end
 
 Store a complete state for a PPMx, including log-likelihood value and MCMC iteration.
 """
-mutable struct State_PPMx{T <: LikParams_PPMx, TT <: Baseline_measure, TTT <: Cohesion_PPM, TTTT <: Similarity_PPMx,
-                          TR <: Real, T5 <: Similarity_PPMxStats}
+mutable struct State_PPMx{
+  T <: LikParams_PPMx,
+  TT <: Baseline_measure,
+  TTT <: Cohesion_PPM,
+  TTTT <: Similarity_PPMx,
+  TR <: Real,
+  T5 <: Similarity_PPMxStats}
+
     C::Vector{Int}
     lik_params::Vector{T}
 
