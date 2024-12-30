@@ -41,7 +41,7 @@ function update_sig0!(base::Union{Baseline_NormDLUnif, Baseline_NormUnif},
                     logtarget, TargetArgs_NormSigUnif(mu_vec, base.mu0),
                     sliceiter)
     #base.sig0 = sigout
-    base.sig0 = 0.0
+    base.sig0 = 1e-20
     return nothing
 end
 

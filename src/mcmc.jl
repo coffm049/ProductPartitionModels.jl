@@ -106,8 +106,8 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
     n_procs::Int=1,
     report_filename::String="",
     report_freq::Int=1000,
-    update::Vector{Symbol}=[:C, :mu, :sig, :beta, :mu0, :sig0],
-    monitor::Vector{Symbol}=[:C, :mu, :sig, :beta, :mu0, :sig0, :llik_mat],
+    update::Vector{Symbol}=[:C,  :beta, :sig], #:mu, :mu0, :sig0
+    monitor::Vector{Symbol}=[:C, :sig, :beta,  :llik_mat], #:mu, :mu0, :sig0,
     slice_max_iter::Int=5000,
     upd_c_mtd::Symbol=:MH,
     M_newclust::Real=10
