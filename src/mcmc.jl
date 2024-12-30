@@ -143,6 +143,10 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
     ## sampling
     for i in 1:n_keep
         for j in 1:thin
+            
+            for k in 1:length(unique(model.state.C))
+                model.state.lik_params[k].mu = 0.0
+            end
 
             if (:C in update_outer)
                 update_C!(model, update_lik, upd_c_mtd, M_newclust) # refreshes model state except llik

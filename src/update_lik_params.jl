@@ -154,15 +154,15 @@ function update_lik_params!(model::Model_PPMx,
 
         ## update mu (generic)
         model.state.lik_params[k].mu =0.0 
-        if (:mu in update)
-            yy = model.y[indx_k] - sig_upd_stats[:means] .+ model.state.lik_params[k].mu
-            one_div_var = 1.0 ./ sig_upd_stats[:vars]
-            yy_div_var = yy .* one_div_var
-            v1 = 1.0 / (1.0/model.state.baseline.sig0^2 + sum(one_div_var))
-            m1 = v1 * (model.state.baseline.mu0 / model.state.baseline.sig0^2 + sum(yy_div_var))
-            model.state.lik_params[k].mu = randn()*sqrt(v1) + m1
-            model.state.lik_params[k].mu =0.0 
-        end
+        # if (:mu in update)
+        #     yy = model.y[indx_k] - sig_upd_stats[:means] .+ model.state.lik_params[k].mu
+        #     one_div_var = 1.0 ./ sig_upd_stats[:vars]
+        #     yy_div_var = yy .* one_div_var
+        #     v1 = 1.0 / (1.0/model.state.baseline.sig0^2 + sum(one_div_var))
+        #     m1 = v1 * (model.state.baseline.mu0 / model.state.baseline.sig0^2 + sum(yy_div_var))
+        #     model.state.lik_params[k].mu = randn()*sqrt(v1) + m1
+        #     model.state.lik_params[k].mu =0.0 
+        # end
 
     end
 
