@@ -171,7 +171,7 @@ function init_PPMx(y::Union{Vector{T}, Matrix{T}}, X::Union{Matrix{T}, Matrix{Un
     prior_mean_beta = zeros(p)
     
 
-    return State_PPMx(C, lik_params, baseline, cohesion, similarity, lcohesions, Xstats, lsimilarities, llik, iter)
+    return State_PPMx(C, lik_params, baseline, cohesion, similarity, lcohesions, Xstats, lsimilarities, prior_mean_beta, llik, iter)
 end
 
 """
