@@ -34,5 +34,6 @@ include("mcmc.jl")
 include("postPred.jl")
 include("update_totalMass.jl")
 include("multivariateNormal.jl")
+include("NN_updater.jl")
 
 end # module
