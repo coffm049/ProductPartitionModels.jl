@@ -13,11 +13,14 @@ function baseCenterSampler(X)
   (p, n) = size(X)
   
   # posterior
-  σ2 = [rand(InverseGamma(n/2, sum((X[:,i] .- μ[i]).^2)/2)) for i in 1:p]
+  σ2 = [rand(InverseGamma(n/2, sum((X[i,:] .- μ[i]).^2)/2)) for i in 1:p]
   μ = rand(MvNormal(μ[:], σ2 .* I(p) ./n))
   return μ, σ2 .* I(p)
 end
 
-X = rand(MatrixNormal(3, 10))
+# concatenate all of the betas across lik_params[j] into a matrix
+Betas = [model.state.lik_params[j].beta for j in 1:2]
+# convert the vector of vectos to a matrix (p x K)
+Betas = hcat(Betas...)
 
-test, test2 = baseCenterSampler(X)
+test, test2 = baseCenterSampler(Betas)

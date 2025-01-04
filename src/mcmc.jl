@@ -137,8 +137,6 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
         monitor_lik = intersect(monitor, fieldnames(typeof(model.state.lik_params[1])))
         monitor_base = intersect(monitor, fieldnames(typeof(model.state.baseline)))
     end
-    # seed empty vector of length n_keep
-    M_vector = Vector{Real}(undef, n_keep * thin)
 
     ## sampling
     for i in 1:n_keep
@@ -168,9 +166,10 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
             # update M_newclust
             # prior on mass param suggested by Clustering consistency with  Dirichlet process mixtures for consistent cluster estimation
             M_newclust = sample_totalMass(M_newclust, model.n, length(unique(model.state.C)), 3.0, 3.0)
-            #M_vector[(i-1)*thin + j] = M_newclust
             
-            
+            for k in 1:length(unique(model.state.C))
+                model.state.lik_params[k].mu = 0.0
+            end
 
 
             model.state.iter += 1
@@ -192,6 +191,7 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
             if length(monitor_base) > 0
                 sims[i][:baseline] = deepcopyFields(model.state.baseline, monitor_base)
                 sims[i][:Mval] = M_newclust
+                sims[i][:prior_mean_beta] = model.state.prior_mean_beta
             end
             if :llik_mat in monitor
                 llik_tmp = llik_all(model)

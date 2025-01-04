@@ -70,9 +70,14 @@ function update_lik_params!(model::Model_PPMx,
     K = maximum(model.state.C)
 
 
-    # [ ] Update this as the average of betas (N-Jeffries)
-    prior_mean_beta = zeros(model.p)
-    #prior_mean_beta = state.prior_mean_beta
+    # [x] Update this as the average of betas (N-Jeffries)
+    # concatenate all of the betas across lik_params[j] into a matrix
+    Betas = [model.state.lik_params[j].beta for k in 1:K]
+    # convert the vector of vectos to a matrix (p x K)
+    Betas = hcat(Betas...)
+
+    model.state.prior_mean_beta, prior_var_beta = baseCenterSampler(Betas)
+    #prior_mean_beta = zeros(model.p)
 
     for k in 1:K ## can parallelize; would need to pass rng through updates (including slice functions and hyper updates)
 
