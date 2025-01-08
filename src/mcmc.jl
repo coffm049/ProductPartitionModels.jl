@@ -1,8 +1,4 @@
 # mcmc.jl
-# 
-
-# using Plots
-# using DataFrames
 
 export timemod!, etr, mcmc!;
 
@@ -106,11 +102,12 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
     n_procs::Int=1,
     report_filename::String="",
     report_freq::Int=1000,
-    update::Vector{Symbol}=[:C,  :beta, :sig], #:mu, :mu0, :sig0
-    monitor::Vector{Symbol}=[:C, :sig, :beta,  :llik_mat], #:mu, :mu0, :sig0,
+    update::Vector{Symbol}=[:C, :mu, :sig, :beta, :mu0, :sig0],
+    monitor::Vector{Symbol}=[:C, :mu, :sig, :beta, :mu0, :sig0, :llik_mat],
     slice_max_iter::Int=5000,
     upd_c_mtd::Symbol=:MH,
-    M_newclust::Real=10
+    M_newclust::Real=10,
+    MixDPM::Bool=true
     )
 
     ## output files
@@ -185,11 +182,17 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
             for field in monitor_outer
                 sims[i][field] = deepcopy(getfield(model.state, field))
             end
+            if length(monitor_lik) > 0
+              sims[i][:lik_params] = [ deepcopyFields(model.state.lik_params[k], monitor_lik) for k in 1:length(model.state.lik_params) ]
+            end
+            if length(monitor_base) > 0
+                sims[i][:baseline] = deepcopyFields(model.state.baseline, monitor_base)
+            end
             
-            sims[i][:lik_params] = [ deepcopyFields(model.state.lik_params[k], monitor_lik) for k in 1:length(model.state.lik_params) ]
-            sims[i][:baseline] = deepcopyFields(model.state.baseline, monitor_base)
-            sims[i][:Mval] = M_newclust
-            sims[i][:prior_mean_beta] = model.state.prior_mean_beta
+            if MixDPM 
+              sims[i][:Mval] = M_newclust
+              sims[i][:prior_mean_beta] = model.state.prior_mean_beta
+            end
             
             if :llik_mat in monitor
                 llik_tmp = llik_all(model)
