@@ -72,7 +72,7 @@ function update_lik_params!(model::Model_PPMx,
 
     # [x] Update this as the average of betas (N-Jeffries)
     # concatenate all of the betas across lik_params[j] into a matrix
-    Betas = [model.state.lik_params[j].beta for k in 1:K]
+    Betas = [model.state.lik_params[k].beta for k in 1:K]
     # convert the vector of vectos to a matrix (p x K)
     Betas = hcat(Betas...)
 
