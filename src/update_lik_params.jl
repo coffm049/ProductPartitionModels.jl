@@ -78,7 +78,7 @@ function update_lik_params!(model::Model_PPMx,
 
     model.state.prior_mean_beta, prior_var_beta = baseCenterSampler(Betas)
     prior_mean_beta = model.state.prior_mean_beta
-    print(model.state.prior_mean_beta)
+    #print(model.state.prior_mean_beta)
     #prior_mean_beta = zeros(model.p)
 
     for k in 1:K ## can parallelize; would need to pass rng through updates (including slice functions and hyper updates)
