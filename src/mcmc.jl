@@ -185,15 +185,12 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
             for field in monitor_outer
                 sims[i][field] = deepcopy(getfield(model.state, field))
             end
-            if length(monitor_lik) > 0
-                sims[i][:lik_params] = [ deepcopyFields(model.state.lik_params[k], monitor_lik) for k in 1:length(model.state.lik_params) ]
-            end
-            if length(monitor_base) > 0
-                sims[i][:baseline] = deepcopyFields(model.state.baseline, monitor_base)
-                sims[i][:Mval] = M_newclust
-                sims[i][:prior_mean_beta] = model.state.prior_mean_beta
-                println(model.state.prior_mean_beta)
-            end
+            
+            sims[i][:lik_params] = [ deepcopyFields(model.state.lik_params[k], monitor_lik) for k in 1:length(model.state.lik_params) ]
+            sims[i][:baseline] = deepcopyFields(model.state.baseline, monitor_base)
+            sims[i][:Mval] = M_newclust
+            sims[i][:prior_mean_beta] = model.state.prior_mean_beta
+            
             if :llik_mat in monitor
                 llik_tmp = llik_all(model)
                 sims[i][:llik] = deepcopy(llik_tmp[:llik])
