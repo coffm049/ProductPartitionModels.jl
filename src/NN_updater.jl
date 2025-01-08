@@ -13,7 +13,7 @@ function baseCenterSampler(X)
   (p, n) = size(X)
   
   # posterior
-  σ2 = [rand(InverseGamma(n/2, abs(sum((X[i,:] .- μ[i]).^2)/2) / 10)) for i in 1:p]
+  σ2 = [rand(InverseGamma(n/2, abs(sum((X[i,:] .- μ[i]).^2)/2) / 5)) for i in 1:p]
   μ = rand(MvNormal(μ[:], σ2 .* I(p) ./n))
   return μ, σ2 .* I(p)
 end
