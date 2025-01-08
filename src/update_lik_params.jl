@@ -77,6 +77,7 @@ function update_lik_params!(model::Model_PPMx,
     Betas = hcat(Betas...)
 
     model.state.prior_mean_beta, prior_var_beta = baseCenterSampler(Betas)
+    prior_mean_beta = model.state.prior_mean_beta
     print(model.state.prior_mean_beta)
     #prior_mean_beta = zeros(model.p)
 
