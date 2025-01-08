@@ -1,5 +1,5 @@
-using Distributions
-using LinearAlgebra
+# using Distributions
+# using LinearAlgebra
 
 
 # sample the posterior mean for a normal normal model
@@ -18,9 +18,9 @@ function baseCenterSampler(X)
   return μ, σ2 .* I(p)
 end
 
-# concatenate all of the betas across lik_params[j] into a matrix
-Betas = [model.state.lik_params[j].beta for j in 1:2]
-# convert the vector of vectos to a matrix (p x K)
-Betas = hcat(Betas...)
-
-test, test2 = baseCenterSampler(Betas)
+# # concatenate all of the betas across lik_params[j] into a matrix
+# Betas = [model.state.lik_params[j].beta for j in 1:2]
+# # convert the vector of vectos to a matrix (p x K)
+# Betas = hcat(Betas...)
+# 
+# test, test2 = baseCenterSampler(Betas)
