@@ -192,6 +192,7 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
                 sims[i][:baseline] = deepcopyFields(model.state.baseline, monitor_base)
                 sims[i][:Mval] = M_newclust
                 sims[i][:prior_mean_beta] = model.state.prior_mean_beta
+                println(model.state.prior_mean_beta)
             end
             if :llik_mat in monitor
                 llik_tmp = llik_all(model)
