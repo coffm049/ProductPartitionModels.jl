@@ -77,16 +77,16 @@ function update_lik_params!(model::Model_PPMx,
     Betas = hcat(Betas...)
     n, p = size(Betas)
 
-    mu0 = repeat([0.0], p)
-    kappa0 = 1.0
-    nu0 = p + 2  # Must be > p - 1
-    S0 = 0.1 * I(p)
-    #model.state.prior_mean_beta, prior_var_beta = baseCenterSampler(Betas)
-    mu_sample, sigma_sample = n_niw_sampler(Betas, mu0, kappa0, nu0, S0, 1)
+    mu0 = repeat([0.0], p)  # Prior mean
+    kappa0 = repeat([1.0], p)  # Prior precision
+    alpha0 = repeat([2.0], p)  # Prior shape for σ^2
+    beta0 = repeat([1.0], p)  # Prior scale for σ^2
     
-    model.state.prior_mean_beta = mu_sample[1]
+    # Run the sampler
+    mu_sample, sigma2_sample = independent_sampler(X, mu0, kappa0, alpha0, beta0,1)
+    model.state.prior_mean_beta = mu_sample[:,1]
     prior_mean_beta = model.state.prior_mean_beta
-    prior_var_beta = diag(sigma_sample[1])
+    prior_var_beta = sigma_sample[:,1]
     #print(model.state.prior_mean_beta)
     #prior_mean_beta = zeros(model.p)
 
