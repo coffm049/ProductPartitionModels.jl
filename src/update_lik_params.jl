@@ -74,7 +74,7 @@ function update_lik_params!(model::Model_PPMx,
     # concatenate all of the betas across lik_params[j] into a matrix
     Betas = [model.state.lik_params[k].beta for k in 1:K]
     # convert the vector of vectos to a matrix (p x K)
-    Betas = hcat(Betas...)
+    Betas = hcat(Betas...)'
     n, p = size(Betas)
 
     mu0 = repeat([0.0], p)  # Prior mean
