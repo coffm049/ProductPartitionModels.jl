@@ -118,29 +118,25 @@ function independent_sampler(X, mu0, kappa0, alpha0, beta0, nsamples)
 end
 
 
-# Simulated data
-Random.seed!(123)
-n, p = 50, 3
-true_mu = [1.0, 2.0, 3.0]
-true_sigma2 = [1.0, 0.5, 0.2]
-X = hcat([rand(Normal(true_mu[j], sqrt(true_sigma2[j])), n) for j in 1:p]...)
-
-# Prior hyperparameters
-mu0 = [0.0, 0.0, 0.0]  # Prior mean
-kappa0 = [1.0, 1.0, 1.0]  # Prior precision
-alpha0 = [2.0, 2.0, 2.0]  # Prior shape for σ^2
-beta0 = [1.0, 1.0, 1.0]  # Prior scale for σ^2
-
-# Number of posterior samples
-nsamples = 10
-
-# Run the sampler
-mu_samples, sigma2_samples = independent_sampler(X, mu0, kappa0, alpha0, beta0, nsamples)
-
-# Inspect results
-println("First sampled μ: ", mu_samples[:, 1])
-println("First sampled σ^2: ", sigma2_samples[:, 1])
-
-
-
+# # Simulated data
+# Random.seed!(123)
+# n, p = 50, 3
+# true_mu = [1.0, 2.0, 3.0]
+# true_sigma2 = [1.0, 0.5, 0.2]
+# X = hcat([rand(Normal(true_mu[j], sqrt(true_sigma2[j])), n) for j in 1:p]...)
 # 
+# # Prior hyperparameters
+# mu0 = [0.0, 0.0, 0.0]  # Prior mean
+# kappa0 = [1.0, 1.0, 1.0]  # Prior precision
+# alpha0 = [2.0, 2.0, 2.0]  # Prior shape for σ^2
+# beta0 = [1.0, 1.0, 1.0]  # Prior scale for σ^2
+# 
+# # Number of posterior samples
+# nsamples = 10
+# 
+# # Run the sampler
+# mu_samples, sigma2_samples = independent_sampler(X, mu0, kappa0, alpha0, beta0, nsamples)
+# 
+# # Inspect results
+# println("First sampled μ: ", mu_samples[:, 1])
+# println("First sampled σ^2: ", sigma2_samples[:, 1])
