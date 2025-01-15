@@ -75,9 +75,14 @@ function update_lik_params!(model::Model_PPMx,
     Betas = [model.state.lik_params[k].beta for k in 1:K]
     # convert the vector of vectos to a matrix (p x K)
     Betas = hcat(Betas...)
+    n, p = size(Betas)
 
+    mu0 = repeat([0.0], p)
+    kappa0 = 1.0
+    nu0 = p + 2  # Must be > p - 1
+    S0 = 0.1 * I(p)
     #model.state.prior_mean_beta, prior_var_beta = baseCenterSampler(Betas)
-    mu_sample, sigma_sample = n_niw_sampler(X, mu0, kappa0, nu0, S0, nsamples)
+    mu_sample, sigma_sample = n_niw_sampler(Betas, mu0, kappa0, nu0, S0, nsamples)
     
     model.state.prior_mean_beta = mu_sample[1]
     prior_mean_beta = model.state.prior_mean_beta
