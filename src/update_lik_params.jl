@@ -82,7 +82,7 @@ function update_lik_params!(model::Model_PPMx,
     nu0 = p + 2  # Must be > p - 1
     S0 = 0.1 * I(p)
     #model.state.prior_mean_beta, prior_var_beta = baseCenterSampler(Betas)
-    mu_sample, sigma_sample = n_niw_sampler(Betas, mu0, kappa0, nu0, S0, nsamples)
+    mu_sample, sigma_sample = n_niw_sampler(Betas, mu0, kappa0, nu0, S0, 1)
     
     model.state.prior_mean_beta = mu_sample[1]
     prior_mean_beta = model.state.prior_mean_beta
