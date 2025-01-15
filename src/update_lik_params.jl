@@ -83,7 +83,7 @@ function update_lik_params!(model::Model_PPMx,
     beta0 = repeat([1.0], p)  # Prior scale for σ^2
     
     # Run the sampler
-    mu_sample, sigma2_sample = independent_sampler(X, mu0, kappa0, alpha0, beta0,1)
+    mu_sample, sigma2_sample = independent_sampler(Betas, mu0, kappa0, alpha0, beta0,1)
     model.state.prior_mean_beta = mu_sample[:,1]
     prior_mean_beta = model.state.prior_mean_beta
     prior_var_beta = sigma2_sample[:,1]
