@@ -132,11 +132,19 @@ end
 # beta0 = [1.0, 1.0, 1.0]  # Prior scale for σ^2
 # 
 # # Number of posterior samples
-# nsamples = 10
+# nsamples = 100
 # 
 # # Run the sampler
 # mu_samples, sigma2_samples = independent_sampler(X, mu0, kappa0, alpha0, beta0, nsamples)
 # 
 # # Inspect results
-# println("First sampled μ: ", mu_samples[:, 1])
-# println("First sampled σ^2: ", sigma2_samples[:, 1])
+# p1 = histogram(mu_samples[1,:], label = "sample", title = "Norm-IG sampler")
+# vline!([true_mu[1]], label = "true")
+# p2 = histogram(mu_samples[2,:], label = nothing)
+# vline!([true_mu[2]], label = nothing)
+# p3 = histogram(mu_samples[3,:], label = nothing)
+# vline!([true_mu[3]], label = nothing)
+# p = plot(p1, p2, p3, layout=(3,1))
+# # save plot
+# savefig(p, "NormIGverification.png")
+
