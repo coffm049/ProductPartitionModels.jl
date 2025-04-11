@@ -1,7 +1,7 @@
 # using Base: Real
 # cohesion.jl
 
-export Cohesion_PPM, Cohesion_CRP, log_coheseion;
+export Cohesion_PPM, Cohesion_CRP, log_cohesion;
 
 mutable struct Cohesion_CRP <: Cohesion_PPM
 

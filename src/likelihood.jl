@@ -1,6 +1,6 @@
 # likelihood.jl
 
-export llik_k, llik_all;
+export llik_k, llik_all, aux_moments_k;
 
 # function aux_moments_k(Xstats_k::Vector{Similarity_NNiG_indep_stats}, similarity::Similarity_NNiG_indep)
 
@@ -111,7 +111,7 @@ function aux_moments_k(Xstats_k::Vector{Similarity_NN_stats}, similarity::Simila
         if n_now > 0.0
             xbar_now = Xstats_k[j].sumx / n_now
             ss_now = (Xstats_k[j].sumx2 - n_now * xbar_now^2)
-            sd_out[j] = sqrt( ( s0 + ss_now + n_now * (xbar_now - similarity.m0)^2 / np1 ) / np1 ) # could do something else
+	    sd_out[j] = sqrt(abs( ( s0 + ss_now + n_now * (xbar_now - similarity.m0)^2 / np1 ) / np1 )) # could do something else # CC: added ABS
         else
             sd_out[j] = sqrt(s0)
         end
