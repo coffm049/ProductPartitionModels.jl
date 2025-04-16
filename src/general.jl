@@ -162,7 +162,7 @@ function init_PPMx(y::Union{Vector{T}, Matrix{T}}, X::Union{Matrix{T}, Matrix{Un
     end
 
     lcohesions, Xstats, lsimilarities = get_lcohlsim(C, X, cohesion, similarity)
-    lcohesions .= lcohesions .+ 2
+    lcohesions .= lcohesions .- 2
 
     llik = 0.0
     iter = 0
