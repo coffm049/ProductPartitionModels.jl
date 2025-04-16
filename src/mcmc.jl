@@ -162,7 +162,7 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
 
             # update M_newclust
             # prior on mass param suggested by Clustering consistency with  Dirichlet process mixtures for consistent cluster estimation
-            M_newclust = sample_totalMass(M_newclust, model.n, length(unique(model.state.C)), 3.0, 3.0)
+            M_newclust = sample_totalMass(M_newclust, model.n, length(unique(model.state.C)), 5.0, 10.0)
             
             for k in 1:length(unique(model.state.C))
                 model.state.lik_params[k].mu = 0.0
