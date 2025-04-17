@@ -77,8 +77,8 @@ function update_lik_params!(model::Model_PPMx,
     Betas = hcat(Betas...)'
     n, p = size(Betas)
 
-    mu0 = repeat([3.0], p)  # Prior mean
-    kappa0 = repeat([200], p)  # Prior precision
+    mu0 = repeat([0.0], p)  # Prior mean
+    kappa0 = repeat([20], p)  # Prior precision
     alpha0 = repeat([4], p)  # Prior shape for σ^2
     beta0 = repeat([1], p)  # Prior scale for σ^2
     
