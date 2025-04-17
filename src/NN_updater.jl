@@ -118,33 +118,34 @@ function independent_sampler(X, mu0, kappa0, alpha0, beta0, nsamples)
 end
 
 
-# # Simulated data
-# Random.seed!(123)
-# N, p = 10, 3
-# true_mu = [1.0, 1.0, 1.0]
-# true_sigma2 = [1.0, 1.0, 1.0]
-# X = hcat([rand(Normal(true_mu[j], sqrt(true_sigma2[j])), N) for j in 1:p]...)
-# 
-# # Prior hyperparameters
-# mu0 = [0.0, 0.0, 0.0]  # Prior mean
-# kappa0 = [2.0, 2.0, 2.0]  # Prior precision
-# alpha0 = [20.0, 20.0, 20.0]  # Prior shape for σ^2
-# beta0 = [3.0, 3.0, 3.0]  # Prior scale for σ^2
-# 
-# # Number of posterior samples
-# nsamples = 100
-# 
-# # Run the sampler
-# mu_samples, sigma2_samples = independent_sampler(X, mu0, kappa0, alpha0, beta0, nsamples)
-# 
-# # Inspect results
-# p1 = histogram(mu_samples[1,:], label = "sample", title = "Norm-IG sampler")
-# vline!([true_mu[1]], label = "true")
-# p2 = histogram(mu_samples[2,:], label = nothing)
-# vline!([true_mu[2]], label = nothing)
-# p3 = histogram(mu_samples[3,:], label = nothing)
-# vline!([true_mu[3]], label = nothing)
-# p = plot(p1, p2, p3, layout=(3,1))
-# # save plot
-# savefig(p, "NormIGverification.png")
-# 
+# Simulated data
+#Random.seed!(123)
+#N, p = 7, 3
+## true_mu = [1.0, 1.0, 1.0]
+## true_sigma2 = [1.0, 1.0, 1.0]
+## X = hcat([rand(Normal(true_mu[j], sqrt(true_sigma2[j])), N) for j in 1:p]...)
+#X = repeat([quantile(Normal(2.0, 1.0), i/(N + 1)) for i in 1:N], inner = (1,3))
+#
+## Prior hyperparameters
+#mu0 = [0.0, 0.0, 0.0]  # Prior mean
+#kappa0 = repeat([1e-1], 3)  # Prior precision
+#alpha0 = [1.0, 1.0, 1.0]  # Prior shape for σ^2
+#beta0 = [3.0, 3.0, 3.0]  # Prior scale for σ^2
+#
+## Number of posterior samples
+#nsamples = 100
+#
+## Run the sampler
+#mu_samples, sigma2_samples = independent_sampler(X, mu0, kappa0, alpha0, beta0, nsamples)
+#
+## Inspect results
+#p1 = histogram(mu_samples[1,:], label = "sample", title = "Norm-IG sampler")
+#vline!([true_mu[1]], label = "true")
+#p2 = histogram(mu_samples[2,:], label = nothing)
+#vline!([true_mu[2]], label = nothing)
+#p3 = histogram(mu_samples[3,:], label = nothing)
+#vline!([true_mu[3]], label = nothing)
+#p = plot(p1, p2, p3, layout=(3,1))
+## save plot
+#savefig(p, "NormIGverification.png")
+
