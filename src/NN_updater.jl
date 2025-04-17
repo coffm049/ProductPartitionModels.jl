@@ -120,16 +120,16 @@ end
 
 # # Simulated data
 # Random.seed!(123)
-# n, p = 50, 3
-# true_mu = [1.0, 2.0, 3.0]
-# true_sigma2 = [1.0, 0.5, 0.2]
-# X = hcat([rand(Normal(true_mu[j], sqrt(true_sigma2[j])), n) for j in 1:p]...)
+# N, p = 10, 3
+# true_mu = [1.0, 1.0, 1.0]
+# true_sigma2 = [1.0, 1.0, 1.0]
+# X = hcat([rand(Normal(true_mu[j], sqrt(true_sigma2[j])), N) for j in 1:p]...)
 # 
 # # Prior hyperparameters
 # mu0 = [0.0, 0.0, 0.0]  # Prior mean
-# kappa0 = [1.0, 1.0, 1.0]  # Prior precision
-# alpha0 = [2.0, 2.0, 2.0]  # Prior shape for σ^2
-# beta0 = [1.0, 1.0, 1.0]  # Prior scale for σ^2
+# kappa0 = [2.0, 2.0, 2.0]  # Prior precision
+# alpha0 = [20.0, 20.0, 20.0]  # Prior shape for σ^2
+# beta0 = [3.0, 3.0, 3.0]  # Prior scale for σ^2
 # 
 # # Number of posterior samples
 # nsamples = 100
@@ -147,4 +147,4 @@ end
 # p = plot(p1, p2, p3, layout=(3,1))
 # # save plot
 # savefig(p, "NormIGverification.png")
-
+# 
