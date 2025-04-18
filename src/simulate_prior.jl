@@ -8,7 +8,7 @@ function sim_partition_PPMx(logα::Real, X::Union{Matrix{T}, Matrix{Union{T, Mis
 
     n, p = size(X)
     C = zeros(Int64, n)
-
+    println("lkjasdlkjsdf")
     C[1] = 1 # cluster assinment of first obs
     K_now = 1 # current number of clusters
     S = [1] # cluster sizes

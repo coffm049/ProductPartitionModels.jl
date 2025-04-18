@@ -5,7 +5,7 @@ export timemod!, etr, mcmc!;
 ## from Arthur Lui
 function deepcopyFields(state::T, fields::Vector{Symbol}) where T
   substate = Dict{Symbol, Any}()
-
+  # adding somehitng meaningles to test Revise
   for field in fields
     substate[field] = deepcopy(getfield(state, field))
   end

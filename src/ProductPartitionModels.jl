@@ -6,7 +6,7 @@ using SpecialFunctions
 using StatsBase
 using Distributions
 using Random, Random123
-using LinearAlgebra
+#using LinearAlgebra
 using Distributed
 using Dates
 using StatsFuns: logsumexp
