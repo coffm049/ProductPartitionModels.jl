@@ -621,7 +621,7 @@ end
 
 function update_C!(model::Model_PPMx, 
     update_lik_params::Vector{Symbol}=[:mu, :sig, :beta], 
-    method::Symbol=:MH, M_newclust::Int=10)
+    method::Symbol=:MH, M_newclust::Int=10, mixDPM::bool=true)
     # method one of :MH, :FC (FC mot currently in use--must be corrected)
 
     K = length(model.state.lik_params)
@@ -630,6 +630,14 @@ function update_C!(model::Model_PPMx,
     llik_now = Vector{Float64}(undef, K)
 
     obs_ord = StatsBase.sample(1:model.n, model.n, replace=false)
+
+
+    if mixDPM
+        # update total mass parameter
+        α = sample_totalMass(model.state.cohesion.α, model.n, length(unique(model.state.C)), 5.0, 5.0)
+        model.state.cohesion = Cohesion_CRP(α, K)
+    end
+
 
     if typeof(model.state.lik_params[1]) <: LikParams_PPMxReg
 

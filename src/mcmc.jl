@@ -171,6 +171,11 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
             if length(monitor_base) > 0
                 sims[i][:baseline] = deepcopyFields(model.state.baseline, monitor_base)
             end
+            
+            if MixDPM 
+              sims[i][:α] = model.state.cohesion.α
+              #sims[i][:prior_mean_beta] = model.state.prior_mean_beta
+            end
             if :llik_mat in monitor
                 llik_tmp = llik_all(model)
                 sims[i][:llik] = deepcopy(llik_tmp[:llik])
