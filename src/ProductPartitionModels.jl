@@ -1,15 +1,14 @@
 module ProductPartitionModels
 
-# using Base: Real, subtract_singletontype
-# using Distributions: SpecialFunctions
+using Base: Real, subtract_singletontype
+using Distributions: SpecialFunctions
 using SpecialFunctions
 using StatsBase
 using Distributions
 using Random, Random123
-# using LinearAlgebra
+using LinearAlgebra
 using Distributed
 using Dates
-
 using StatsFuns: logsumexp
 
 include("types.jl")
