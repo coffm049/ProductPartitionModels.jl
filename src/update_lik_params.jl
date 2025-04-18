@@ -65,31 +65,37 @@ end
 
 function update_lik_params!(model::Model_PPMx,
     update::Vector{Symbol}=[:mu, :sig, :beta],
-    sliceiter::Int=5000)
+    sliceiter::Int=5000;
+    mixDPM::Bool=true
+    )
     
-    clustCounts = sort(countmap(model.state.C))
-    K = maximum(keys(clustCounts))
+    if mixDPM
+        clustCounts = sort(countmap(model.state.C))
+        K = maximum(keys(clustCounts))
 
-    # [x] Update this as the average of betas (N-Jeffries)
-    # concatenate all of the betas across lik_params[j] into a matrix
-    # only clusters with sufficient observations
-    Betas = [model.state.lik_params[k].beta for k in 1:K if clustCounts[k] > 8]
-    # convert the vector of vectos to a matrix (p x K)
-    Betas = hcat(Betas...)'
-    p = size(Betas)[2]
+        # [x] Update this as the average of betas (N-Jeffries)
+        # concatenate all of the betas across lik_params[j] into a matrix
+        # only clusters with sufficient observations
+        Betas = [model.state.lik_params[k].beta for k in 1:K if clustCounts[k] > 8]
+        # convert the vector of vectos to a matrix (p x K)
+        Betas = hcat(Betas...)'
+        p = size(Betas)[2]
 
-    mu0 = repeat([0.0], p)  # Prior mean
-    kappa0 = repeat([0.01], p)  # Prior precision
-    alpha0 = repeat([30.0], p)  # Prior shape for σ^2
-    beta0 = repeat([1e-4], p)  # Prior scale for σ^2
-  
-    # Run the sampler
-    mu_sample, sigma2_sample = independent_sampler(Betas, mu0, kappa0, alpha0, beta0,1)
-    model.state.prior_mean_beta = mu_sample[:,1]
-    prior_mean_beta = model.state.prior_mean_beta
-    prior_var_beta = sigma2_sample[:,1]
-    #print(model.state.prior_mean_beta)
-    #prior_mean_beta = zeros(model.p)
+        mu0 = repeat([0.0], p)  # Prior mean
+        kappa0 = repeat([0.1], p)  # Prior precision
+        alpha0 = repeat([10.0], p)  # Prior shape for σ^2
+        beta0 = repeat([1e-1], p)  # Prior scale for σ^2
+
+        # Run the sampler
+        mu_sample, sigma2_sample = independent_sampler(Betas, mu0, kappa0, alpha0, beta0,1)
+        model.state.prior_mean_beta = mu_sample[:,1]
+        prior_mean_beta = model.state.prior_mean_beta
+        prior_var_beta = sigma2_sample[:,1]
+    else
+        #print(model.state.prior_mean_beta)
+        prior_mean_beta = zeros(model.p)
+        K = maximum(model.state.C)
+    end
 
     for k in 1:K ## can parallelize; would need to pass rng through updates (including slice functions and hyper updates)
 

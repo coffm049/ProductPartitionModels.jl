@@ -140,11 +140,11 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
         for j in 1:thin
 
             if (:C in update_outer)
-                update_C!(model, update_lik, upd_c_mtd, M_newclust) # refreshes model state except llik
+                update_C!(model, update_lik, upd_c_mtd, M_newclust, mixDPM=mixDPM) # refreshes model state except llik
             end
 
             if up_lik
-                update_lik_params!(model, update_lik, slice_max_iter)
+                update_lik_params!(model, update_lik, slice_max_iter, mixDPM=mixDPM)
                 # update_lik_params!(model.state, model.prior, model.y, update_mixcomps, n_procs=n_procs) # if we want to go parallel at some point
             end
 
