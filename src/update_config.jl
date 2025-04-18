@@ -16,7 +16,7 @@ function update_Ci!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int},
     if !wasnot_single
         M_newclust -= 1 # the existing singleton will become one of the proposed singletons
     end
- 
+
     ## cohesions, Xstats, and similarities each with obs i hypothetically in (1) or not in (0) each cluster
 
     lcohesions0 = deepcopy(model.state.lcohesions)
@@ -621,7 +621,7 @@ end
 
 function update_C!(model::Model_PPMx, 
     update_lik_params::Vector{Symbol}=[:mu, :sig, :beta], 
-    method::Symbol=:MH, M_newclust::Int=10, mixDPM::bool=true)
+    method::Symbol=:MH, M_newclust::Int=10, mixDPM::Bool=true)
     # method one of :MH, :FC (FC mot currently in use--must be corrected)
 
     K = length(model.state.lik_params)

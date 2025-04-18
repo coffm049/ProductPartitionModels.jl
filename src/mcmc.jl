@@ -106,7 +106,8 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
     monitor::Vector{Symbol}=[:C, :mu, :sig, :beta, :mu0, :sig0, :llik_mat],
     slice_max_iter::Int=5000,
     upd_c_mtd::Symbol=:MH,
-    M_newclust::Int=10
+    M_newclust::Int=10,
+    mixDPM::Bool=true
     )
 
     ## output files
@@ -172,7 +173,7 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
                 sims[i][:baseline] = deepcopyFields(model.state.baseline, monitor_base)
             end
             
-            if MixDPM 
+            if mixDPM 
               sims[i][:α] = model.state.cohesion.α
               #sims[i][:prior_mean_beta] = model.state.prior_mean_beta
             end
