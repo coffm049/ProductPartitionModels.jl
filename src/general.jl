@@ -49,6 +49,7 @@ mutable struct State_PPMx{T <: LikParams_PPMx, TT <: Baseline_measure, TTT <: Co
     lcohesions::Vector{TR}
     Xstats::Vector{Vector{T5}}
     lsimilarities::Vector{Vector{TR}}
+    prior_mean_beta::Vector{TR}
 
     llik::TR
     iter::Int
@@ -158,8 +159,11 @@ function init_PPMx(y::Vector{T}, X::Union{Matrix{T}, Matrix{Union{T, Missing}}, 
 
     llik = 0.0
     iter = 0
+    
+    # NEW: initiate central measure center
+    prior_mean_beta = zeros(p)
 
-    return State_PPMx(C, lik_params, baseline, cohesion, similarity, lcohesions, Xstats, lsimilarities, llik, iter)
+    return State_PPMx(C, lik_params, baseline, cohesion, similarity, lcohesions, Xstats, lsimilarities, prior_mean_beta, llik, iter)
 end
 
 """

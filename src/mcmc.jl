@@ -175,7 +175,7 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
             
             if mixDPM 
               sims[i][:α] = model.state.cohesion.α
-              #sims[i][:prior_mean_beta] = model.state.prior_mean_beta
+              sims[i][:prior_mean_beta] = model.state.prior_mean_beta
             end
             if :llik_mat in monitor
                 llik_tmp = llik_all(model)
