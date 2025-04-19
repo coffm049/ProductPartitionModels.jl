@@ -1,0 +1,537 @@
+---
+title: Sim Experiment
+date: today
+format:
+  html:
+    embed-resources: false
+    code-fold: true
+    toc: true
+    toc-location: left
+engine: julia
+execute: 
+  cache: true
+  warning: false
+  error: false
+julia:
+  exeflags: ["--project"]
+---
+
+Run with multiple threads to speed it up [not done yet]
+
+
+```{julia}
+using StatsBase
+using Statistics
+using Plots
+using Random
+using CSV
+using GLM
+using LinearAlgebra
+using HypothesisTests
+using LaTeXStrings
+using SpecialFunctions
+using SummaryTables 
+using StatsPlots
+using Clustering
+using DataFrames
+using TidierData
+using Revise
+using ProductPartitionModels
+
+include("simFunctions2.jl")
+# set plot defaults
+default(fillopacity = 0.5, lineopacity = 1.0)
+```
+
+
+```{julia} 
+N = 200
+nc =5 
+variance = 0
+interEffect = 3.0
+common = 2.0
+niters=2000
+rng = Random.MersenneTwister(0)
+reps = 25
+xdiff=0.25 
+```
+
+# Simulation experiment
+
+We utilized a monte carlo simulation to assess perfomance of the proposed method and compare to other methods.
+Synthetic observations were generated based on a multi-level linear model in which observations add one outcome $Y$ and two sets of explanatory covariates $X_1$ and $X_2$.
+4 clusters of equal sizes among 200 observations were simulated with the magnitude of the common effects equal to and the magnitude of the group interaction effects equal to 0.5.
+Additionally, each observation was generated with a variance of 0.25. 
+The mean effect assocaited with each covariate was the sum of a common effect (that was shared across all observations) and a group specific effect (which was only shared within a given data cluster).
+For the given set of simulations the following table describes the common and group specific effects.
+
+- Some of the group effects had same direction as common effect
+  - results in locally linear curve
+- Some of the group effects had opposite direction as common effect
+  - results in Simpson paradox
+  - much easier differentiate groups
+
+
+Let $X_g$ be a dummy matrix codifying group membership.
+
+$$
+  \begin{aligned}
+    Y_{shared} & = X_1\beta_{1, shared} + X_2\beta_{2, shared} \\ 
+    Y_{group} & = X_1 (X_g\beta_{1, group}) + X_2 (X_g\beta_{2, group}) \\
+    Y & = Y_{shared} + Y_{group} + \epsilon \\
+    \text{All together} & \\
+    Y & = X_1\beta_{1, shared} + X_2\beta_{2, shared} + X_1 (X_g\beta_{1, group}) + X_2 (X_g\beta_{2, group}) + \epsilon \\
+    & = X_1(\beta_{1, shared} + (X_g\beta_{1, group})) + X_2(\beta_{2, shared} + (X_g\beta_{2, group}) + \epsilon \\
+  \end{aligned}
+$$
+
+# 5 clusters
+
+```{julia}
+fractions = repeat([1/nc], nc)
+groupEffects = [quantile(Normal(0, interEffect), i/(length(fractions) + 1)) for i in 1:length(fractions)]
+simInfo = DataFrame(Dict(
+  "Fraction" => fractions,
+  "B1_shared" => common,
+  "ge" => groupEffects,
+  "B1_group" => common .+ groupEffects,
+))
+simple_table(simInfo)
+```
+
+```{julia}
+#| label: fig-singleSimdist2
+#| fig-cap: "Illustrations of simulated data."
+
+df = simData(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotSim = true, xdiff=xdiff, dims = 1)
+```
+
+
+The DPM and Mixture of DPM's models were both fit using a 1000 step MCMC with 500 burn-in steps and a thinned to every 5th observation of the MCMC.
+After fitting the data with 4 clusters, the data was subsequently trimmed to 2 clusters and refit to assess model performance under less heterogeneous circumstances.
+Each model was fit 100 times for each circumstance following a random seed using the Mersenne Twister random number generator with starting seed 0.
+Results from a single simulation is shown in @fig-singleSim.
+
+```{julia}
+#| label: fig-singleSim2
+#| fig-cap: "Illustrations of a single simulation fit."
+
+fractions = repeat([1/nc], nc)
+results = Vector{DataFrame}(undef, reps)
+results[1] = simExperiment(rng, N, fractions, variance, interEffect, common, true, niters, xdiff = xdiff, dims = 1)
+```
+
+
+```{julia}
+#| output: false
+
+seeds = MersenneTwister.(rand(1:10^8, Threads.nthreads()))  # or generate from original rng
+
+if !isfile("5_clustResults.csv")
+    # n,  fractions, variance, interEffect, common
+    Threads.@threads for i in 2:reps
+        try
+           println(i)
+           results[i] = simExperiment(seeds[Threads.threadid()], N, fractions, variance, interEffect, common, false, niters, xdiff = xdiff)
+        catch err
+            println("sim Failed")
+        end
+    end   
+    defined_results = [results[i] for i in 1:reps if isassigned(results, i)]
+    df = vcat(defined_results...)
+    CSV.write("5_clustResults.csv", df, writeheader = true, append = true)
+end
+results = CSV.read("5_clustResults.csv", DataFrame, header = 1) 
+
+# replace and value below 0.75 with missing in columns starting with "rind"
+# results = @chain results begin
+#     @mutate(
+#         midDPM = ifelse(rind_DPM <= 0.75, missing, midDPM),
+#         midMix = ifelse(rind_Mix <= 0.75, missing, midMix),
+#         midMixoos = ifelse(rind_Mix <= 0.75, missing, midMixoos),
+#         midDPMoos = ifelse(rind_DPM <= 0.75, missing, midDPMoos),
+#         rindMixoos = ifelse(rind_Mix <= 0.75, missing, rindMixoos),
+#         rind_DPMoos = ifelse(rind_DPM <= 0.75, missing, rind_DPMoos),
+#         rind_Mix = ifelse(rind_Mix <= 0.75, missing, rind_Mix),
+#         rind_DPM = ifelse(rind_DPM <= 0.75, missing, rind_DPM),
+#         mixEq = ifelse(mixEq <= 20, missing, mixEq),
+#         dpmEq = ifelse(dpmEq <= 20, missing, dpmEq),
+# )
+# end
+```
+
+## Overall assessment
+To assess overall model performance of each method, we characterized the root mean squared prediction error (RMSE) for bayesian methods we summarized this with the posterior median of the RMSE.
+Additionally, we computed the proportion of observations lying within the 95\% predictive credible interval which we call the Bayesian p-value @fig-bayesPvalue.
+We also considered the differentiation between the DPM and Mixture of DPM models with a two-tailed Kolmogorov-Smirnov test @fig-ksTest.
+
+
+
+## Clustering and Prediction
+Next, we compared the models ability to cluster and predict within the fit dataset. These were assess through the median posterior Rand index @fig-randIndex and the median posterior RMSE @fig-RMSE.
+
+
+```{julia}
+#| label: fig-randIndex2
+#| fig-cap: "Rand index for 2 and four clusters."
+
+p1 = histogram([results.rind_Mix, results.rind_DPM, results.rind_K],
+          opacity = 0.5,
+          labels = ["PPMx-shared" "PPMx" "Kmean"],
+          title = "2 cluster"
+          )
+# p2 = histogram([results.rind_Mix_2, results.rind_DPM_2, results.rind_K_2],
+#           opacity = 0.5,
+#           labels = ["PPMx-shared" "PPMx" "Kmean"],
+#           title = "2 cluster"
+#           )
+p3 = histogram([results.rindMixoos, results.rind_DPMoos, results.rind_Koos],
+          opacity = 0.5,
+          labels = ["PPMx-shared" "PPMx" "Kmean"],
+          title = "2 cluster (OOS)"
+          )
+xlims!(0, 1.1)
+# p4 = histogram([results.rind_Mix_2oos, results.rind_DPM_2oos, results.rind_K_2oos],
+#           opacity = 0.5,
+#           labels = ["PPMx-shared" "PPMx" "Kmean"],
+#           title = "2 cluster (OOS)"
+#           )
+plot(p1, p3, layout= [1,1], plot_title = "Rand index")
+```
+
+```{julia}
+#| label: fig-RMSE2
+#| fig-cap: "RMSE for 2 and four clusters."
+
+p1 = histogram([results.midMix, results.midDPM, results.kmean_MSE],
+          opacity = 0.33,
+          labels = ["PPMx-shared" "PPMx" "Kmean"],
+          title = "2 cluster"
+          )
+# p2 = histogram([results.midMix2, results.midDPM2, results.kmean_MSE_2],
+#           opacity = 0.5,
+#           labels = ["PPMx-shared" "PPMx" "Kmean"],
+#           title = "2 cluster"
+#           )
+p3 = histogram([results.midMixoos, results.midDPMoos, results.kmean_MSEoos],
+          opacity = 0.5,
+          labels = ["PPMx-shared" "PPMx" "Kmean"],
+          title = "2 cluster (OOS)"
+          )
+# p4 = histogram([results.midMix2oos, results.midDPM2oos, results.kmean_MSE_2oos],
+#           opacity = 0.5,
+#           labels = ["PPMx-shared" "PPMx" "Kmean"],
+#           title = "2 cluster (OOS)"
+#           )
+plot(p1, p3, layout= [1,1], plot_title = "Median posterior RMSE")
+```
+
+
+```{julia}
+#| label: fig-nclusts2
+#| fig-cap: "Number of clusts for 2 simulated clusters."
+
+histogram([results.ncMix, results.ncDPM, results.ncK],
+          opacity = 0.33,
+          labels = ["PPMx-shared" "PPMx" "Kmean"],
+          title = "2 cluster"
+          )
+
+
+```
+
+```{julia}
+#| label: fig-mixing2
+#| fig-cap: "Number of steps until mixed."
+
+histogram([results.mixEq, results.dpmEq],
+          opacity = 0.33,
+          labels = ["PPMx-shared" "PPMx"],
+          title = "2 cluster"
+          )
+```
+
+
+## Common effect inference
+We assessed the estimation of common effects.
+
+```{julia}
+p1 = histogram([results.meanBeta1 results.meanBetakclust1], label = ["4 cluster"  "Kmean"], opacity = 0.5, title = "Common effects")
+xlims!(-10,10)
+vline!([common], label = "true", linewidth = 4, color = :black)
+#p2 = histogram([results.meanBeta2 results.meanBetakclust2], label = ["4 cluster"  "Kmean"], opacity = 0.5)
+#vline!(-[common], label = "true", linewidth = 4, color = :black)
+
+```
+
+## Group Inference
+We assessed the estimation of group specific effects.
+```{julia}
+p1 = histogram([results.Mix_beta1_c1 results.dpm_beta1_c1], label = ["PPMx-shared" "PPMx"], title = "Cluster 1, " * L"\beta_1 (2 clusters)")
+```
+
+
+
+## Table summary
+```{julia}
+@chain results begin
+    @summarize(
+        Mix_rind = round(median(skipmissing(rind_Mix)),digits = 2),
+        DPM_rind = round(median(skipmissing(rind_DPM)), digits= 2),
+        k_rind = round(median(skipmissing(rind_K)), digits = 2),
+        Mix_rindiqr = round(iqr(skipmissing(rind_Mix)),digits = 2),
+        DPM_rindiqr = round(iqr(skipmissing(rind_DPM)), digits= 2),
+        k_rindiqr = round(iqr(skipmissing(rind_K)), digits = 2),
+        Mix_rmse = round(median(skipmissing(midMix)),digits = 2),
+        DPM_rmse = round(median(skipmissing(midDPM)), digits= 2),
+        k_rmse = round(median(skipmissing(kmean_MSE)), digits = 2),
+        Mix_rmsesd = round(iqr(skipmissing(midMix)),digits = 2),
+        DPM_rmsesd = round(iqr(skipmissing(midDPM)), digits= 2),
+        k_rmsesd = round(iqr(skipmissing(kmean_MSE)), digits = 2),
+    )
+  @unite(MixRind, (Mix_rind, Mix_rindiqr), "-")
+  @unite(DPMRind, (DPM_rind, DPM_rindiqr), "-")
+  @unite(kRind, (k_rind, k_rindiqr), "-")
+  @unite(MixMSE, (Mix_rmse, Mix_rmsesd), "-")
+  @unite(DPMMSE, (DPM_rmse, DPM_rmsesd), "-")
+  @unite(kMSE, (k_rmse, k_rmsesd), "-")
+  @mutate(
+    MixRind = replace(MixRind, "-" => " ("),
+    DPMRind = replace(DPMRind, "-" => " ("),
+    kRind = replace(kRind, "-" => " ("),
+    MixMSE = replace(MixMSE, "-" => " ("),
+    DPMMSE = replace(DPMMSE, "-" => " ("),
+    kMSE = replace(kMSE, "-" => " ("),
+  )
+  @mutate(
+    # add ")" to end of stirng
+    MixRind = replace(MixRind, r"$" => ")"),
+    DPMRind = replace(DPMRind, r"$" => ")"),
+    kRind = replace(kRind, r"$" => ")"),
+    MixMSE = replace(MixMSE, r"$" => ")"),
+    DPMMSE = replace(DPMMSE, r"$" => ")"),
+    kMSE = replace(kMSE, r"$" => ")"),
+  ) 
+  simple_table()
+end
+```
+
+
+# 4 clusters
+
+```{julia}
+nc = 4
+fractions = repeat([1/nc], nc)
+groupEffects = [quantile(Normal(0, interEffect), i/(length(fractions) + 1)) for i in 1:length(fractions)]
+simInfo = DataFrame(Dict(
+  "Fraction" => fractions,
+  "B1_shared" => common,
+  "ge" => groupEffects,
+  "B1_group" => common .+ groupEffects,
+))
+simple_table(simInfo)
+```
+
+```{julia}
+#| label: fig-singleSimdist
+#| fig-cap: "Illustrations of simulated data."
+
+df = simData(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotSim = true, xdiff=xdiff)
+```
+
+```{julia}
+#| label: fig-singleSim
+#| fig-cap: "Illustrations of a single simulation fit."
+
+results = Vector{DataFrame}(undef, reps)
+#results[1] = simExperiment(rng, N, fractions, variance, interEffect, common, true, niters, xdiff = xdiff)
+```
+
+
+```{julia}
+#| output: false
+
+seeds = MersenneTwister.(rand(1:10^8, Threads.nthreads()))  # or generate from original rng
+if !isfile("4_clustResults.csv")
+    # n,  fractions, variance, interEffect, common
+    Threads.@threads for i in 2:reps
+        try
+           println(i)
+           results[i] = simExperiment(seeds[Threads.threadid()], N, fractions, variance, interEffect, common, false, niters, xdiff = xdiff)
+        catch err
+            println("sim Failed")
+        end
+    end   
+    defined_results = [results[i] for i in 1:100 if isassigned(results, i)]
+    df = vcat(defined_results...)
+    CSV.write("4_clustResults.csv", df, writeheader = true, append = false)
+end
+results = CSV.read("4_clustResults.csv", DataFrame, header = 1)
+results = @chain results begin
+    @mutate(
+        midDPM = ifelse(rind_DPM <= 0.75, missing, midDPM),
+        midMix = ifelse(rind_Mix <= 0.75, missing, midMix),
+        midMixoos = ifelse(rind_Mix <= 0.75, missing, midMixoos),
+        midDPMoos = ifelse(rind_DPM <= 0.75, missing, midDPMoos),
+        rindMixoos = ifelse(rind_Mix <= 0.75, missing, rindMixoos),
+        rind_DPMoos = ifelse(rind_DPM <= 0.75, missing, rind_DPMoos),
+        rind_Mix = ifelse(rind_Mix <= 0.75, missing, rind_Mix),
+        rind_DPM = ifelse(rind_DPM <= 0.75, missing, rind_DPM),
+        mixEq = ifelse(mixEq <= 20, missing, mixEq),
+        dpmEq = ifelse(dpmEq <= 20, missing, dpmEq),
+)
+end
+```
+
+
+
+## Overall assessment
+To assess overall model performance of each method, we characterized the root mean squared prediction error (RMSE) for bayesian methods we summarized this with the posterior median of the RMSE.
+Additionally, we computed the proportion of observations lying within the 95\% predictive credible interval which we call the Bayesian p-value @fig-bayesPvalue.
+We also considered the differentiation between the DPM and Mixture of DPM models with a two-tailed Kolmogorov-Smirnov test @fig-ksTest.
+
+## Clustering and Prediction
+Next, we compared the models ability to cluster and predict within the fit dataset. These were assess through the median posterior Rand index @fig-randIndex and the median posterior RMSE @fig-RMSE.
+
+
+```{julia}
+#| label: fig-randIndex
+#| fig-cap: "Rand index for 2 and four clusters."
+
+p1 = histogram([results.rind_Mix, results.rind_DPM, results.rind_K],
+          opacity = 0.5,
+          labels = ["PPMx-shared" "PPMx" "Kmean"],
+          title = "4 cluster"
+          )
+# p2 = histogram([results.rind_Mix_2, results.rind_DPM_2, results.rind_K_2],
+#           opacity = 0.5,
+#           labels = ["PPMx-shared" "PPMx" "Kmean"],
+#           title = "2 cluster"
+#           )
+p3 = histogram([results.rindMixoos, results.rind_DPMoos, results.rind_Koos],
+          opacity = 0.5,
+          labels = ["PPMx-shared" "PPMx" "Kmean"],
+          title = "4 cluster (OOS)"
+          )
+# p4 = histogram([results.rind_Mix_2oos, results.rind_DPM_2oos, results.rind_K_2oos],
+#           opacity = 0.5,
+#           labels = ["PPMx-shared" "PPMx" "Kmean"],
+#           title = "2 cluster (OOS)"
+#           )
+plot(p1, p3, layout= [1,1], plot_title = "Rand index")
+```
+
+```{julia}
+#| label: fig-RMSE
+#| fig-cap: "RMSE for 2 and four clusters."
+
+p1 = histogram([results.midMix, results.midDPM, results.kmean_MSE],
+          opacity = 0.5,
+          labels = ["PPMx-shared" "PPMx" "Kmean"],
+          title = "4 cluster"
+          )
+# p2 = histogram([results.midMix2, results.midDPM2, results.kmean_MSE_2],
+#           opacity = 0.5,
+#           labels = ["PPMx-shared" "PPMx" "Kmean"],
+#           title = "2 cluster"
+#           )
+p3 = histogram([results.midMixoos, results.midDPMoos, results.kmean_MSEoos],
+          opacity = 0.5,
+          labels = ["PPMx-shared" "PPMx" "Kmean"],
+          title = "4 cluster (OOS)"
+          )
+# p4 = histogram([results.midMix2oos, results.midDPM2oos, results.kmean_MSE_2oos],
+#           opacity = 0.5,
+#           labels = ["PPMx-shared" "PPMx" "Kmean"],
+#           title = "2 cluster (OOS)"
+#           )
+plot(p1, p3, layout= [1,1], plot_title = "Median posterior RMSE")
+```
+
+
+## Common effect inference
+We assessed the estimation of common effects.
+
+```{julia}
+p1 = histogram([results.meanBeta1 results.meanBetakclust1], label = ["4 cluster"  "Kmean"], opacity = 0.5)
+vline!([common], label = "true", linewidth = 4, color = :black)
+
+plot(p1, plot_title = "Common effects")
+
+```
+
+## Group Inference
+We assessed the estimation of group specific effects.
+```{julia}
+p1 = histogram([results.Mix_beta1_c1 results.dpm_beta1_c1], label = ["PPMx-shared" "PPMx"], title = "Cluster 1, " * L"\beta_1")
+```
+
+
+## Table summary
+```{julia}
+@chain results begin
+    @summarize(
+        Mix_rind = round(median(skipmissing(rind_Mix)),digits = 2),
+        DPM_rind = round(median(skipmissing(rind_DPM)), digits= 2),
+        k_rind = round(median(skipmissing(rind_K)), digits = 2),
+        Mix_rindiqr = round(iqr(skipmissing(rind_Mix)),digits = 2),
+        DPM_rindiqr = round(iqr(skipmissing(rind_DPM)), digits= 2),
+        k_rindiqr = round(iqr(skipmissing(rind_K)), digits = 2),
+        Mix_rmse = round(median(skipmissing(midMix)),digits = 2),
+        DPM_rmse = round(median(skipmissing(midDPM)), digits= 2),
+        k_rmse = round(median(skipmissing(kmean_MSE)), digits = 2),
+        Mix_rmsesd = round(iqr(skipmissing(midMix)),digits = 2),
+        DPM_rmsesd = round(iqr(skipmissing(midDPM)), digits= 2),
+        k_rmsesd = round(iqr(skipmissing(kmean_MSE)), digits = 2),
+    )
+  @unite(MixRind, (Mix_rind, Mix_rindiqr), "-")
+  @unite(DPMRind, (DPM_rind, DPM_rindiqr), "-")
+  @unite(kRind, (k_rind, k_rindiqr), "-")
+  @unite(MixMSE, (Mix_rmse, Mix_rmsesd), "-")
+  @unite(DPMMSE, (DPM_rmse, DPM_rmsesd), "-")
+  @unite(kMSE, (k_rmse, k_rmsesd), "-")
+  @mutate(
+    MixRind = replace(MixRind, "-" => " ("),
+    DPMRind = replace(DPMRind, "-" => " ("),
+    kRind = replace(kRind, "-" => " ("),
+    MixMSE = replace(MixMSE, "-" => " ("),
+    DPMMSE = replace(DPMMSE, "-" => " ("),
+    kMSE = replace(kMSE, "-" => " ("),
+  )
+  @mutate(
+    # add ")" to end of stirng
+    MixRind = replace(MixRind, r"$" => ")"),
+    DPMRind = replace(DPMRind, r"$" => ")"),
+    kRind = replace(kRind, r"$" => ")"),
+    MixMSE = replace(MixMSE, r"$" => ")"),
+    DPMMSE = replace(DPMMSE, r"$" => ")"),
+    kMSE = replace(kMSE, r"$" => ")"),
+  ) 
+  simple_table()
+end
+```
+
+```{julia}
+#| label: fig-nclusts4
+#| fig-cap: "Number of clusts for 4 simulated clusters."
+
+histogram([results.ncMix, results.ncDPM, results.ncK],
+          opacity = 0.33,
+          labels = ["PPMx-shared" "PPMx" "Kmean"],
+          title = "4 cluster"
+          )
+```
+
+```{julia}
+#| label: fig-mixing4
+#| fig-cap: "Number of steps until mixed for 4 clusters."
+
+histogram([results.mixEq, results.dpmEq],
+          opacity = 0.33,
+          labels = ["PPMx-shared" "PPMx"],
+          title = "2 cluster"
+          )
+
+
+```
+
