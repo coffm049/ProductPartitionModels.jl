@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.3"
+julia_version = "1.10.4"
 manifest_format = "2.0"
 project_hash = "10981afcd9d9c50750478f54aafa8640ebdca510"
 
@@ -1714,7 +1714,7 @@ uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [[deps.ProductPartitionModels]]
 deps = ["Dates", "Distributed", "Distributions", "Random", "Random123", "SpecialFunctions", "StatsBase", "StatsFuns"]
-path = "../ProductPartitionModels.jl"
+path = ".."
 uuid = "dc94b787-0653-43d5-ba3f-631bd51a31aa"
 version = "0.8.5"
 
