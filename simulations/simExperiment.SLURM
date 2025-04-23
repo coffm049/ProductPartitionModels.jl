@@ -2,15 +2,15 @@
 #SBATCH --job-name=sim_array
 #SBATCH --output=logs/sim_%A_%a.out
 #SBATCH --error=logs/sim_%A_%a.err
-#SBATCH --array=1-4
+#SBATCH --array=1-3
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --time=01:00:00
-#SBATCH --mem=2G
+#SBATCH --time=01:30:00
+#SBATCH --mem=8G
 
 # Define the parameter grid (manually or dynamically)
-NCS=(5 5 10 10)
-INTERS=(2.0 4.0 2.0 4.0)
+NCS=(5 10 10)
+INTERS=(2.0 4.0 5.0)
 
 NC=${NCS[$SLURM_ARRAY_TASK_ID]}
 INTER=${INTERS[$SLURM_ARRAY_TASK_ID]}
