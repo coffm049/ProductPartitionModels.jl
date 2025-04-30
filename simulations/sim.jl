@@ -27,14 +27,15 @@ variance = parse(Float64, ARGS[3])
 interEffect = parse(Float64, ARGS[4])
 common = parse(Float64, ARGS[5])
 xdiff=parse(Float64, ARGS[6])
+dims=parse(Int, ARGS[7])
 
 # construct a file name from the user inputs
-outputName = "results/c$(nc)_N$(N)_inter$(interEffect)_common$(common)_xd$(xdiff)_v$(variance)"
+outputName = "results/c$(nc)_N$(N)_inter$(interEffect)_common$(common)_xd$(xdiff)_v$(variance)_dim$(dims)"
 
 # END user input
 
 reps = 25
-niters=2000
+niters=4000
 rng = Random.MersenneTwister(0)
 fractions = repeat([1/nc], nc)
 
@@ -48,7 +49,7 @@ if !isfile("$(outputName).csv")
     Threads.@threads for i in 1:reps
         try
            println(i)
-           results[i] = simExperiment(seeds[Threads.threadid()], N, fractions, variance, interEffect, common, false, niters, xdiff = xdiff)
+           results[i] = simExperiment(seeds[Threads.threadid()]; N=N, fractions=fractions, variance = variance, interEffect = interEffect, common = common , niters=niters, plotSim =  false, xdiff = xdiff, dims = dims)
         catch err
             println("sim Failed")
         end

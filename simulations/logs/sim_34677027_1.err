@@ -1,0 +1,7 @@
+ERROR: LoadError: BoundsError: attempt to access 6-element Vector{String} at index [7]
+Stacktrace:
+ [1] getindex(A::Vector{String}, i1::Int64)
+   @ Base ./essentials.jl:13
+ [2] top-level scope
+   @ ~/software/ProductPartitionModels.jl/simulations/sim.jl:30
+in expression starting at /users/4/coffm049/software/ProductPartitionModels.jl/simulations/sim.jl:30

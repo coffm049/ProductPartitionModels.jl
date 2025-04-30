@@ -32,9 +32,6 @@ function assign_clusters(X, centroids)
     return [argmin([norm(X[:, i] - centroids[:, j]) for j in 1:size(centroids, 2)]) for i in 1:size(X, 2)]
 end
 
-# asse convergence using Gleman from mcmc chains
-
-
 # note rmse will hvae to be inverted
 function findEquilibrated(;rmse::Vector{Float64}, rind::Vector{Float64}, tol::Float64=0.01)
     rmseEq = abs.(rmse .- minimum(rmse)) .<= (tol.* minimum(rmse))
@@ -106,7 +103,7 @@ end
 #df = simData(rng; n=n, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotSim = true, xdiff=xdiff)
 
 
-function simExperiment(rng::AbstractRNG, n::Int=100, fractions::Vector{Float64}=[0.25,0.25,0.25,0.25], variance::Real=1.0, interEffect::Float64=1.0, common::Float64=1.0, plotFit::Bool=false, niters::Int=1000; plotSim::Bool = false, xdiff::Real= 1.0, dims::Int=2)
+function simExperiment(rng::AbstractRNG, N::Int=100, fractions::Vector{Float64}=[0.25,0.25,0.25,0.25], variance::Real=1.0, interEffect::Float64=1.0, common::Float64=1.0, plotFit::Bool=false, niters::Int=1000; plotSim::Bool = false, xdiff::Real= 1.0, dims::Int=2)
 
     # common = interEffect : promising
     # common < interEffect : 
@@ -114,8 +111,8 @@ function simExperiment(rng::AbstractRNG, n::Int=100, fractions::Vector{Float64}=
 
     local result = 0
     # Simulate data
-    df = simData(rng; N, fractions, variance, interEffect, common, plotSim=plotSim, xdiff = xdiff, dims = dims)
-    dfoos = simData(rng; N, fractions, variance, interEffect, common, plotSim=false, xdiff = xdiff, dims = dims)
+    df = simData(rng; N=N, fractions=fractions, variance=variance, interEffect =interEffect, common = common, plotSim=plotSim, xdiff = xdiff, dims = dims)
+    dfoos = simData(rng; N=N, fractions=fractions, variance=variance, interEffect =interEffect, common = common, plotSim=false, xdiff = xdiff, dims = dims)
     # standardize
     Ymean = mean(df.Y)
     Ystd  = std(df.Y)
@@ -126,20 +123,56 @@ function simExperiment(rng::AbstractRNG, n::Int=100, fractions::Vector{Float64}=
     X = Matrix(df[:, Cols("inter", r"X")][:, Not(r"eff")])
     Xoos = Matrix(dfoos[:, Cols("inter", r"X")][:, Not(r"eff")])
     model = Model_PPMx(Ystand, X, df.group, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=true)
+    # closeGroup = df.group
+    # closeGroup[1:10] .= 3
+    #model = Model_PPMx(Ystand, X, closeGroup, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=false)
+    # groupEffect = [quantile(Normal(common, interEffect), i/(length(fractions) + 1)) for i in 1:length(fractions)]
+    # for c in 1:length(unique(model.state.C))
+    #     model.state.lik_params[c].beta .= groupEffect[c] # ./Ystd
+    # end
+    # 
+    # if length(fractions) == 2
+    #     lcoh = repeat([148.5], length(fractions))
+    #     #lcoh = repeat([152], length(fractions))
+    # elseif length(fractions) == 4
+    #     lcoh = repeat([63], length(fractions))
+    # elseif length(fractions) == 7
+    #     # for 100 sample
+    #     # lcoh = repeat([200], length(fractions))
+    #     # for 500 sampel
+    #     lcoh = repeat([1000], length(fractions))
+    # else 
+    #     lcoh = model.state.lcohesions
+    # end
 
+    #model.state.lcohesions .= lcoh
+
+    ################################################
+    ## For two clusters Common = inter = xdiff = 1.0
+    # model.state.Xstats = [
+    #     [Similarity_NN_stats(108, 108.0, 108.0)
+    #       Similarity_NN_stats(108, 35, 117)
+    #       Similarity_NN_stats(108, 37, 118)],
+    #     [Similarity_NN_stats(92, 92.0, 92.0)
+    #       Similarity_NN_stats(92, -35, 81)
+    #       Similarity_NN_stats(92, -37, 80)
+    # ]] # super help
+    # model.state.lcohesions = [396, 322] # super help
+    #model.state.lcohesions = [148.5, 148.5] # trial for 2
+    # model.state.lcohesions = [63, 63, 63, 63] # trial for 4
+    # model.state.prior_mean_beta = [10, 0.3, -5.5] # didn't help.
+    # model.state.lsimilarities = [[-102, -154, -154],
+    #[-87, -120, -119]] # didn't help
+    ################################################
+    ################################################
     sim = mcmc!(model, niters; mixDPM=true)
-    model = Model_PPMx(Ystand, X, df.group, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=true)
-    sim1 = mcmc!(model, niters; mixDPM=true)
-    # Look at convergence
-    # [ ] plot
-  # # Gelman convergence
-
     rindMixvec = [Clustering.randindex(s[:C], df.group)[2] for s in sim]
     X2 = Matrix(df[:, Cols("inter", r"X")][:, Not(r"eff")])
     X2oos = Matrix(dfoos[:, Cols("inter", r"X")][:, Not(r"eff")])
     model2 = Model_PPMx(Ystand, X2, df.group, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=false)
     sim2 = mcmc!(model2, niters; mixDPM=false)
-    trimid = Int(niters/2)
+    #trimid = Int(niters/2)
+    trimid = 3000
     thin = 1
     sim = sim[trimid:thin:end]
     sim2 = sim2[trimid:thin:end]
@@ -232,8 +265,8 @@ function simExperiment(rng::AbstractRNG, n::Int=100, fractions::Vector{Float64}=
     meanBetakclust1 = coef(clustlm)[2]
     
     ncMix = mode([maximum(s[:C]) for s in sim ])
-    ncDPM = mode([maximum(s[:C]) for s in sim ])
-    ncK = mode([maximum(s[:C]) for s in sim ])
+    ncDPM = mode([maximum(s[:C]) for s in sim2 ])
+    ncK = kclust 
     
     nclusts = length(fractions)
     Mix_beta1_c1 = [s[:lik_params][1][:beta][2] for s in sim if maximum(s[:C]) == ncMix] .* Ystd
@@ -279,7 +312,7 @@ function simExperiment(rng::AbstractRNG, n::Int=100, fractions::Vector{Float64}=
       ncK = ncK,
       
       # setup
-      n=n, fractions = string(fractions), variance = variance, 
+      N=N, fractions = string(fractions), variance = variance, 
       interEffect = interEffect, common = common
     )
     
