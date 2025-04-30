@@ -97,6 +97,7 @@ simInfo = DataFrame(Dict(
   "B1_group" => common .+ groupEffects,
 ))
 simple_table(simInfo)
+dims = 1
 ```
 
 ```{julia}

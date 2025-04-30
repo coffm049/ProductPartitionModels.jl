@@ -82,8 +82,8 @@ function update_lik_params!(model::Model_PPMx,
         p = size(Betas)[2]
 
         mu0 = repeat([0.0], p)  # Prior mean
-        kappa0 = repeat([0.1], p)  # Prior precision
-        alpha0 = repeat([10.0], p)  # Prior shape for σ^2
+	      kappa0 = repeat([0.1], p)  # Prior precision # [ ] Try out precision of 1.0, and 1e-2
+    alpha0 = repeat([10.0], p)  # Prior shape for σ^2 # [ ] consider a less informative prior (alpha = 2, beta = 1) for instance 
         beta0 = repeat([1e-1], p)  # Prior scale for σ^2
 
         # Run the sampler
