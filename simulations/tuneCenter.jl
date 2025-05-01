@@ -1,7 +1,10 @@
 using Distributions
 using LinearAlgebra
+using DataFrames
 using Random
-using Plots
+using UnicodePlots
+using Tables
+#using Plots
 
 
 
@@ -38,54 +41,63 @@ function independent_sampler(X, mu0, kappa0, alpha0, beta0, nsamples)
     return mu_samples, sigma2_samples
 end
 
+function simMSE(X, mu0, kap, alph, bet, nsamples)
+    dim = size(X)[2]
+    mu_samples, sigma2_samples = independent_sampler(
+    X, repeat([mu0], dim), repeat([kap], dim), repeat([alph], dim), repeat([bet], dim), nsamples)
+    mse = mean((mu_samples .- true_mu) .^2, dims = 2)[1]
+    mse2 = mean((sigma2_samples .- true_sigma2) .^2, dims = 2)[1]
+  return mse, mse2
+end
 
 # Simulated data
 Random.seed!(123)
 N, p = 7, 3
-true_mu = repeat([0.25], p)
-true_sigma2 = repeat([0.1], p)
+true_mu = repeat([1.0], p)
+true_sigma2 = repeat([0.5], p)
 # X = hcat([rand(Normal(true_mu[j], sqrt(true_sigma2[j])), N) for j in 1:p]...)
 X = [quantile(Normal(true_mu[p], true_sigma2[p]), i/(N + 1)) for i in 1:N, j in 1:p]
 
 # Prior hyperparameters
-mu0 = [0.0, 0.0, 0.0]  # Prior mean
-kappa0 = [1, 1e-1, 1e-2]  # Prior precision
-alpha0 = [30.0, 30.0, 30.0]  # Prior shape for σ^2
-beta0 = [1e-1, 1e-1, 1e-1]  # Prior scale for σ^2
+mu0 = [0.0]  # Prior mean
+kappa0 = [0.01, 0.1, 1, 10]  # Prior precision
+alpha0 = [1.0, 5.0, 10.0, 20.0]  # Prior shape for σ^2
+beta0 = [1.0, 5.0, 10.0, 20.0]  # Prior scale for σ^2
 
 # Number of posterior samples
 nsamples = 100
 
-# Run the sampler
-mu_samples, sigma2_samples = independent_sampler(X, mu0, kappa0, alpha0, beta0, nsamples)
-store = zeros(length(kappa0), length(alpha0), length(beta0))
 # loop over all combinations ofr priors in for loop 
 # use the independent sampler given those priors then add 
 # MSE to store vector
-results = []
+experimentDF = DataFrame(collect(Base.Iterators.product(mu0, kappa0, alpha0, beta0)), [:priorμ, :priorκ, :priorα, :priorβ])
+test = Tables.matrix([simMSE(X, row.priorμ, row.priorκ, row.priorα, row.priorβ, nsamples) for row in eachrow(experimentDF)])
+experimentDF[!, :mse] = test[:,1]
+experimentDF[!, :mse2] = test[:,2]
 
-for kap, alph, bet in collect(Base.Iterators.product(kappa0, alpha0, beta0))
-    mu_samples, sigma2_samples = independent_sampler(X, mu0[p], kap, alph, bet, nsamples)
-    mse = mean((mu_samples .- true_mu) .^2, dims = 2)
-    push!(results, mse)
-end
 
-for kap, alph, bet in collect(Base.Iterators.product(kappa0, alpha0, beta0))
-  mu_samples, sigma2_samples = independent_sampler(X, mu0[p], kap, alph, bet, nsamples)
-  #mean((mu_samples .- true_mu) .^2, dims = 2)
-  mse = mean((mu_samples .- true_mu) .^2, dims = 2)
-  push!(results, mse)
-end
+scatterplot(experimentDF.priorκ, experimentDF.mse) # 1.0
+scatterplot(experimentDF.priorα, experimentDF.mse) # 5.0
+scatterplot(experimentDF.priorβ, experimentDF.mse) # 1.0
+scatterplot(experimentDF.priorκ, experimentDF.mse2) # 1.0
+scatterplot(experimentDF.priorα, experimentDF.mse2) # 5.0
+scatterplot(experimentDF.priorβ, experimentDF.mse2) # 1.0
+
+
+
+histogram(mu_samples[1,:])
+histogram(sigma2_samples[1,:])
+
+
 
 
 # Inspect results
-p1 = histogram(mu_samples[1,:], label = "sample", title = "Norm-IG sampler")
-vline!([true_mu[1]], label = "true")
-p2 = histogram(mu_samples[2,:], label = nothing)
-vline!([true_mu[2]], label = nothing)
-p3 = histogram(mu_samples[3,:], label = nothing)
-vline!([true_mu[3]], label = nothing)
-p = plot(p1, p2, p3, layout=(3,1))
+# p1 = histogram(mu_samples[1,:], label = "sample", title = "Norm-IG sampler")
+# vline!([true_mu[1]], label = "true")
+# p2 = histogram(mu_samples[2,:], label = nothing)
+# vline!([true_mu[2]], label = nothing)
+# vline!([true_mu[3]], label = nothing)
+# p = plot(p1, p2, p3, layout=(3,1))
 # save plot
 savefig(p, "NormIGverification.png")
 
