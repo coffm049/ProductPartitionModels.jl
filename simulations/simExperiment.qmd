@@ -38,7 +38,7 @@ using TidierData
 using Revise
 using ProductPartitionModels
 
-include("simFunctions2.jl")
+include("simFunctions.jl")
 # set plot defaults
 default(fillopacity = 0.5, lineopacity = 1.0)
 ```
@@ -53,7 +53,7 @@ common = 2.0
 niters=2000
 rng = Random.MersenneTwister(0)
 reps = 25
-xdiff=0.25 
+xdiff=0.0
 ```
 
 # Simulation experiment
@@ -119,7 +119,7 @@ Results from a single simulation is shown in @fig-singleSim.
 
 fractions = repeat([1/nc], nc)
 results = Vector{DataFrame}(undef, reps)
-results[1] = simExperiment(rng, N, fractions, variance, interEffect, common, true, niters, xdiff = xdiff, dims = 1)
+results = simExperiment(rng, N, fractions, variance, interEffect, common, true, niters, 0.1, 1.0, 1.0, xdiff = xdiff, dims = 1)
 ```
 
 
