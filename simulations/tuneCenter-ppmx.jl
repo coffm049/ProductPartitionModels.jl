@@ -37,7 +37,7 @@ outputName = "results/c$(nc)_inter$(interEffect)_common$(common)_xd$(xdiff)_v$(v
 
 # END user input
 
-reps = 5
+reps = 10
 niters=5000
 rng = Random.MersenneTwister(0)
 fractions = repeat([1/nc], nc)

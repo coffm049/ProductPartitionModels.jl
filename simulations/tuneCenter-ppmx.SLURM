@@ -4,26 +4,41 @@
 #SBATCH --error=logs/tuneCenter_%A_%a.err
 #SBATCH --array=1-8
 #SBATCH --cpus-per-task=2
-#SBATCH --time=00:30:00
+#SBATCH --time=01:00:00
 #SBATCH --mem-per-cpu=8G
 
 # Define the parameter grid (manually or dynamically)
-NCS=(8 8 8 8 8 8 8 8)
-INTERS=(2.0 2.0 2.0 2.0 2.0 2.0 2.0 2.0)
-PRECS=(0.1 0.1 1.0 1.0 0.1 0.1 1.0 1.0)
-ALPHAS=(1.0 2.0 1.0 2.0 1.0 2.0 1.0 2.0)
-BETAS=(1.0 1.0 1.0 1.0 2.0 2.0 2.0 2.0)
+PRECS=(0.01 0.1)
+ALPHAS=(0.1 1.0 2.0)
+BETAS=(0.1 1.0 2.0)
 
-NC=${NCS[$SLURM_ARRAY_TASK_ID]}
-INTER=${INTERS[$SLURM_ARRAY_TASK_ID]}
-PREC=${PRECS[$SLURM_ARRAY_TASK_ID]}
-ALPHA=${ALPHAS[$SLURM_ARRAY_TASK_ID]}
-BETA=${BETAS[$SLURM_ARRAY_TASK_ID]}
+len_PREC=${#PREC_vals[@]}
+len_ALPHA=${#ALPHA_vals[@]}
+len_BETA=${#BETA_vals[@]}
 
-echo "Task $SLURM_ARRAY_TASK_ID: NC=$NC, INTER=$INTER, PREC=$PREC, ALPHA=$ALPHA, BETA=$BETA"
+# Total combinations
+total=$((len_PREC * len_ALPHA * len_BETA))
+# Ensure task ID is in range
+if [ "$SLURM_ARRAY_TASK_ID" -ge "$total" ]; then
+    echo "Task ID $SLURM_ARRAY_TASK_ID exceeds number of parameter combinations $total"
+    exit 1
+fi
+
+# Compute indices
+id=$SLURM_ARRAY_TASK_ID
+i=$((id / (len_ALPHA * len_BETA)))
+j=$(( (id / len_BETA) % len_ALPHA ))
+k=$(( id % len_PREC ))
+
+# Fetch actual parameters
+PREC=${PREC_vals[$i]}
+ALPHA=${ALPHA_vals[$j]}
+BETA=${BETA_vals[$k]}
+
+echo "Task $SLURM_ARRAY_TASK_ID: NC=8, INTER=2, PREC=$PREC, ALPHA=$ALPHA, BETA=$BETA"
 
 cd ~/software/ProductPartitionModels.jl/simulations
 
 # read arguments from command line
 # N, nc, variance, interEffect, common, xdiff
-julia --project=. --threads=2 tuneCenter-ppmx.jl 200 $NC 1.0 $INTER 3.0 0.0 1 $PREC $ALPHA $BETA
+julia --project=. --threads=2 tuneCenter-ppmx.jl 120 8 1.0 2.0 3.0 0.0 1 $PREC $ALPHA $BETA
