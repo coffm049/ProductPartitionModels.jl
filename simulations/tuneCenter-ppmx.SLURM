@@ -2,9 +2,9 @@
 #SBATCH --job-name=tuneCenter_array
 #SBATCH --output=logs/tuneCenter_%A_%a.out
 #SBATCH --error=logs/tuneCenter_%A_%a.err
-#SBATCH --array=1-8
+#SBATCH --array=1-18
 #SBATCH --cpus-per-task=2
-#SBATCH --time=01:00:00
+#SBATCH --time=01:15:00
 #SBATCH --mem-per-cpu=8G
 
 # Define the parameter grid (manually or dynamically)
@@ -12,17 +12,17 @@ PRECS=(0.01 0.1)
 ALPHAS=(0.1 1.0 2.0)
 BETAS=(0.1 1.0 2.0)
 
-len_PREC=${#PREC_vals[@]}
-len_ALPHA=${#ALPHA_vals[@]}
-len_BETA=${#BETA_vals[@]}
+len_PREC=${#PRECS[@]}
+len_ALPHA=${#ALPHAS[@]}
+len_BETA=${#BETAS[@]}
 
 # Total combinations
 total=$((len_PREC * len_ALPHA * len_BETA))
 # Ensure task ID is in range
-if [ "$SLURM_ARRAY_TASK_ID" -ge "$total" ]; then
-    echo "Task ID $SLURM_ARRAY_TASK_ID exceeds number of parameter combinations $total"
-    exit 1
-fi
+# if [ "$SLURM_ARRAY_TASK_ID" -ge "$total" ]; then
+#     echo "Task ID $SLURM_ARRAY_TASK_ID exceeds number of parameter combinations $total"
+#     exit 1
+# fi
 
 # Compute indices
 id=$SLURM_ARRAY_TASK_ID
@@ -31,9 +31,9 @@ j=$(( (id / len_BETA) % len_ALPHA ))
 k=$(( id % len_PREC ))
 
 # Fetch actual parameters
-PREC=${PREC_vals[$i]}
-ALPHA=${ALPHA_vals[$j]}
-BETA=${BETA_vals[$k]}
+PREC=${PRECS[$i]}
+ALPHA=${ALPHAS[$j]}
+BETA=${BETAS[$k]}
 
 echo "Task $SLURM_ARRAY_TASK_ID: NC=8, INTER=2, PREC=$PREC, ALPHA=$ALPHA, BETA=$BETA"
 

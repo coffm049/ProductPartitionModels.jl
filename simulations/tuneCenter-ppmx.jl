@@ -20,7 +20,6 @@ include("simFunctions.jl")
 
 # read arguments from command line
 # N, nc, variance, interEffect, common, xdiff
-
 N = parse(Int, ARGS[1])
 nc =parse(Int, ARGS[2])
 variance = parse(Float64, ARGS[3])
@@ -39,7 +38,6 @@ outputName = "results/c$(nc)_inter$(interEffect)_common$(common)_xd$(xdiff)_v$(v
 
 reps = 10
 niters=5000
-rng = Random.MersenneTwister(0)
 fractions = repeat([1/nc], nc)
 
 # END other controls
@@ -47,17 +45,20 @@ fractions = repeat([1/nc], nc)
 
 results = Vector{DataFrame}(undef, reps)
 seeds = MersenneTwister.(rand(1:10^8, Threads.nthreads()))  # or generate from original rng
+# n,  fractions, variance, interEffect, common
+Threads.@threads for i in 1:reps
+    try
+       println(i)
+       results[i] = simExperiment(seeds[Threads.threadid()]; N=N, fractions=fractions, variance = variance, interEffect = interEffect, common = common , niters=niters,  plotSim =  false, xdiff = xdiff, dims = dims, prec = prec, alph = alph, bet = bet)
+    catch err
+        println("sim Failed")
+    end
+end   
+defined_results = [results[i] for i in 1:reps if isassigned(results, i)]
+df = vcat(defined_results...)
+
 if !isfile("$(outputName).csv")
-    # n,  fractions, variance, interEffect, common
-    Threads.@threads for i in 1:reps
-        try
-           println(i)
-           results[i] = simExperiment(seeds[Threads.threadid()]; N=N, fractions=fractions, variance = variance, interEffect = interEffect, common = common , niters=niters,  plotSim =  false, xdiff = xdiff, dims = dims, prec = prec, alph = alph, bet = bet)
-        catch err
-            println("sim Failed")
-        end
-    end   
-    defined_results = [results[i] for i in 1:reps if isassigned(results, i)]
-    df = vcat(defined_results...)
-    CSV.write("$(outputName).csv", df, writeheader = true, append = true)
+    CSV.write("$(outputName).csv", df, writeheader = true, append = false)
+else 
+    CSV.write("$(outputName).csv", df, writeheader = false, append = true)
 end
