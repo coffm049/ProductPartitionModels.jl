@@ -15,4 +15,5 @@ df %>%
     ggplot(aes(x = meanBeta1, fill = factor(prec))) +
     geom_density(alpha = 0.3) +
     geom_vline(aes(xintercept = 3)) +
-    facet_grid(rows = vars(bet), cols = vars(alph))
+    # facet
+    facet_grid(rows = vars(bet), cols = vars(alph), labeller = labeller(.rows = label_both, .cols = label_both))
