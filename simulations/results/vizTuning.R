@@ -17,3 +17,10 @@ df %>%
     geom_vline(aes(xintercept = 3)) +
     # facet
     facet_grid(rows = vars(bet), cols = vars(alph), labeller = labeller(.rows = label_both, .cols = label_both))
+
+
+df %>%
+    ggplot(aes(x = meanBetakclust1)) +
+    geom_density(alpha = 0.3) +
+    geom_vline(aes(xintercept = 3))
+# facet
