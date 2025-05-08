@@ -118,8 +118,8 @@ Results from a single simulation is shown in @fig-singleSim.
 #| fig-cap: "Illustrations of a single simulation fit."
 
 fractions = repeat([1/nc], nc)
-results = Vector{DataFrame}(undef, reps)
-results = simExperiment(rng, N, fractions, variance, interEffect, common, true, niters, 0.1, 1.0, 1.0, xdiff = xdiff, dims = 1)
+#results = Vector{DataFrame}(undef, reps)
+results = simExperiment(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotFit=true, niters=niters, prec=0.1, alph=1.0, bet=1.0, plotSim=false, xdiff=xdiff, dims=dims)
 ```
 
 

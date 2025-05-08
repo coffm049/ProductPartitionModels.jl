@@ -174,7 +174,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     model2 = Model_PPMx(Ystand, X2, df.group, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=false)
     sim2 = mcmc!(model2, niters; mixDPM=false)
     #trimid = Int(niters/2)
-    trimid = 3000
+    trimid = Int(niters * 3 / 5)
     thin = 1
     sim = sim[trimid:thin:end]
     sim2 = sim2[trimid:thin:end]
@@ -244,6 +244,14 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     commonBeta1 = [s[:prior_mean_beta][2] for s in sim] .* Ystd
     meanBeta1 = mean(commonBeta1)
 
+    # find 95% credible interval
+    dpmCI = quantile(commonBeta1, [0.025, 0.975])
+
+    # check if 3.0 is in dpmCI
+    zeroInDPM = (sum((0.0 .< dpmCI)) == 1) & (sum(0.0 .> dpmCI) == 1)
+    commonInDPM = (sum((common .< dpmCI)) == 1) & (sum(common .> dpmCI) == 1)
+
+
     # is each obs in the 0.05 0.95 quantiles of the posterior predictive?
     bayesPmix = median(mean(df.Y .<= Ypred1', dims=2))
     bayesPDPM = median(mean(Ystand .<= Ypred2', dims=2))
@@ -253,7 +261,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     # Add in Kmeans with full interaction effect model
     # - select best clustering based off X
     # - interaction model
-    kclust = argmin([kmeans(X', i).totalcost for i in 1:6])
+    kclust = argmin([kmeans(X', i).totalcost for i in 1:10])
     kmodel = kmeans(X', kclust)
     df.kclust = kmodel.assignments
     dfoos.kclust = assign_clusters(Xoos', kmodel.centers)
@@ -265,6 +273,11 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     kmeanMSE = sqrt(mean(residuals(clustlm) .^ 2))
     kmeanMSEoos = sqrt(mean((predict(clustlm, dfoos) - dfoos.Y) .^ 2))
     meanBetakclust1 = coef(clustlm)[2]
+
+    # seef if 95% CI for X1 coefficient in clustlm includes 0
+    kclustCI = confint(clustlm)[2, :]
+    kclustIn0 = (sum((0.0 .< kclustCI)) == 1) & (sum(0.0 .> kclustCI) == 1)
+    kclustInCommon = (sum((common .< kclustCI)) == 1) & (sum(common .> kclustCI) == 1)
 
     ncMix = mode([maximum(s[:C]) for s in sim])
     ncDPM = mode([maximum(s[:C]) for s in sim2])
@@ -287,8 +300,10 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
         bayesPmixoos=bayesPmixoos,
         meanBeta1=meanBeta1,
         Mix_beta1_c1=median(Mix_beta1_c1),
-        Mix_beta1_c2=median(Mix_beta1_c2),
+        #Mix_beta1_c2=median(Mix_beta1_c2),
         mixEq=mixEq,
+        zeroInDPM=zeroInDPM,
+        commonInDPM=commonInDPM,
 
         # PPMx model
         rind_DPM=rindDPM,
@@ -298,7 +313,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
         bayesPDPM=bayesPDPM,
         bayesPDPMoos=bayesPDPMoos,
         dpm_beta1_c1=median(dpm_beta1_c1),
-        dpm_beta1_c2=median(dpm_beta1_c2),
+        #dpm_beta1_c2=median(dpm_beta1_c2),
         dpmEq=dpmEq,
 
         # rind_K
@@ -307,6 +322,8 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
         kmean_MSE=kmeanMSE,
         kmean_MSEoos=kmeanMSEoos,
         meanBetakclust1=meanBetakclust1,
+        kclustIn0=kclustIn0,
+        kclustInCommon=kclustInCommon,
 
         # number of clusts
         ncMix=ncMix,
@@ -315,7 +332,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
         # setup
         N=N, fractions=string(fractions), variance=variance,
-        interEffect=interEffect, common=common, prec = prec, alph= alph, bet=bet
+        interEffect=interEffect, common=common, prec=prec, alph=alph, bet=bet
     )
 
     if plotFit
