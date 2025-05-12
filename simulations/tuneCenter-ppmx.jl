@@ -36,7 +36,7 @@ outputName = "results/c$(nc)_inter$(interEffect)_common$(common)_xd$(xdiff)_v$(v
 
 # END user input
 
-reps = 10
+reps = 20
 niters=5000
 fractions = repeat([1/nc], nc)
 

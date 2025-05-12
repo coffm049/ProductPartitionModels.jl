@@ -4,7 +4,7 @@
 #SBATCH --error=logs/tuneCenter_%A_%a.err
 #SBATCH --array=1-18
 #SBATCH --cpus-per-task=2
-#SBATCH --time=01:15:00
+#SBATCH --time=02:30:00
 #SBATCH --mem-per-cpu=8G
 
 # Define the parameter grid (manually or dynamically)
