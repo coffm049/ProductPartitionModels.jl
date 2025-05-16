@@ -144,10 +144,14 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     Ypred2oos, Cpred2oos = postPred(X2oos, model2, sim2)
 
     # clustering
+    adjrindMixvec = [Clustering.randindex(s[:C], df.group)[1] for s in sim]
+    adjrindDPMvec = [Clustering.randindex(s[:C], df.group)[1] for s in sim2]
     rindMixvec = [Clustering.randindex(s[:C], df.group)[2] for s in sim]
     rindDPMvec = [Clustering.randindex(s[:C], df.group)[2] for s in sim2]
     rindMixvecoos = map(x -> Clustering.randindex(dfoos.group, x)[2], eachrow(Cpred1oos))
     rindDPMvecoos = map(x -> Clustering.randindex(dfoos.group, x)[2], eachrow(Cpred2oos))
+    adjrindMixvecoos = map(x -> Clustering.randindex(dfoos.group, x)[1], eachrow(Cpred1oos))
+    adjrindDPMvecoos = map(x -> Clustering.randindex(dfoos.group, x)[1], eachrow(Cpred2oos))
 
 
     # transform back
@@ -185,6 +189,10 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     rindDPM = median(rindDPMvec)
     rindMixoos = median(rindMixvecoos)
     rindDPMoos = median(rindDPMvecoos)
+    adjrindMix = median(adjrindMixvec)
+    adjrindDPM = median(adjrindDPMvec)
+    adjrindMixoos = median(adjrindMixvecoos)
+    adjrindDPMoos = median(adjrindDPMvecoos)
 
     rmseMixoos = sqrt.(mean(resid1oos[mixEq:end] .^ 2, dims=1))[1, :]
     rmseDPMoos = sqrt.(mean(resid2oos[dpmEq:end] .^ 2, dims=1))[1, :]
@@ -218,6 +226,16 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     bayesPmixoos = median(mean(df.Y .<= Ypred1oos', dims=2))
     bayesPDPMoos = median(mean(Ystandoos .<= Ypred2oos', dims=2))
 
+    # Simple linear regresion
+    slr = lm(@formula(Y ~ X1), df)
+    meanBetaSLR = coef(slr)[2]
+    betaCI = confint(slr)[2, :]
+    # test if 0 is between the two values in betaCI
+    zeroInSLR = (sum((0.0 .< betaCI)) == 1) & (sum(0.0 .> betaCI) == 1)
+    commonInSLR = (sum((common .< betaCI)) == 1) & (sum(common .> betaCI) == 1)
+    slrRMSE = sqrt(mean(residuals(slr) .^ 2))
+
+
     # Add in Kmeans with full interaction effect model
     # - select best clustering based off X
     # - interaction model
@@ -226,8 +244,8 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     df.kclust = kmodel.assignments
     dfoos.kclust = assign_clusters(Xoos', kmodel.centers)
 
-    rindKclust = Clustering.randindex(df.kclust, df.group)[2]
-    rindKclustoos = Clustering.randindex(dfoos.kclust, dfoos.group)[2]
+    rindKclust = Clustering.randindex(df.kclust, df.group)
+    rindKclustoos = Clustering.randindex(dfoos.kclust, dfoos.group)
     # linear model with Y vs X1, X2
     clustlm = lm(@formula(Y ~ (X1) * kclust), df)
     kmeanMSE = sqrt(mean(residuals(clustlm) .^ 2))
@@ -245,22 +263,21 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
     nclusts = length(fractions)
     Mix_beta1_c1 = [s[:lik_params][1][:beta][2] for s in sim if maximum(s[:C]) == ncMix] .* Ystd
-    Mix_beta1_c2 = [s[:lik_params][2][:beta][2] for s in sim if maximum(s[:C]) == ncMix] .* Ystd
     dpm_beta1_c1 = [s[:lik_params][1][:beta][1] for s in sim if maximum(s[:C]) == ncDPM] .* Ystd
-    dpm_beta1_c2 = [s[:lik_params][2][:beta][1] for s in sim if maximum(s[:C]) == ncDPM] .* Ystd
 
 
     result = DataFrame(
         # mixture model
         rind_Mix=rindMix,
         rindMixoos=rindMixoos,
+        adjrind_Mix=adjrindMix,
+        adjrindMixoos=adjrindMixoos,
         midMix=midMix,
         midMixoos=midMixoos,
         bayesPmix=bayesPmix,
         bayesPmixoos=bayesPmixoos,
         meanBeta1=meanBeta1,
         Mix_beta1_c1=median(Mix_beta1_c1),
-        #Mix_beta1_c2=median(Mix_beta1_c2),
         mixEq=mixEq,
         zeroInDPM=zeroInDPM,
         commonInDPM=commonInDPM,
@@ -268,22 +285,32 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
         # PPMx model
         rind_DPM=rindDPM,
         rind_DPMoos=rindDPMoos,
+        adjrind_DPM=adjrindDPM,
+        adjrind_DPMoos=adjrindDPMoos,
         midDPM=midDPM,
         midDPMoos=midDPMoos,
         bayesPDPM=bayesPDPM,
         bayesPDPMoos=bayesPDPMoos,
         dpm_beta1_c1=median(dpm_beta1_c1),
-        #dpm_beta1_c2=median(dpm_beta1_c2),
         dpmEq=dpmEq,
 
         # rind_K
-        rind_K=rindKclust,
-        rind_Koos=rindKclustoos,
+        adjrind_K=rindKclust[1],
+        adjrind_Koos=rindKclustoos[1],
+        rind_K=rindKclust[2],
+        rind_Koos=rindKclustoos[2],
         kmean_MSE=kmeanMSE,
         kmean_MSEoos=kmeanMSEoos,
         meanBetakclust1=meanBetakclust1,
         kclustIn0=kclustIn0,
         kclustInCommon=kclustInCommon,
+
+        # SLR
+        meanBetaSLR=coef(slr)[2],
+        zeroInSLR=zeroInSLR,
+        commonInSLR=commonInSLR,
+        slrRMSE=slrRMSE,
+
 
         # number of clusts
         ncMix=ncMix,
