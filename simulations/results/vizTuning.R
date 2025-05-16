@@ -58,7 +58,7 @@ p2 <- temp %>%
     geom_tile() +
     scale_fill_gradient2(
         low = "red", mid = "white", high = "forestgreen",
-        midpoint = 0.75
+        midpoint = 0.85
     ) +
     facet_wrap(~prec) +
     ggtitle("Coverage")
@@ -72,9 +72,11 @@ p3 <- temp2 %>%
     geom_tile() +
     scale_fill_gradient2(
         low = "forestgreen", mid = "white", high = "red",
-        midpoint = 2.4
+        midpoint = 3
     ) +
     facet_wrap(~prec) +
     ggtitle("MSE")
 
 p1 / p2 / p3
+
+ggsave("tuningResults.png")
