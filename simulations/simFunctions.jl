@@ -128,7 +128,6 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
 
     sim = mcmc!(model, niters; mixDPM=true)
-    rindMixvec = [Clustering.randindex(s[:C], df.group)[2] for s in sim]
     X2 = Matrix(df[:, Cols("inter", r"X")][:, Not(r"eff")])
     X2oos = Matrix(dfoos[:, Cols("inter", r"X")][:, Not(r"eff")])
     model2 = Model_PPMx(Ystand, X2, df.group, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=false)
@@ -263,7 +262,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
     nclusts = length(fractions)
     Mix_beta1_c1 = [s[:lik_params][1][:beta][2] for s in sim if maximum(s[:C]) == ncMix] .* Ystd
-    dpm_beta1_c1 = [s[:lik_params][1][:beta][1] for s in sim if maximum(s[:C]) == ncDPM] .* Ystd
+    dpm_beta1_c1 = [s[:lik_params][1][:beta][1] for s in sim2 if maximum(s[:C]) == ncDPM] .* Ystd
 
 
     result = DataFrame(
@@ -310,7 +309,6 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
         zeroInSLR=zeroInSLR,
         commonInSLR=commonInSLR,
         slrRMSE=slrRMSE,
-
 
         # number of clusts
         ncMix=ncMix,
