@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=common2
-#SBATCH --output=logs/common2.out
-#SBATCH --error=logs/common2.err
+#SBATCH --job-name=common6
+#SBATCH --output=logs/common6.out
+#SBATCH --error=logs/common6.err
 #SBATCH --cpus-per-task=2
 #SBATCH --time=12:30:00
 #SBATCH --mem-per-cpu=8G
@@ -18,4 +18,4 @@ cd ~/software/ProductPartitionModels.jl/simulations
 
 # read arguments from command line
 # N, nc, variance, interEffect, common, xdiff
-julia --project=. --threads=2 sim.jl 120 8 1.0 2.0 2.0 0.0 1 $PREC $ALPHA $BETA
+julia --project=. --threads=2 sim.jl 120 8 1.0 2.0 6.0 0.0 1 $PREC $ALPHA $BETA
