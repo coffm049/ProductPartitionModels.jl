@@ -29,4 +29,4 @@ cd ~/software/ProductPartitionModels.jl/simulations
 # bet = parse(Float64, ARGS[10])
 # reps = parse(Int, ARGS[11])
 # niters = parse(Int, ARGS[12])
-julia --project=. --threads=2 sim.jl 150 8 0.1 1.0 1.0 0.0 1 $PREC $ALPHA $BETA 10 500
+julia --project=. --threads=2 sim.jl 150 8 0.1 1.0 1.0 0.0 3 $PREC $ALPHA $BETA 100 5000
