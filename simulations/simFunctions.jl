@@ -109,7 +109,6 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     # common < interEffect : 
     # common > interEffect : somewhat promising
 
-    local result = 0
     # Simulate data
     df = simData(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotSim=plotSim, xdiff=xdiff, dims=dims)
     dfoos = simData(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotSim=false, xdiff=xdiff, dims=dims)

@@ -30,14 +30,14 @@ dims = parse(Int, ARGS[7])
 prec = parse(Float64, ARGS[8])
 alph = parse(Float64, ARGS[9])
 bet = parse(Float64, ARGS[10])
+reps = parse(Int, ARGS[11])
+niters = parse(Int, ARGS[12])
 
 # construct a file name from the user inputs
 outputName = "results/c$(nc)_inter$(interEffect)_common$(common)_xd$(xdiff)_v$(variance)_dim$(dims)_prec$(prec)alph$(alph)bet$(bet)"
 
 # END user input
-
-reps = 100
-niters = 5000
+#
 fractions = repeat([1 / nc], nc)
 
 # END other controls

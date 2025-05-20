@@ -1,7 +1,6 @@
 library(tidyverse)
 library(patchwork)
 
-
 df <- data.frame("file" = c(
     "c8_inter2.0_common1.0_xd0.0_v0.1_dim1_prec0.01alph1.0bet0.1.csv",
     "c8_inter2.0_common2.0_xd0.0_v1.0_dim1_prec0.01alph1.0bet0.1.csv",
@@ -10,14 +9,7 @@ df <- data.frame("file" = c(
     "c8_inter2.0_common6.0_xd0.0_v1.0_dim1_prec0.01alph1.0bet0.1.csv"
 )) %>%
     # map read these csvs into nested dataframe
-    mutate(
-        data = map(file, read_csv,
-            col_types = cols(
-                .default = col_double(),
-                zeroInDPM = col_logical()
-            )
-        )
-    ) %>%
+    mutate(data = map(file, read_csv, )) %>%
     # unnest them
     unnest(data)
 # group by file
