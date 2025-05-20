@@ -3,8 +3,11 @@ library(patchwork)
 
 
 df <- data.frame("file" = c(
+    "c8_inter2.0_common1.0_xd0.0_v0.1_dim1_prec0.01alph1.0bet0.1.csv",
     "c8_inter2.0_common2.0_xd0.0_v1.0_dim1_prec0.01alph1.0bet0.1.csv",
-    "c8_inter2.0_common3.0_xd0.0_v1.0_dim1_prec0.01alph1.0bet0.1.csv"
+    "c8_inter2.0_common3.0_xd0.0_v0.1_dim1_prec0.01alph1.0bet0.1.csv",
+    "c8_inter2.0_common3.0_xd0.0_v1.0_dim1_prec0.01alph1.0bet0.1.csv",
+    "c8_inter2.0_common6.0_xd0.0_v1.0_dim1_prec0.01alph1.0bet0.1.csv"
 )) %>%
     # map read these csvs into nested dataframe
     mutate(
@@ -41,7 +44,7 @@ temp <- df %>%
         mseMix = sqrt(mean((common - meanBeta1)^2, na.rm = T)),
         mseK = sqrt(mean((common - meanBetakclust1)^2, na.rm = T)),
         mseSLR = sqrt(mean((common - meanBetaSLR)^2, na.rm = T)),
-        .by = c(common)
+        .by = c(common, variance)
     ) %>%
     drop_na(common)
 
@@ -50,25 +53,25 @@ df %>%
     pivot_longer(c(
         meanBeta1, meanBetakclust1, meanBetaSLR
     )) %>%
-    select(name, value, common) %>%
+    select(name, value, common, variance) %>%
     drop_na() %>%
     ggplot(aes(x = value)) +
     geom_density() +
-    facet_grid(rows = vars(name), cols = vars(common), scales = "free")
+    facet_grid(rows = vars(name), cols = vars(common, variance), scales = "free")
 
 # bias
 temp %>%
-    select(common, starts_with("bias"))
+    select(common, variance, starts_with("bias"))
 
 
 # MSE
 temp %>%
-    select(common, starts_with("mse"))
+    select(common, variance, starts_with("mse"))
 
 # T2
 temp %>%
-    select(common, contains("T2"))
+    select(common, variance, contains("T2"))
 
 # Cov
 temp %>%
-    select(common, contains("Cov"))
+    select(common, variance, contains("Cov"))

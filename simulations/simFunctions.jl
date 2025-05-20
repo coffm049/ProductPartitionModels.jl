@@ -203,8 +203,8 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
     # Kolmogorov-Smirnov pvalue for marginal distribution of Y
     # ks= pvalue(ApproximateTwoSampleKSTest(mean(Ypred1, dims= 1)[1,:], mean(Ypred2, dims= 1)[1,:]))
-    sim = sim[mixEq:5:end]
-    sim2 = sim2[dpmEq:5:end]
+    sim = sim[mixEq:thin:end]
+    sim2 = sim2[dpmEq:thin:end]
 
     commonBeta0 = [s[:prior_mean_beta][1] for s in sim] .* Ystd
     meanBeta0 = mean(commonBeta0)
@@ -215,8 +215,8 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     dpmCI = quantile(commonBeta1, [0.025, 0.975])
 
     # check if 3.0 is in dpmCI
-    zeroInDPM = (sum((0.0 .< dpmCI)) == 1) & (sum(0.0 .> dpmCI) == 1)
-    commonInDPM = (sum((common .< dpmCI)) == 1) & (sum(common .> dpmCI) == 1)
+    zeroInDPM = (0.0 .>= dpmCI[1]) & (0.0 <= dpmCI[2])
+    commonInDPM = (common .>= dpmCI[1]) & (common <= dpmCI[2])
 
 
     # is each obs in the 0.05 0.95 quantiles of the posterior predictive?
@@ -230,8 +230,8 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     meanBetaSLR = coef(slr)[2]
     betaCI = confint(slr)[2, :]
     # test if 0 is between the two values in betaCI
-    zeroInSLR = (sum((0.0 .< betaCI)) == 1) & (sum(0.0 .> betaCI) == 1)
-    commonInSLR = (sum((common .< betaCI)) == 1) & (sum(common .> betaCI) == 1)
+    zeroInSLR = (0.0 .>= betaCI[1]) & (0.0 <= betaCI[2])
+    commonInSLR = (common .>= betaCI[1]) & (common <= betaCI[2])
     slrRMSE = sqrt(mean(residuals(slr) .^ 2))
 
 
@@ -253,8 +253,8 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
     # seef if 95% CI for X1 coefficient in clustlm includes 0
     kclustCI = confint(clustlm)[2, :]
-    kclustIn0 = (sum((0.0 .< kclustCI)) == 1) & (sum(0.0 .> kclustCI) == 1)
-    kclustInCommon = (sum((common .< kclustCI)) == 1) & (sum(common .> kclustCI) == 1)
+    zeroInk = (0.0 .>= kclustCI[1]) & (0.0 <= kclustCI[2])
+    commonInk = (common .>= kclustCI[1]) & (common <= kclustCI[2])
 
     ncMix = mode([maximum(s[:C]) for s in sim])
     ncDPM = mode([maximum(s[:C]) for s in sim2])
@@ -301,8 +301,8 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
         kmean_MSE=kmeanMSE,
         kmean_MSEoos=kmeanMSEoos,
         meanBetakclust1=meanBetakclust1,
-        kclustIn0=kclustIn0,
-        kclustInCommon=kclustInCommon,
+        zeroInk=zeroInk,
+        commonInk=commonInk,
 
         # SLR
         meanBetaSLR=coef(slr)[2],
