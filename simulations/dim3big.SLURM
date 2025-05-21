@@ -3,7 +3,7 @@
 #SBATCH --output=logs/common2.out
 #SBATCH --error=logs/common2.err
 #SBATCH --cpus-per-task=2
-#SBATCH --time=12:30:00
+#SBATCH --time=4:30:00
 #SBATCH --mem-per-cpu=8G
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=coffm049@umn.edu
