@@ -237,8 +237,10 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     # Add in Kmeans with full interaction effect model
     # - select best clustering based off X
     # - interaction model
-    kclust = argmin([kmeans(X', i).totalcost for i in 1:10])
-    kmodel = kmeans(X', kclust)
+    # kclust = argmin([kmeans(X', i).totalcost for i in 1:10])
+    #kmodel = kmeans(X', kclust)
+    nclusts = length(fractions)
+    kmodel = kmeans(X', nclusts)
     df.kclust = kmodel.assignments
     dfoos.kclust = assign_clusters(Xoos', kmodel.centers)
 
@@ -257,9 +259,9 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
     ncMix = mode([maximum(s[:C]) for s in sim])
     ncDPM = mode([maximum(s[:C]) for s in sim2])
-    ncK = kclust
+    #ncK = kclust
+    ncK = nclusts
 
-    nclusts = length(fractions)
     Mix_beta1_c1 = [s[:lik_params][1][:beta][2] for s in sim if maximum(s[:C]) == ncMix] .* Ystd
     dpm_beta1_c1 = [s[:lik_params][1][:beta][1] for s in sim2 if maximum(s[:C]) == ncDPM] .* Ystd
 

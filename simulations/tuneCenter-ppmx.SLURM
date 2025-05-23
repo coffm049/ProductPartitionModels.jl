@@ -6,6 +6,7 @@
 #SBATCH --cpus-per-task=2
 #SBATCH --time=02:30:00
 #SBATCH --mem-per-cpu=8G
+#SBATCH --account=saonli
 
 # Define the parameter grid (manually or dynamically)
 PRECS=(0.01 0.1)
@@ -41,4 +42,4 @@ cd ~/software/ProductPartitionModels.jl/simulations
 
 # read arguments from command line
 # N, nc, variance, interEffect, common, xdiff
-julia --project=. --threads=2 tuneCenter-ppmx.jl 120 8 1.0 2.0 3.0 0.0 1 $PREC $ALPHA $BETA
+julia --project=. --threads=2 sim.jl 150 8 0.1 1.0 2.0 0.0 2 $PREC $ALPHA $BETA 25 5000
