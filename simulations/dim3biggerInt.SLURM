@@ -3,14 +3,15 @@
 #SBATCH --output=logs/common2.out
 #SBATCH --error=logs/common2.err
 #SBATCH --cpus-per-task=2
-#SBATCH --time=4:30:00
+#SBATCH --time=2:30:00
 #SBATCH --mem-per-cpu=8G
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=coffm049@umn.edu
+#SBATCH --account=saonli
 
 PREC=0.01
-ALPHA=1.0
-BETA=0.1
+ALPHA=2.0
+BETA=1.0
 
 echo "Task: NC=8, INTER=2, PREC=$PREC, ALPHA=$ALPHA, BETA=$BETA"
 
@@ -29,4 +30,4 @@ cd ~/software/ProductPartitionModels.jl/simulations
 # bet = parse(Float64, ARGS[10])
 # reps = parse(Int, ARGS[11])
 # niters = parse(Int, ARGS[12])
-julia --project=. --threads=2 sim.jl 150 8 0.1 2.0 1.0 0.0 3 $PREC $ALPHA $BETA 100 5000
+julia --project=. --threads=2 sim.jl 150 8 0.1 2.0 1.0 0.0 3 $PREC $ALPHA $BETA 50 5000
