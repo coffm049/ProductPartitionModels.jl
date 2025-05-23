@@ -23,7 +23,8 @@ library(kableExtra)
 
 df <- data.frame("file" = c(
     "c8_inter1.0_common1.0_xd0.0_v0.1_dim3_prec0.01alph1.0bet0.1.csv",
-    "c8_inter2.0_common1.0_xd0.0_v0.1_dim3_prec0.01alph1.0bet0.1.csv"
+    "c8_inter2.0_common1.0_xd0.0_v0.1_dim3_prec0.01alph1.0bet0.1.csv",
+    "c8_inter4.0_common10.0_xd0.0_v0.1_dim3_prec0.01alph1.0bet0.1.csv"
 )) %>%
     # map read these csvs into nested dataframe
     mutate(data = map(file, read_csv, )) %>%
@@ -70,7 +71,7 @@ df %>%
     ggplot(aes(x = value, fill = name)) +
     geom_density(alpha = 0.2) +
     facet_grid(
-        cols = vars(interEffect), scales = "free",
+        rows = vars(common), cols = vars(interEffect), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
     )
 ```
@@ -109,17 +110,64 @@ temp %>%
 ```
 
 
-<!--# common
+# clustering
+```{r}
 df %>%
     pivot_longer(c(
-        adjrind_Mix, adjrind_K, adjrind_DPM
+        rind_Mix, rind_K, rind_DPM
     )) %>%
     select(name, value, common, interEffect) %>%
     drop_na() %>%
     ggplot(aes(x = value, fill = name)) +
     geom_density(alpha = 0.2) +
     facet_grid(
-        cols = vars(interEffect), scales = "free",
+        rows = vars(common), cols = vars(interEffect), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
     )
--->
+
+df %>% 
+    reframe(
+        across(c(rind_Mix, rind_K, rind_DPM), function(x) median(x, na.rm = T)),
+        .by = c(common, interEffect)
+    )
+df %>% 
+    reframe(
+        across(c(ncMix, ncDPM, ncK), function(x) median(x, na.rm = T)),
+        .by = c(common, interEffect)
+    )
+
+```
+
+# Prediction
+```{r}
+df %>%
+    pivot_longer(c(
+        midMix, kmean_MSE, midDPM, slrRMSE
+    )) %>%
+    select(name, value, common, interEffect) %>%
+    drop_na() %>%
+    ggplot(aes(x = value, fill = name)) +
+    geom_density(alpha = 0.2) +
+    facet_grid(
+        rows = vars(common), cols = vars(interEffect), scales = "free",
+        labeller = labeller(.rows = label_both, .cols = label_both)
+    )
+
+
+df %>%
+    pivot_longer(c(
+        bayesPmix, bayesPDPM, bayesPmixoos, bayesPDPMoos
+    )) %>%
+    select(name, value, common, interEffect) %>%
+    drop_na() %>%
+    ggplot(aes(x = value, fill = name)) +
+    geom_density(alpha = 0.2) +
+    facet_grid(
+        rows = vars(common), cols = vars(interEffect), scales = "free",
+        labeller = labeller(.rows = label_both, .cols = label_both)
+    )
+
+```
+
+
+
