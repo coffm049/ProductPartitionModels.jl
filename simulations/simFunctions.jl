@@ -47,7 +47,7 @@ function findEquilibrated(; rmse::Vector{Float64}, rind::Vector{Float64}, tol::F
 end
 
 
-function simData(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25, 0.25, 0.25, 0.25], variance::Real=1.0, interEffect::Real=1.0, common::Float64=1.0, plotSim::Bool=false, xdiff::Real=1.0, dims::Int=2)
+function simData(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25, 0.25, 0.25, 0.25], variance::Real=1.0, interEffect::Real=1.0, common::Float64=1.0, plotSim::Bool=false, xdiff::Real=0.0, dims::Int=2)
 
     nclusts = length(fractions) # Create a DataFrame with two normally distributed columns, X1 and X2
 
@@ -103,7 +103,7 @@ end
 #df = simData(rng; n=n, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotSim = true, xdiff=xdiff)
 
 
-function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25, 0.25, 0.25, 0.25], variance::Real=1.0, interEffect::Float64=1.0, common::Float64=1.0, plotFit::Bool=false, niters::Int=1000, prec::Real=0.1, alph::Real=1.0, bet::Real=1.0, plotSim::Bool=false, xdiff::Real=1.0, dims::Int=2)
+function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25, 0.25, 0.25, 0.25], variance::Real=1.0, interEffect::Float64=1.0, common::Float64=1.0, plotFit::Bool=false, niters::Int=1000, prec::Real=0.1, alph::Real=1.0, bet::Real=1.0, plotSim::Bool=false, xdiff::Real=0.0, dims::Int=2)
 
     # common = interEffect : promising
     # common < interEffect : 
