@@ -68,26 +68,34 @@ df %>%
     )) %>%
     select(name, value, common, interEffect) %>%
     drop_na() %>%
+    mutate(
+        name = case_when(
+            name == "meanBeta1" ~ "ppmx-common",
+            name == "meanBetakclust1" ~ "kmean",
+            name == "meanBetaSLR" ~ "SLR"
+        )
+    ) %>%
     ggplot(aes(x = value, fill = name)) +
     geom_density(alpha = 0.2) +
     facet_grid(
         rows = vars(interEffect), cols = vars(common), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
-    ) 
+    ) +
+    ggtitle("Common Effect")
 ```
 
-## MSE
+## RMSE of Common effect
 ```{r}
 temp %>%
-    select(common, interEffect, starts_with("mse")) %>%
+    select(Common = common, interEffect, `ppmx-common` = mseMix, kmean = mseK, Regression = mseSLR) %>%
     kable() %>%
     kable_paper()
 ```
 
-## bias
+## bias of common effect
 ```{r}
 temp %>%
-    select(common, interEffect, starts_with("bias")) %>%
+    select(Common = common, interEffect, `ppmx-common` = biasMix, kmean = biasK, Regression = biasSLR) %>%
     kable() %>%
     kable_paper()
 ```
@@ -96,7 +104,7 @@ temp %>%
 ## T2 error
 ```{r}
 temp %>%
-    select(common, interEffect, contains("T2")) %>%
+    select(Common = common, interEffect, `ppmx-common` = mixT2, kmean = kT2, Regression = slrT2) %>%
     kable() %>%
     kable_paper()
 ```
@@ -104,7 +112,7 @@ temp %>%
 ## Cov
 ```{r}
 temp %>%
-    select(common, interEffect, contains("Cov")) %>%
+    select(Common = common, interEffect, `ppmx-common` = mixCov, kmean = kCov, Regression = slrCov) %>%
     kable() %>%
     kable_paper()
 ```
@@ -129,12 +137,17 @@ df %>%
     reframe(
         across(c(rind_Mix, rind_K, rind_DPM), function(x) median(x, na.rm = T)),
         .by = c(common, interEffect)
-    )
+    ) %>%
+    kable() %>%
+    kable_paper()
 df %>% 
     reframe(
         across(c(ncMix, ncDPM, ncK), function(x) median(x, na.rm = T)),
         .by = c(common, interEffect)
-    )
+    ) %>%
+    select(Common = common, interEffect, `ppmx-common` = ncMix, kmean = ncK, ppmx = ncDPM) %>%
+    kable() %>%
+    kable_paper()
 
 ```
 
@@ -145,27 +158,45 @@ df %>%
         midMix, kmean_MSE, midDPM, slrRMSE
     )) %>%
     select(name, value, common, interEffect) %>%
+    mutate(
+        name = case_when(
+            name == "midMix" ~ "ppmx-common",
+            name == "kmean_MSE" ~ "kmean",
+            name == "midDPM" ~ "ppmx",
+            name == "slrRMSE" ~ "SLR"
+        )
+    ) %>%
     drop_na() %>%
     ggplot(aes(x = value, fill = name)) +
     geom_density(alpha = 0.2) +
     facet_grid(
         rows = vars(interEffect), cols = vars(common), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
-    )
+    ) +
+    ggtitle("RMSE")
 
 
 df %>%
     pivot_longer(c(
-        bayesPmix, bayesPDPM, bayesPmixoos, bayesPDPMoos
+        bayesPmix, bayesPDPM, #bayesPmixoos, bayesPDPMoos
     )) %>%
     select(name, value, common, interEffect) %>%
     drop_na() %>%
+    mutate(
+        name = case_when(
+            name == "bayesPmix" ~ "ppmx-common",
+            name == "bayesPDPM" ~ "ppmx",
+            name == "bayesPmixoos" ~ "SLR",
+            name == "meanBetaSLR" ~ "SLR"
+        )
+    ) %>%
     ggplot(aes(x = value, fill = name)) +
     geom_density(alpha = 0.2) +
     facet_grid(
         rows = vars(interEffect), cols = vars(common), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
-    )
+    ) +
+    ggtitle("Bayes pvalue")
 
 ```
 
