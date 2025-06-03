@@ -151,6 +151,8 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     adjrindMixvecoos = map(x -> Clustering.randindex(dfoos.group, x)[1], eachrow(Cpred1oos))
     adjrindDPMvecoos = map(x -> Clustering.randindex(dfoos.group, x)[1], eachrow(Cpred2oos))
 
+    # cluster direction
+
 
     # transform back
     Ypred1 = Ypred1 .* Ystd .+ Ymean

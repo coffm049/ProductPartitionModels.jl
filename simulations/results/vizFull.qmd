@@ -1,0 +1,189 @@
+---
+title: "Comparisons simulated interaction effect size for 3D sim"
+date: today
+format:
+  html:
+    embed-resources: false
+    code-fold: true
+    toc: true
+    toc-location: left
+execute: 
+  cache: false
+  warning: false
+  error: false
+---
+
+
+
+
+```{r}
+library(tidyverse)
+library(patchwork)
+library(kableExtra)
+library(ggsci)
+library(gt)
+theme_set(theme_bw())
+theme_update(
+    scale_fill = scale_fill_npg(),
+    scale_color = scale_color_npg(),
+)
+
+df <- data.frame("file" = dir()) %>%
+    mutate(Imbalanced = grepl("^Imbal_", file)) %>%
+    filter(grepl(".csv$", file)) %>%
+    # map read these csvs into nested dataframe
+    mutate(data = map(file, read_csv))  %>%
+    # unnest them
+    unnest(data) %>%
+    select(
+        `ppmx-common_rind` = rind_Mix,
+        ppmx_rind = rind_DPM,
+        kmean_rind = rind_K,
+        `ppmx-common_arind` = adjrind_Mix,
+        ppmx_arind = adjrind_DPM,
+        kmean_arind = adjrind_K,
+
+        `ppmx-common_rmse` = midMix,
+        ppmx_rmse = midDPM,
+        kmean_rmse = kmean_MSE,
+        slr_rmse = slrRMSE,
+        
+        `ppmx-common_common` = meanBeta1,
+        kmean_common = meanBetakclust1,
+        slr_common = meanBetaSLR,
+
+        `ppmx-common_T2` = zeroInDPM,
+        kmean_T2 = zeroInk,
+        slr_T2 = zeroInSLR,
+        `ppmx-common_Cov` = commonInDPM,
+        kmean_Cov = commonInk,
+        slr_Cov = commonInSLR,
+
+        `ppmx-common_NC` = ncMix,
+        `ppmx_NC` = ncDPM,
+        kmean_NC = ncK,
+        
+        `ppmx-common_bayesP` = bayesPmix,
+        `ppmx_bayesP` = bayesPDPM,
+
+        Common = common, Precision = prec, Alpha = alph,
+        Beta = bet, InterEffect = interEffect, Imbalanced
+    )
+# group by file
+
+    
+
+
+
+temp <- df %>%
+    reframe(
+        # type 2 error
+        across(ends_with("T2"), function(x) mean(x, na.rm = T)),
+        # coverage
+        across(ends_with("_Cov"), function(x) mean(x, na.rm = T)),
+        # bias
+        across(ends_with("_common"), function(x) mean(Common - x, na.rm = T), .names= "{.col}-bias"),
+        # MSE
+        across(ends_with("_common"), function(x) sqrt(mean((Common - x)^2, na.rm = T)), .names= "{.col}-RMSE"),
+        .by = c(Common, InterEffect, Alpha, Beta, Precision, Imbalanced)
+    ) %>%
+    pivot_longer(
+        -c(Common, Alpha, Beta, Precision, InterEffect, Imbalanced),
+         names_to = c(".value", "Metric"),
+         names_pattern = "(.*)_(.*)",
+        )
+longDF <- df %>%
+    pivot_longer(
+        -c(Common, Alpha, Beta, Precision, InterEffect, Imbalanced),
+         names_to = c(".value", "Metric"),
+         names_pattern = "(.*)\\_(.*)",
+        ) %>%
+    pivot_longer(c(`ppmx-common`, ppmx, kmean, slr), names_to = "Model", values_to = "Statistic")
+```
+
+
+# Common Effect
+```{r}
+longDF %>%
+    filter(Metric == "common", Imbalanced == TRUE) %>%
+    ggplot(aes(x = Statistic, fill = Model)) +
+    geom_density(alpha = 0.2) +
+    facet_grid(
+        rows = vars(InterEffect), cols = vars(Common), scales = "free",
+        labeller = labeller(.rows = label_both, .cols = label_both)
+    ) +
+    ggtitle("Common effects sampling distribution (alpha=2, beta=1,prec=0.01), Imbalanced") +
+    xlab("Common Estimate")
+longDF %>%
+    filter(Metric == "common", Imbalanced == FALSE, Alpha >=2.0) %>%
+    ggplot(aes(x = Statistic, fill = Model)) +
+    geom_density(alpha = 0.2) +
+    facet_grid(
+        rows = vars(Alpha, Beta), cols = vars(Common, InterEffect), scales = "free",
+        labeller = labeller(.rows = label_both, .cols = label_both)
+    ) +
+    ggtitle("Common effects sampling distribution (alpha=2, beta=1,prec=0.01), Imbalanced") +
+    xlab("Common Estimate")
+```
+
+## Model comparison table 
+```{r}
+temp %>%
+    pivot_wider(names_from = Metric, values_from = c(`ppmx-common`, kmean, slr)) |>
+    gt() |>
+    fmt_number(
+      n_sigfig = 2,
+      use_seps = FALSE
+    ) |>
+    fmt_number(
+      columns = c(Alpha, Beta, Common, InterEffect, Precision),
+      n_sigfig = 1,
+      use_seps = FALSE
+    ) |>
+    tab_spanner(
+        label = "Simulation",
+        columns = c(Common, InterEffect, Imbalanced)
+    ) |>
+    tab_spanner(
+        label = "Priors",
+        columns = c(Alpha, Beta, Precision)
+    ) |>
+    tab_spanner(
+        label = "T2 Error",
+        columns = c(`ppmx-common_T2`, kmean_T2, slr_T2)
+    ) |>
+    tab_spanner(
+        label = "Beta RMSE",
+        columns = c(`ppmx-common_common-RMSE`, `kmean_common-RMSE`, `slr_common-RMSE`)
+    ) |>
+    tab_spanner(
+        label = "Beta Bias",
+        columns = c(`ppmx-common_common-bias`, `kmean_common-bias`, `slr_common-bias`)
+    ) |>
+    tab_spanner(
+        label = "Coverage",
+        columns = c(`ppmx-common_Cov`, kmean_Cov, slr_Cov)
+    ) |>
+    cols_label(
+        `ppmx-common_Cov` = "ppmx-common",
+        `ppmx-common_common-bias` = "ppmx-common",
+        `ppmx-common_common-RMSE` = "ppmx-common",
+        `ppmx-common_T2` = "ppmx-common",
+
+        kmean_T2 = "kmean",
+        kmean_Cov = "kmean",
+        `kmean_common-RMSE` = "kmean",
+        `kmean_common-bias` = "kmean",
+        
+        slr_T2 = "SLR",
+        slr_Cov = "SLR",
+        `slr_common-RMSE` = "SLR",
+        `slr_common-bias` = "SLR",
+        Alpha = "α",
+        Beta = "β",
+        Precision = "κ",
+        Common = "μ",
+        InterEffect = "σ",
+    )
+
+```
