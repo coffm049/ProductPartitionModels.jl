@@ -31,6 +31,7 @@ theme_update(
 df <- data.frame("file" = dir()) %>%
     mutate(Imbalanced = grepl("^Imbal_", file)) %>%
     filter(grepl(".csv$", file)) %>%
+    filter(grepl("xd1.0", file)) %>%
     # map read these csvs into nested dataframe
     mutate(data = map(file, read_csv))  %>%
     # unnest them
@@ -107,7 +108,7 @@ longDF <- df %>%
 longDF %>%
     filter(Metric == "common", Imbalanced == TRUE) %>%
     ggplot(aes(x = Statistic, fill = Model)) +
-    geom_density(alpha = 0.2) +
+    geom_density(alpha = 0.3) +
     facet_grid(
         rows = vars(InterEffect), cols = vars(Common), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
@@ -186,4 +187,13 @@ temp %>%
         InterEffect = "σ",
     )
 
+```
+
+
+```{r}
+longDF %>%
+    filter(Metric == "rind") %>%
+    ggplot(aes(x = Statistic, fill = Model)) +
+    geom_density(alpha = 0.3) +
+    facet_grid(rows = vars(InterEffect), cols = vars(Common), scales = "free")
 ```

@@ -75,7 +75,7 @@ function simData(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25,
     groupEffect = [quantile(Normal(common, interEffect), i / (nclusts + 1)) for i in 1:nclusts]
     df.groupEffect = map(x -> groupEffect[x], df.group)
 
-    df.mean .= (dims .* df.groupEffect) .+ sum(Matrix(df.groupEffect .* df[:, r"^X"]); dims=2)
+    df.mean .= (3 * dims .* df.groupEffect) .+ sum(Matrix(df.groupEffect .* df[:, r"^X"]); dims=2)
     #df.mean = df.groupEffect .+ df.X1 .* df.X2
 
     # Generate the Y column as the sum of globalMean, groupDeviations, and noise
@@ -100,14 +100,12 @@ function simData(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25,
     return df
 end
 
-#df = simData(rng; n=n, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotSim = true, xdiff=xdiff)
 
+# common = interEffect : promising
+# common < interEffect : 
+# common > interEffect : somewhat promising
 
 function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25, 0.25, 0.25, 0.25], variance::Real=1.0, interEffect::Float64=1.0, common::Float64=1.0, plotFit::Bool=false, niters::Int=1000, prec::Real=0.1, alph::Real=1.0, bet::Real=1.0, plotSim::Bool=false, xdiff::Real=0.0, dims::Int=2)
-
-    # common = interEffect : promising
-    # common < interEffect : 
-    # common > interEffect : somewhat promising
 
     # Simulate data
     df = simData(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotSim=plotSim, xdiff=xdiff, dims=dims)
@@ -338,7 +336,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
         # setup
         N=N, fractions=string(fractions), variance=variance,
-        interEffect=interEffect, common=common, prec=prec, alph=alph, bet=bet, xdiff = xdiff
+        interEffect=interEffect, common=common, prec=prec, alph=alph, bet=bet, xdiff=xdiff
     )
 
     if plotFit
