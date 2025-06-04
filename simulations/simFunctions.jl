@@ -151,9 +151,6 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     adjrindMixvecoos = map(x -> Clustering.randindex(dfoos.group, x)[1], eachrow(Cpred1oos))
     adjrindDPMvecoos = map(x -> Clustering.randindex(dfoos.group, x)[1], eachrow(Cpred2oos))
 
-    # cluster direction
-
-
     # transform back
     Ypred1 = Ypred1 .* Ystd .+ Ymean
     Ypred2 = Ypred2 .* Ystd .+ Ymean
@@ -232,7 +229,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     bayesPDPMoos = median(mean(Ystandoos .<= Ypred2oos', dims=2))
 
     # Simple linear regresion
-    slr = lm(@formula(Y ~ X1), df)
+    slr = lm(@formula(Y ~ X1 + X2), df)
     meanBetaSLR = coef(slr)[2]
     meanBetaSLR2 = coef(slr)[3]
     betaCI = confint(slr)[2, :]
@@ -258,7 +255,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     rindKclust = Clustering.randindex(df.kclust, df.group)
     rindKclustoos = Clustering.randindex(dfoos.kclust, dfoos.group)
     # linear model with Y vs X1, X2
-    clustlm = lm(@formula(Y ~ (X1) * kclust), df)
+    clustlm = lm(@formula(Y ~ (X1 + X2) * kclust), df)
     kmeanMSE = sqrt(mean(residuals(clustlm) .^ 2))
     kmeanMSEoos = sqrt(mean((predict(clustlm, dfoos) - dfoos.Y) .^ 2))
     meanBetakclust1 = coef(clustlm)[2]
