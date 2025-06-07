@@ -120,10 +120,10 @@ longDF %>%
     ggplot(aes(x = Statistic, fill = Model)) +
     geom_density(alpha = 0.2) +
     facet_grid(
-        rows = vars(Alpha, Beta), cols = vars(Common, InterEffect), scales = "free",
+        rows = vars(InterEffect), cols = vars(Common), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
-    ggtitle("Common effects sampling distribution (alpha=2, beta=1,prec=0.01), Imbalanced") +
+    ggtitle("Common effects sampling distribution (alpha=2, beta=1,prec=0.01), Balanced") +
     xlab("Common Estimate")
 ```
 

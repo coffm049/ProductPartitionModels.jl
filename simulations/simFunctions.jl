@@ -70,6 +70,9 @@ function simData(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25,
 
     # add xdiff * group to all columns starting with "X"
     df[:, r"^X"] .= df[:, r"^X"] .+ (df.group .* xdiff)
+    xmean = mean(Matrix(df[:, r"^X"]), dims=1)
+    xstd = std(Matrix(df[:, r"^X"]), dims=1)
+    df[:, r"^X"] = (df[:, r"^X"] .- xmean) ./ xstd
 
     # group effect
     groupEffect = [quantile(Normal(common, interEffect), i / (nclusts + 1)) for i in 1:nclusts]
@@ -82,7 +85,7 @@ function simData(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25,
     df.Y = df.mean .+ rand(rng, Normal(0, variance), N)
     df.inter .= 1
 
-    if plotSim & dims == 2
+    if plotSim & (dims == 2)
         # X marginal
         px1 = @df df density(:X1, group=:group, fillopacity=1 / 2, title="X1 marginal")
         px2 = @df df density(:X2, group=:group, fillopacity=1 / 2, title="X1 marginal")
