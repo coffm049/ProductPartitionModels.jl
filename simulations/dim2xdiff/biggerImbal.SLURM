@@ -3,7 +3,7 @@
 #SBATCH --output=../logs/biggerImbal.out
 #SBATCH --error=../logs/biggerImbal.err
 #SBATCH --cpus-per-task=2
-#SBATCH --time=2:00:00
+#SBATCH --time=3:00:00
 #SBATCH --mem-per-cpu=8G
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=coffm049@umn.edu
