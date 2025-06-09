@@ -231,6 +231,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
     # Simple linear regresion
     slr = lm(@formula(Y ~ X1 + X2), df)
+    #slr = lm(@formula(Y ~ (X1 + X2) * group), df)
     meanBetaSLR = coef(slr)[2]
     meanBetaSLR2 = coef(slr)[3]
     betaCI = confint(slr)[2, :]
@@ -290,6 +291,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
         bayesPmix=bayesPmix,
         bayesPmixoos=bayesPmixoos,
         meanBeta1=meanBeta1,
+        meanBeta2=meanBeta2,
         Mix_beta1_c1=median(Mix_beta1_c1),
         mixEq=mixEq,
         zeroInDPM=zeroInDPM,

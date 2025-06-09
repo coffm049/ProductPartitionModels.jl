@@ -36,6 +36,7 @@ df <- data.frame("file" = dir()) %>%
     mutate(data = map(file, read_csv))  %>%
     # unnest them
     unnest(data) %>%
+    filter(common == 1.0, interEffect == 0.5, xdiff == 1.0) %>%
     select(
         `ppmx-common_rind` = rind_Mix,
         ppmx_rind = rind_DPM,
@@ -68,7 +69,8 @@ df <- data.frame("file" = dir()) %>%
         `ppmx_bayesP` = bayesPDPM,
 
         Common = common, Precision = prec, Alpha = alph,
-        Beta = bet, InterEffect = interEffect, Imbalanced
+        Beta = bet, InterEffect = interEffect, Imbalanced,
+        xdiff
     )
 # group by file
 
