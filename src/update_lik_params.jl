@@ -76,16 +76,16 @@ function update_lik_params!(model::Model_PPMx,
         # [x] Update this as the average of betas (N-Jeffries)
         # concatenate all of the betas across lik_params[j] into a matrix
         # only clusters with sufficient observations
-        Betas = [model.state.lik_params[k].beta for k in 1:K if clustCounts[k] > 8]
+        Betas = [model.state.lik_params[k].beta for k in 1:K if clustCounts[k] > 3]
         # convert the vector of vectos to a matrix (p x K)
         Betas = hcat(Betas...)'
         p = size(Betas)[2]
 
-        if model.prior.base == nothing
+        if isnothing(model.prior.base)
             mu0 = repeat([0.0], p)
-            kappa0 = repeat([0.1], p)
-            alpha0 = repeat([10.0], p)
-            beta0 = repeat([1e-1], p)
+            kappa0 = repeat([0.01], p)
+            alpha0 = repeat([2.0], p)
+            beta0 = repeat([1.0], p)
         else
             mu0 = repeat([model.prior.base.center], p)
             kappa0 = repeat([model.prior.base.precision], p)  # Prior precision # [ ] Try out precision of 1.0, and 1e-2
@@ -94,7 +94,8 @@ function update_lik_params!(model::Model_PPMx,
         end
 
         # Run the sampler
-        mu_sample, sigma2_sample = independent_sampler(Betas, mu0, kappa0, alpha0, beta0, 1)
+        # mu_sample, sigma2_sample = independent_sampler(Betas, mu0, kappa0, alpha0, beta0, 1)
+        mu_sample, sigma2_sample = NN_shrinkage(Betas, 0.0, 1e-8, kappa0, alpha0, beta0, 100)
         model.state.prior_mean_beta = mu_sample[:, 1]
         prior_mean_beta = model.state.prior_mean_beta
         prior_var_beta = sigma2_sample[:, 1]

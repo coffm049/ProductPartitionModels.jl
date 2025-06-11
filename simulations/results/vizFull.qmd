@@ -3,7 +3,7 @@ title: "Comparisons simulated interaction effect size for 3D sim"
 date: today
 format:
   html:
-    embed-resources: false
+    embed-resources: true
     code-fold: true
     toc: true
     toc-location: left
@@ -36,7 +36,6 @@ df <- data.frame("file" = dir()) %>%
     mutate(data = map(file, read_csv))  %>%
     # unnest them
     unnest(data) %>%
-    filter(common == 1.0, interEffect == 0.5, xdiff == 1.0) %>%
     select(
         `ppmx-common_rind` = rind_Mix,
         ppmx_rind = rind_DPM,
@@ -70,7 +69,7 @@ df <- data.frame("file" = dir()) %>%
 
         Common = common, Precision = prec, Alpha = alph,
         Beta = bet, InterEffect = interEffect, Imbalanced,
-        xdiff
+        xdiff, variance
     )
 # group by file
 
@@ -88,20 +87,21 @@ temp <- df %>%
         across(ends_with("_common"), function(x) mean(Common - x, na.rm = T), .names= "{.col}-bias"),
         # MSE
         across(ends_with("_common"), function(x) sqrt(mean((Common - x)^2, na.rm = T)), .names= "{.col}-RMSE"),
-        .by = c(Common, InterEffect, Alpha, Beta, Precision, Imbalanced)
+        .by = c(Common, InterEffect, Alpha, Beta, Precision, Imbalanced, variance)
     ) %>%
     pivot_longer(
-        -c(Common, Alpha, Beta, Precision, InterEffect, Imbalanced),
+        -c(Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance),
          names_to = c(".value", "Metric"),
          names_pattern = "(.*)_(.*)",
         )
 longDF <- df %>%
     pivot_longer(
-        -c(Common, Alpha, Beta, Precision, InterEffect, Imbalanced),
+        -c(Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance),
          names_to = c(".value", "Metric"),
          names_pattern = "(.*)\\_(.*)",
         ) %>%
-    pivot_longer(c(`ppmx-common`, ppmx, kmean, slr), names_to = "Model", values_to = "Statistic")
+    pivot_longer(c(`ppmx-common`, ppmx, kmean, slr), names_to = "Model", values_to = "Statistic") %>%
+    filter(Metric != "rind" | Statistic >=0.4)
 ```
 
 
@@ -111,18 +111,20 @@ longDF %>%
     filter(Metric == "common", Imbalanced == TRUE) %>%
     ggplot(aes(x = Statistic, fill = Model)) +
     geom_density(alpha = 0.3) +
+    geom_vline(xintercept = 1.0) +
     facet_grid(
-        rows = vars(InterEffect), cols = vars(Common), scales = "free",
+        rows = vars(InterEffect), cols = vars(Common, variance), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
     ggtitle("Common effects sampling distribution (alpha=2, beta=1,prec=0.01), Imbalanced") +
     xlab("Common Estimate")
 longDF %>%
-    filter(Metric == "common", Imbalanced == FALSE, Alpha >=2.0) %>%
+    filter(Metric == "common", Imbalanced == FALSE) %>%
     ggplot(aes(x = Statistic, fill = Model)) +
     geom_density(alpha = 0.2) +
+    geom_vline(xintercept = 1.0) +
     facet_grid(
-        rows = vars(InterEffect), cols = vars(Common), scales = "free",
+        rows = vars(InterEffect), cols = vars(Common, variance), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
     ggtitle("Common effects sampling distribution (alpha=2, beta=1,prec=0.01), Balanced") +
@@ -139,13 +141,13 @@ temp %>%
       use_seps = FALSE
     ) |>
     fmt_number(
-      columns = c(Alpha, Beta, Common, InterEffect, Precision),
+      columns = c(Alpha, Beta, Common, InterEffect, Precision, variance),
       n_sigfig = 1,
       use_seps = FALSE
     ) |>
     tab_spanner(
         label = "Simulation",
-        columns = c(Common, InterEffect, Imbalanced)
+        columns = c(Common, InterEffect, variance, Imbalanced)
     ) |>
     tab_spanner(
         label = "Priors",
@@ -195,7 +197,7 @@ temp %>%
 ```{r}
 longDF %>%
     filter(Metric == "rind") %>%
-    ggplot(aes(x = Statistic, fill = Model)) +
-    geom_density(alpha = 0.3) +
-    facet_grid(rows = vars(InterEffect), cols = vars(Common), scales = "free")
+    ggplot(aes(x = Statistic, fill = Model, y = ..density..)) +
+    geom_histogram(alpha = 0.3, color = "black") +
+    facet_grid(cols = vars(variance), rows = vars(InterEffect), scales = "free")
 ```

@@ -48,7 +48,7 @@ default(fillopacity = 0.5, lineopacity = 1.0)
 N = 150
 nc =5 
 variance = 0.0
-interEffect = 0.5
+interEffect = 0.25
 common = 1.0
 niters=2000
 rng = Random.MersenneTwister(0)

@@ -70,9 +70,9 @@ function simData(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25,
 
     # add xdiff * group to all columns starting with "X"
     df[:, r"^X"] .= df[:, r"^X"] .+ (df.group .* xdiff)
-    xmean = mean(Matrix(df[:, r"^X"]), dims=1)
-    xstd = std(Matrix(df[:, r"^X"]), dims=1)
-    df[:, r"^X"] = (df[:, r"^X"] .- xmean) ./ xstd
+    # xmean = mean(Matrix(df[:, r"^X"]), dims=1)
+    # xstd = std(Matrix(df[:, r"^X"]), dims=1)
+    # df[:, r"^X"] = (df[:, r"^X"] .- xmean) ./ xstd
 
     # group effect
     groupEffect = [quantile(Normal(common, interEffect), i / (nclusts + 1)) for i in 1:nclusts]
@@ -113,16 +113,11 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     # Simulate data
     df = simData(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotSim=plotSim, xdiff=xdiff, dims=dims)
     dfoos = simData(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotSim=false, xdiff=xdiff, dims=dims)
-    # standardize
-    Ymean = mean(df.Y)
-    Ystd = std(df.Y)
-    Ystand = (df.Y .- Ymean) ./ Ystd
-    Ystandoos = (dfoos.Y .- Ymean) ./ Ystd
 
     # Fit 
     X = Matrix(df[:, Cols("inter", r"X")][:, Not(r"eff")])
     Xoos = Matrix(dfoos[:, Cols("inter", r"X")][:, Not(r"eff")])
-    model = Model_PPMx(Ystand, X, df.group, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=true)
+    model = Model_PPMx(df.Y, X, df.group, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=true)
     # set priors for base measure sampling
     model.prior.base = Prior_base(0.0, prec, alph, bet)
 
@@ -130,7 +125,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     sim = mcmc!(model, niters; mixDPM=true)
     X2 = Matrix(df[:, Cols("inter", r"X")][:, Not(r"eff")])
     X2oos = Matrix(dfoos[:, Cols("inter", r"X")][:, Not(r"eff")])
-    model2 = Model_PPMx(Ystand, X2, df.group, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=false)
+    model2 = Model_PPMx(df.Y, X2, df.group, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=false)
     sim2 = mcmc!(model2, niters; mixDPM=false)
     #trimid = Int(niters/2)
     trimid = Int(niters * 3 / 5)
@@ -151,13 +146,6 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     rindDPMvecoos = map(x -> Clustering.randindex(dfoos.group, x)[2], eachrow(Cpred2oos))
     adjrindMixvecoos = map(x -> Clustering.randindex(dfoos.group, x)[1], eachrow(Cpred1oos))
     adjrindDPMvecoos = map(x -> Clustering.randindex(dfoos.group, x)[1], eachrow(Cpred2oos))
-
-    # transform back
-    Ypred1 = Ypred1 .* Ystd .+ Ymean
-    Ypred2 = Ypred2 .* Ystd .+ Ymean
-    Ypred1oos = Ypred1oos .* Ystd .+ Ymean
-    Ypred2oos = Ypred2oos .* Ystd .+ Ymean
-
 
     # predictive
     resid1 = df.Y .- Ypred1'
@@ -205,11 +193,15 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     sim = sim[mixEq:thin:end]
     sim2 = sim2[dpmEq:thin:end]
 
-    commonBeta0 = [s[:prior_mean_beta][1] for s in sim] .* Ystd
+    # empirical mean for comparison
+    output_list = map(step -> mean([c[:beta][2] for c in step[:lik_params]]), sim)
+    plot(output_list)
+
+    commonBeta0 = [s[:prior_mean_beta][1] for s in sim]
     meanBeta0 = mean(commonBeta0)
-    commonBeta1 = [s[:prior_mean_beta][2] for s in sim] .* Ystd
+    commonBeta1 = [s[:prior_mean_beta][2] for s in sim]
     meanBeta1 = mean(commonBeta1)
-    commonBeta2 = [s[:prior_mean_beta][3] for s in sim] .* Ystd
+    commonBeta2 = [s[:prior_mean_beta][3] for s in sim]
     meanBeta2 = mean(commonBeta2)
 
     # find 95% credible interval
@@ -231,9 +223,9 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
     # Simple linear regresion
     slr = lm(@formula(Y ~ X1 + X2), df)
+    df.group .= string.(df.group)
+    dfoos.group .= string.(dfoos.group)
     #slr = lm(@formula(Y ~ (X1 + X2) * group), df)
-    meanBetaSLR = coef(slr)[2]
-    meanBetaSLR2 = coef(slr)[3]
     betaCI = confint(slr)[2, :]
     betaCI2 = confint(slr)[3, :]
     # test if 0 is between the two values in betaCI
@@ -276,8 +268,8 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     #ncK = kclust
     ncK = nclusts
 
-    Mix_beta1_c1 = [s[:lik_params][1][:beta][2] for s in sim if maximum(s[:C]) == ncMix] .* Ystd
-    dpm_beta1_c1 = [s[:lik_params][1][:beta][1] for s in sim2 if maximum(s[:C]) == ncDPM] .* Ystd
+    Mix_beta1_c1 = [s[:lik_params][1][:beta][2] for s in sim if maximum(s[:C]) == ncMix]
+    dpm_beta1_c1 = [s[:lik_params][1][:beta][1] for s in sim2 if maximum(s[:C]) == ncDPM]
 
 
     result = DataFrame(
