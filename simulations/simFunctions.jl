@@ -194,8 +194,8 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     sim2 = sim2[dpmEq:thin:end]
 
     # empirical mean for comparison
-    output_list = map(step -> mean([c[:beta][2] for c in step[:lik_params]]), sim)
-    plot(output_list)
+    # output_list = map(step -> mean([c[:beta][2] for c in step[:lik_params]]), sim)
+    # plot(output_list)
 
     commonBeta0 = [s[:prior_mean_beta][1] for s in sim]
     meanBeta0 = mean(commonBeta0)
