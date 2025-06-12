@@ -217,15 +217,15 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
     # is each obs in the 0.05 0.95 quantiles of the posterior predictive?
     bayesPmix = median(mean(df.Y .<= Ypred1', dims=2))
-    bayesPDPM = median(mean(Ystand .<= Ypred2', dims=2))
+    bayesPDPM = median(mean(df.Y .<= Ypred2', dims=2))
     bayesPmixoos = median(mean(df.Y .<= Ypred1oos', dims=2))
-    bayesPDPMoos = median(mean(Ystandoos .<= Ypred2oos', dims=2))
+    bayesPDPMoos = median(mean(df.Y .<= Ypred2oos', dims=2))
 
     # Simple linear regresion
     slr = lm(@formula(Y ~ X1 + X2), df)
-    df.group .= string.(df.group)
-    dfoos.group .= string.(dfoos.group)
-    #slr = lm(@formula(Y ~ (X1 + X2) * group), df)
+    # df.group .= string.(df.group)
+    # dfoos.group .= string.(dfoos.group)
+    # slr = lm(@formula(Y ~ (X1 + X2) * group), df)
     betaCI = confint(slr)[2, :]
     betaCI2 = confint(slr)[3, :]
     # test if 0 is between the two values in betaCI
