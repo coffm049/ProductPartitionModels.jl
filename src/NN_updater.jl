@@ -115,9 +115,9 @@ function independent_sampler(X, mu0, kappa0, alpha0, beta0, nsamps)
     return mu_samples, sigma2_samples
 end
 
-function NN_shrinkage(X, mu_global, tau2, kappa0, alpha0, beta0, nsamps)
-    n, p = size(X)  # Number of observations and dimensions
-    X_bar = mean(X, dims=1)  # Sample mean for each variable
+function NN_shrinkage(XX, mu_global, tau2, kappa0, alpha0, beta0, nsamps)
+    n, p = size(XX)  # Number of observations and dimensions
+    XX_bar = mean(XX, dims=1)  # Sample mean for each variable
 
     # Storage for samples
     mu_samples = Matrix{Float64}(undef, p, nsamps)
@@ -125,7 +125,7 @@ function NN_shrinkage(X, mu_global, tau2, kappa0, alpha0, beta0, nsamps)
 
     for j in 1:p
         # Extract data for the j-th variable
-        x̄ = mean(X[:, j])
+        x̄ = mean(XX[:, j])
 
         # Shrinkage: New prior mean and precision for μ_j
         # Prior: μ_j ~ Normal(mu_global, τ²), with prior precision = 1/τ²
@@ -135,7 +135,7 @@ function NN_shrinkage(X, mu_global, tau2, kappa0, alpha0, beta0, nsamps)
         mu_n = (mu_global / tau2 + (x̄ * n / kappa0[j])) / (n / kappa0[j] + 1 / tau2)
 
         alpha_n = alpha0[j] + n / 2
-        beta_n = beta0[j] + 0.5 * sum((X[:, j] .- x̄) .^ 2) +
+        beta_n = beta0[j] + 0.5 * sum((XX[:, j] .- x̄) .^ 2) +
                  (kappa0[j] * n * (x̄ - mu_global)^2) / (2 * kappa_n)
 
         for i in 1:nsamps
