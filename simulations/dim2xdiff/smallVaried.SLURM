@@ -1,0 +1,51 @@
+#!/bin/bash
+#SBATCH --job-name=smaller
+#SBATCH --output=../logs/smaller.out
+#SBATCH --error=../logs/smaller.err
+#SBATCH --cpus-per-task=2
+#SBATCH --time=0:20:00
+#SBATCH --mem-per-cpu=4G
+#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --mail-user=coffm049@umn.edu
+#SBATCH --array=0-8
+
+
+
+PRECS=(0.01)
+ALPHAS=(0.1 1.0 2.0)
+BETAS=(0.1 1.0 2.0)
+
+len_PREC=${#PRECS[@]}
+len_ALPHA=${#ALPHAS[@]}
+len_BETA=${#BETAS[@]}
+
+# Total combinations
+total=$((len_PREC * len_ALPHA * len_BETA))
+
+# Compute indices
+id=$SLURM_ARRAY_TASK_ID
+i=$((id / (len_ALPHA * len_BETA)))
+j=$(( (id / len_BETA) % len_ALPHA ))
+k=$(( id % len_PREC ))
+
+# Fetch actual parameters
+PREC=${PRECS[$i]}
+ALPHA=${ALPHAS[$j]}
+BETA=${BETAS[$k]}
+
+cd ~/software/ProductPartitionModels.jl/simulations
+
+# read arguments from command line
+# N = parse(Int, ARGS[1])
+# nc = parse(Int, ARGS[2])
+# variance = parse(Float64, ARGS[3])
+# interEffect = parse(Float64, ARGS[4])
+# common = parse(Float64, ARGS[5])
+# xdiff = parse(Float64, ARGS[6])
+# dims = parse(Int, ARGS[7])
+# prec = parse(Float64, ARGS[8])
+# alph = parse(Float64, ARGS[9])
+# bet = parse(Float64, ARGS[10])
+# reps = parse(Int, ARGS[11])
+# niters = parse(Int, ARGS[12])
+julia --project=. --threads=2 sim.jl 150 8 0.1 0.25 1.0 1.0 2 $PREC $ALPHA $BETA 10 5000
