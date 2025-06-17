@@ -48,6 +48,9 @@ function ellipSlice(x::Vector{T}, mu::Vector{T}, sig2::Vector{T},
     all(sig2 .> 0.0) || throw("Prior variances must be positive.")
 
     nu = randn(L) .* sqrt.(sig2) + mu
+    x_cand = nu
+    lt_cand = logtarget(x_cand, logtarget_args)
+    iter = 1
     # u = rand()
 
     # lt = logtarget(x, logtarget_args)
