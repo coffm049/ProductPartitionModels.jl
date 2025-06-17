@@ -152,6 +152,17 @@ function NN_shrinkage(XX, mu_global, tau2, kappa0, alpha0, beta0, nsamps)
     return mu_samples, sigma2_samples
 end
 
+# clustCounts = sort(countmap(model.state.C))
+# K = maximum(keys(clustCounts))
+# Betas = map(s -> mean([s[:lik_params][k][:beta] for k in unique(s[:C])]), sim)
+# mean(reduce(hcat, Betas), dims = 2)
+# mean(Betas)
+# cBetas = [s[:prior_mean_beta] for s in sim]
+# mean(reduce(hcat, cBetas), dims=2)
+# clustCounts = sort(countmap(model2.state.C))
+# K = maximum(keys(clustCounts))
+# Betas = map(s -> mean([s[:lik_params][k][:beta] for k in unique(s[:C])]), sim2)
+# mean(Betas)
 
 
 # Simulated data
