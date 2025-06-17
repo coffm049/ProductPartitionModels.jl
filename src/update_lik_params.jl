@@ -94,8 +94,9 @@ function update_lik_params!(model::Model_PPMx,
         end
 
         # Run the sampler
-        # mu_sample, sigma2_sample = independent_sampler(Betas, mu0, kappa0, alpha0, beta0, 1)
-        mu_sample, sigma2_sample = NN_shrinkage(Betas, 0.0, 5e-3, kappa0, alpha0, beta0, 100)
+        mu_sample, sigma2_sample = independent_sampler(Betas, mu0, kappa0, alpha0, beta0, 1)
+        # mu_sample .= mu_sample ./ 2
+        # mu_sample, sigma2_sample = NN_shrinkage(Betas, 0.0, 5e-3, kappa0, alpha0, beta0, 100)
         model.state.prior_mean_beta = mu_sample[:, 1]
         prior_mean_beta = model.state.prior_mean_beta
         prior_var_beta = sigma2_sample[:, 1]

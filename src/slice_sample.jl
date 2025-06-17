@@ -48,35 +48,40 @@ function ellipSlice(x::Vector{T}, mu::Vector{T}, sig2::Vector{T},
     all(sig2 .> 0.0) || throw("Prior variances must be positive.")
 
     nu = randn(L) .* sqrt.(sig2) + mu
-    x_cand = nu
-    lt_cand = logtarget(x_cand, logtarget_args)
-    iter = 1
-    # u = rand()
-
-    # lt = logtarget(x, logtarget_args)
-    # lz = lt[:llik] + log(u)
-    # theta = 2π * rand()
-
-    # theta_min = theta - 2π
-    # theta_max = theta
-
-    # x_cand = (x - mu)*cos(theta) + (nu - mu)*sin(theta) + mu
-    # lt_cand = logtarget(x_cand, logtarget_args)
-    # iter = 1
-
-    # while lt_cand[:llik] <= lz && iter <= maxiter
-    #     if theta < 0
-    #         theta_min = theta
-    #     else
-    #         theta_max = theta
-    #     end
-    #     theta = rand()*(theta_max - theta_min) + theta_min
-    #     x_cand = (x - mu)*cos(theta) + (nu - mu)*sin(theta) + mu
-    #     lt_cand = logtarget(x_cand, logtarget_args)
+    # while any(abs.(nu) .> 100)
+    #     nu = randn(L) .* sqrt.(sig2) + mu
     #     iter += 1
     # end
+    # x_cand = nu
+    # lt_cand = logtarget(x_cand, logtarget_args)
+    u = rand()
 
-    # iter <= maxiter || throw("Elliptical slice sampler exceeded max iterations.")
+    lt = logtarget(x, logtarget_args)
+    lz = lt[:llik] + log(u)
+    theta = 2π * rand()
+
+    theta_min = theta - 2π
+    theta_max = theta
+
+    x_cand = (x - mu) * cos(theta) + (nu - mu) * sin(theta) + mu
+    lt_cand = logtarget(x_cand, logtarget_args)
+    iter = 1
+
+    while lt_cand[:llik] <= lz && iter <= maxiter
+        if theta < 0
+            theta_min = theta
+        else
+            theta_max = theta
+        end
+        theta = rand(Uniform(theta_min, theta_max))
+        x_cand = (x - mu) * cos(theta) + (nu - mu) * sin(theta) + mu
+        lt_cand = logtarget(x_cand, logtarget_args)
+        iter += 1
+    end
+
+    # x_cand .= (x_cand .+ mu) ./ 2
+    # x_cand .= x_cand ./ 2
+    iter <= maxiter || throw("Elliptical slice sampler exceeded max iterations.")
 
     return x_cand, lt_cand, iter
 end

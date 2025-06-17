@@ -339,39 +339,22 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     if plotFit
         # 4 
         # clustering 
-        histogram([rmseMix, rmseDPM], label=["PPMx-shared" "PPMx"], fillalpha=0.33, title="RMSE (4 clusters)")
+        histogram([rmseMix, rmseDPM], label=["PPMx-shared" "PPMx"], fillalpha=0.33, title="RMSE")
         vline!([kmeanMSE], label="K-means")
         display(current())
 
         # prediction
-        histogram([rindMixvec, rindDPMvec], label=["PPMx-shared" "PPMx"], fillalpha=0.33, title="Adjusted Rand Index (4 clusters)")
-        vline!([rindKclust], label="K-means")
+        histogram([rindMixvec, rindDPMvec], label=["PPMx-shared" "PPMx"], fillalpha=0.33, title="Rand Index")
+        vline!([rindKclust[2]], label="K-means")
         display(current())
 
         # inference
         # Common
         histogram(commonBeta1, label=L"\beta_1", title="Common Effects estimates", fillalpha=0.33)
-        vline!([common, -common], label="True", color="black")
-        xlims!(-3 * common, 3 * common)
-        display(current())
-
-        # specific
-        plot(
-            histogram(Mix_beta1_c1, label="Cluster 1, " * L"\beta_1"),
-            histogram(Mix_beta1_c2, label="Cluster 2, " * L"\beta_1"),
-            #    histogram(Mix_beta2_c1, label = "Cluster 1, " * L"\beta_2"),
-            #    histogram(Mix_beta2_c2, label = "Cluster 2, " * L"\beta_2"),
-            plot_title="Cluster specific estimates \n Mixture"
-        )
-        display(current())
-        plot(
-            histogram(dpm_beta1_c1, label="Cluster 1, " * L"\beta_1"),
-            histogram(dpm_beta1_c2, label="Cluster 2, " * L"\beta_1"),
-            plot_title="Cluster specific estimates \n PPMx"
-        )
+        vline!([common], label="True", color="black", linewidth=3)
+        vline!([0], label="Zero", color="black", linewidth=3, linestyle=:dot)
         display(current())
     end
 
     return result
 end
-#results = simExperiment(rng, n, fractions, variance, interEffect, common, true, niters, xdiff = xdiff)

@@ -28,6 +28,36 @@ theme_update(
     scale_color = scale_color_npg(),
 )
 
+
+
+"c8_inter0.25_common1.0_xd1.0_v0.1_dim2_prec0.01alph0.1bet0.1.csv"
+"c8_inter0.25_common1.0_xd1.0_v0.1_dim2_prec0.01alph1.0bet0.1.csv"
+"c8_inter0.25_common1.0_xd1.0_v0.1_dim2_prec0.01alph2.0bet0.1.csv"
+"c8_inter0.25_common1.0_xd1.0_v0.1_dim2_prec0.01alph2.0bet1.0.csv"
+"c8_inter1.0_common1.0_xd0.0_v0.1_dim3_prec0.01alph2.0bet1.0.csv"
+"c8_inter1.0_common1.0_xd0.0_v0.1_dim3_prec0.01alph3.0bet0.01.csv"
+"c8_inter1.0_common1.0_xd1.0_v0.01_dim2_prec0.01alph2.0bet1.0.csv"
+"c8_inter1.0_common2.0_xd0.0_v0.1_dim2_prec0.01alph0.1bet0.1.csv"
+"c8_inter1.0_common2.0_xd0.0_v0.1_dim2_prec0.01alph0.1bet1.0.csv"
+"c8_inter1.0_common2.0_xd0.0_v0.1_dim2_prec0.01alph1.0bet0.1.csv"
+"c8_inter1.0_common2.0_xd0.0_v0.1_dim2_prec0.01alph1.0bet1.0.csv"
+"c8_inter1.0_common2.0_xd0.0_v0.1_dim2_prec0.01alph2.0bet0.1.csv"
+"c8_inter1.0_common2.0_xd0.0_v0.1_dim2_prec0.01alph2.0bet1.0.csv"
+"c8_inter1.0_common2.0_xd0.0_v0.1_dim2_prec0.1alph0.1bet0.1.csv"
+"c8_inter1.0_common2.0_xd0.0_v0.1_dim2_prec0.1alph0.1bet1.0.csv"
+"c8_inter1.0_common2.0_xd0.0_v0.1_dim2_prec0.1alph1.0bet0.1.csv"
+"c8_inter1.0_common2.0_xd0.0_v0.1_dim2_prec0.1alph1.0bet1.0.csv"
+"c8_inter1.0_common2.0_xd0.0_v0.1_dim2_prec0.1alph2.0bet0.1.csv"
+"c8_inter1.0_common2.0_xd0.0_v0.1_dim2_prec0.1alph2.0bet1.0.csv"
+"c8_inter1.0_common2.0_xd0.0_v0.1_dim3_prec0.01alph2.0bet1.0.csv"
+"c8_inter1.0_common2.0_xd0.0_v0.1_dim3_prec0.01alph3.0bet0.01.csv"
+"c8_inter2.0_common1.0_xd0.0_v0.1_dim3_prec0.01alph2.0bet1.0.csv"
+"c8_inter2.0_common1.0_xd0.0_v0.1_dim3_prec0.01alph3.0bet0.01.csv"
+
+
+
+
+
 df <- data.frame("file" = dir()) %>%
     mutate(Imbalanced = grepl("^Imbal_", file)) %>%
     filter(grepl(".csv$", file)) %>%

@@ -1,0 +1,83 @@
+---
+title: Sim Experiment
+date: today
+format:
+  html:
+    embed-resources: true
+    code-fold: true
+    toc: true
+    toc-location: left
+engine: julia
+execute: 
+  cache: false
+  warning: false
+  error: false
+julia:
+  exeflags: ["--project"]
+---
+
+Run with multiple threads to speed it up [not done yet]
+
+
+```{julia}
+using StatsBase
+using Statistics
+using Plots
+using Random
+using CSV
+using GLM
+using LinearAlgebra
+using HypothesisTests
+using LaTeXStrings
+using SpecialFunctions
+using SummaryTables 
+using StatsPlots
+using Clustering
+using DataFrames
+using TidierData
+using Revise
+using ProductPartitionModels
+
+include("simFunctions.jl")
+# set plot defaults
+default(fillopacity = 0.5, lineopacity = 1.0)
+```
+
+
+```{julia} 
+N = 150
+nc =8 
+variance = 0.01
+interEffect = 0.25
+common = 1.0
+niters=2000
+rng = Random.MersenneTwister(0)
+reps = 25
+xdiff=1.0
+```
+
+# Simulation experiment
+# 8 clusters
+
+```{julia}
+fractions = repeat([1/nc], nc)
+dims = 2
+```
+
+```{julia}
+#| label: fig-singleSimdist2
+#| fig-cap: "Illustrations of simulated data."
+
+df = simData(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotSim = true, xdiff=xdiff, dims = 2)
+```
+
+
+```{julia}
+#| label: fig-singleSim2
+#| fig-cap: "Illustrations of a single simulation fit."
+
+fractions = repeat([1/nc], nc)
+#results = Vector{DataFrame}(undef, reps)
+results = simExperiment(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotFit=true, niters=niters, prec=0.01, alph=2.0, bet=1.0, plotSim=false, xdiff=xdiff, dims=dims)
+```
+
