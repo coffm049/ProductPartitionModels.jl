@@ -67,18 +67,22 @@ function simData(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25,
             df[firstsub:end, :group] .= g
         end
     end
-
-    # add xdiff * group to all columns starting with "X"
-    df[:, r"^X"] .= df[:, r"^X"] .+ (df.group .* xdiff)
-    # xmean = mean(Matrix(df[:, r"^X"]), dims=1)
-    # xstd = std(Matrix(df[:, r"^X"]), dims=1)
-    # df[:, r"^X"] = (df[:, r"^X"] .- xmean) ./ xstd
-
+    
     # group effect
     groupEffect = [quantile(Normal(common, interEffect), i / (nclusts + 1)) for i in 1:nclusts]
+    xDiffs = [quantile(Normal(0, xdiff), i / (nclusts + 1)) for i in 1:nclusts]
+
+    # add xdiff * group to all columns starting with "X"
+    # df[:, r"^X"] .= df[:, r"^X"] .+ map(x-> xDiffs[x], df.group)
+    df[:, r"^X"] .= df[:, r"^X"] .+ df.group .* xdiff
+    xmean = mean(Matrix(df[:, r"^X"]), dims=1)
+    xstd = std(Matrix(df[:, r"^X"]), dims=1)
+    df[:, r"^X"] = (df[:, r"^X"] .- xmean) ./ xstd
+
     df.groupEffect = map(x -> groupEffect[x], df.group)
 
-    df.mean .= (3 * dims .* df.groupEffect) .+ sum(Matrix(df.groupEffect .* df[:, r"^X"]); dims=2)
+    # df.mean .= (3 * dims .* df.groupEffect) .+ sum(Matrix(df.groupEffect .* df[:, r"^X"]); dims=2)
+    df.mean .= (3* dims .* df.groupEffect) .+ (df.groupEffect .* df[:, "X1"]) .+ (df.groupEffect .* df[:, "X2"])
     #df.mean = df.groupEffect .+ df.X1 .* df.X2
 
     # Generate the Y column as the sum of globalMean, groupDeviations, and noise
@@ -123,9 +127,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
 
     sim = mcmc!(model, niters; mixDPM=true)
-    X2 = Matrix(df[:, Cols("inter", r"X")][:, Not(r"eff")])
-    X2oos = Matrix(dfoos[:, Cols("inter", r"X")][:, Not(r"eff")])
-    model2 = Model_PPMx(df.Y, X2, df.group, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=false)
+    model2 = Model_PPMx(df.Y, X, df.group, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=false)
     sim2 = mcmc!(model2, niters; mixDPM=false)
     #trimid = Int(niters/2)
     trimid = Int(niters * 3 / 5)
@@ -133,9 +135,9 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     sim = sim[trimid:thin:end]
     sim2 = sim2[trimid:thin:end]
     Ypred1, Cpred1 = postPred(X, model, sim)
-    Ypred2, Cpred2 = postPred(X2, model2, sim2)
+    Ypred2, Cpred2 = postPred(X, model2, sim2)
     Ypred1oos, Cpred1oos = postPred(Xoos, model, sim)
-    Ypred2oos, Cpred2oos = postPred(X2oos, model2, sim2)
+    Ypred2oos, Cpred2oos = postPred(Xoos, model2, sim2)
 
     # clustering
     adjrindMixvec = [Clustering.randindex(s[:C], df.group)[1] for s in sim]

@@ -135,11 +135,11 @@ function update_lik_params!(model::Model_PPMx,
 
                 model.state.lik_params[k].beta_hypers.tau = update_τ(model.state.lik_params[k].beta_hypers.phi,
                     model.state.lik_params[k].beta ./ model.state.baseline.tau0 ./ model.state.lik_params[k].sig,
-                    1.0 / model.p
+                    1e3 # 1.0 / model.p
                 )
 
                 model.state.lik_params[k].beta_hypers.phi = update_ϕ(model.state.lik_params[k].beta ./ model.state.baseline.tau0 ./ model.state.lik_params[k].sig,
-                    1.0 / model.p
+                    1e3 #1.0 / model.p
                 )
             else
                 beta_upd_stats = llik_k(model.y[indx_k], model.X[indx_k, :], model.obsXIndx[indx_k],

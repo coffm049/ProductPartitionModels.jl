@@ -84,9 +84,9 @@ end
 # plot!([it[3] for it in mu_samples], label = "mu3")
 # plot!(true_mu[3] * ones(nsamples), label = nothing, color = "black")
 
-function independent_sampler(X, mu0, kappa0, alpha0, beta0, nsamps)
-    n, p = size(X)  # Number of observations and dimensions
-    X_bar = mean(X, dims=1)  # Sample means for each dimension
+function independent_sampler(XX, mu0, kappa0, alpha0, beta0, nsamps)
+    n, p = size(XX)  # Number of observations and dimensions
+    XX_bar = mean(XX, dims=1)  # Sample means for each dimension
 
     # Storage for samples
     mu_samples = Matrix{Float64}(undef, p, nsamps)
@@ -96,10 +96,10 @@ function independent_sampler(X, mu0, kappa0, alpha0, beta0, nsamps)
 
     for j in 1:p
         # Posterior hyperparameters for the j-th dimension
-        mu_n = (kappa0[j] * mu0[j] + n * X_bar[j]) / kappa_n[j]
+        mu_n = (kappa0[j] * mu0[j] + n * XX_bar[j]) / kappa_n[j]
         alpha_n = alpha0[j] + n / 2
-        beta_n = beta0[j] + 0.5 * sum((X[:, j] .- X_bar[j]) .^ 2) +
-                 (kappa0[j] * n * (X_bar[j] - mu0[j])^2) / (2 * kappa_n[j])
+        beta_n = beta0[j] + 0.5 * sum((XX[:, j] .- XX_bar[j]) .^ 2) +
+                 (kappa0[j] * n * (XX_bar[j] - mu0[j])^2) / (2 * kappa_n[j])
 
         for i in 1:nsamps
             # Sample σ_j^2 from Inverse-Gamma
@@ -156,10 +156,8 @@ end
 # mean(Betas, dims=2)
 # cBetas = reduce(hcat, [s[:prior_mean_beta] for s in sim])
 # mean(cBetas, dims=2)
-# clustCounts = sort(countmap(model2.state.C))
-# K = maximum(keys(clustCounts))
-# Betas = map(s -> mean([s[:lik_params][k][:beta] for k in unique(s[:C])]), sim2)
-# mean(Betas)
+# Betas = reduce(hcat, map(s -> mean([s[:lik_params][k][:beta] for k in unique(s[:C])]), sim2))
+# mean(Betas, dims = 2)
 
 
 # Simulated data
