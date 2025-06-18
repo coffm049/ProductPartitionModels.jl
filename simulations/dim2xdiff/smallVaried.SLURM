@@ -20,7 +20,17 @@ len_BETA=${#BETAS[@]}
 
 # Compute indices
 i=$(( SLURM_ARRAY_TASK_ID / len_ALPHA ))
-j=$(( SLURM_ARRAY_TASK_ID % nB ))
+j=$(( SLURM_ARRAY_TASK_ID %  len_BETA))
+
+# for ((id = 0; id < 9; id++)); do
+#   i=$(( $id / len_ALPHA ))
+#   j=$(( $id % len_BETA ))
+#   ALPHA=${ALPHAS[$i]}
+#   BETA=${BETAS[$j]}
+#   
+#   echo "$PREC $ALPHA $BETA"
+# done
+
 
 # Fetch actual parameters
 ALPHA=${ALPHAS[$i]}
