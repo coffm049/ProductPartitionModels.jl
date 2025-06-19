@@ -100,8 +100,8 @@ longDF <- df %>%
          names_to = c(".value", "Metric"),
          names_pattern = "(.*)\\_(.*)",
         ) %>%
-    pivot_longer(c(`ppmx-common`, ppmx, kmean, slr), names_to = "Model", values_to = "Statistic") %>%
-    filter(Metric != "rind" | Statistic >=0.4)
+    pivot_longer(c(`ppmx-common`, ppmx, kmean, slr), names_to = "Model", values_to = "Statistic") # %>%
+    # filter(Metric != "rind" | Statistic >=0.4)
 ```
 
 
@@ -124,10 +124,10 @@ longDF %>%
     geom_density(alpha = 0.2) +
     geom_vline(xintercept = 1.0) +
     facet_grid(
-        rows = vars(InterEffect), cols = vars(Common, variance), scales = "free",
+        rows = vars(Alpha), cols = vars(Beta), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
-    ggtitle("Common effects sampling distribution (alpha=2, beta=1,prec=0.01), Balanced") +
+    ggtitle("Common effects (common=1, Interaction=0.25), Balanced") +
     xlab("Common Estimate")
 ```
 
@@ -199,7 +199,7 @@ longDF %>%
     filter(Metric == "rind") %>%
     ggplot(aes(x = Statistic, fill = Model, y = ..density..)) +
     geom_histogram(alpha = 0.3, color = "black") +
-    facet_grid(cols = vars(variance), rows = vars(InterEffect), scales = "free",
+    facet_grid(cols = vars(Alpha), rows = vars(Beta), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
     )
 ```
