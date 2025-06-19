@@ -82,7 +82,7 @@ function simData(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25,
     df.groupEffect = map(x -> groupEffect[x], df.group)
 
     # df.mean .= (3 * dims .* df.groupEffect) .+ sum(Matrix(df.groupEffect .* df[:, r"^X"]); dims=2)
-    df.mean .= (-6 * dims .* df.groupEffect) .+ (df.groupEffect .* df[:, "X1"]) .+ (df.groupEffect .* df[:, "X2"])
+    df.mean .= (-6 * dims .* df.groupEffect) .+ (df.groupEffect .* df[:, "X1"]) .- (df.groupEffect .* df[:, "X2"])
     #df.mean = df.groupEffect .+ df.X1 .* df.X2
 
     # Generate the Y column as the sum of globalMean, groupDeviations, and noise
