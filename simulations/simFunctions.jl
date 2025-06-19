@@ -245,8 +245,8 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     #kmodel = kmeans(X', kclust)
     nclusts = length(fractions)
     kmodel = kmeans(X', nclusts)
-    df.kclust = kmodel.assignments
-    dfoos.kclust = assign_clusters(Xoos', kmodel.centers)
+    df.kclust = string.(kmodel.assignments)
+    dfoos.kclust = string.(assign_clusters(Xoos', kmodel.centers))
 
     rindKclust = Clustering.randindex(df.kclust, df.group)
     rindKclustoos = Clustering.randindex(dfoos.kclust, dfoos.group)
