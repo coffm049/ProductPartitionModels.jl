@@ -34,7 +34,7 @@ reps = parse(Int, ARGS[11])
 niters = parse(Int, ARGS[12])
 
 # construct a file name from the user inputs
-outputName = "results/c$(nc)_inter$(interEffect)_common$(common)_xd$(xdiff)_v$(variance)_dim$(dims)_prec$(prec)alph$(alph)bet$(bet)"
+outputName = "results/N$(N)_c$(nc)_inter$(interEffect)_common$(common)_xd$(xdiff)_v$(variance)_dim$(dims)_prec$(prec)alph$(alph)bet$(bet)"
 
 # END user input
 #

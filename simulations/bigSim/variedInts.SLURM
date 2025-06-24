@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=smaller
-#SBATCH --output=../logs/smaller.out
-#SBATCH --error=../logs/smaller.err
+#SBATCH --job-name=large
+#SBATCH --output=../logs/large.out
+#SBATCH --error=../logs/large.err
 #SBATCH --cpus-per-task=2
-#SBATCH --time=4:00:00
-#SBATCH --mem-per-cpu=4G
+#SBATCH --time=30:00:00
+#SBATCH --mem-per-cpu=16G
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=coffm049@umn.edu
 #SBATCH --array=0-1
@@ -34,4 +34,4 @@ cd ~/software/ProductPartitionModels.jl/simulations
 # bet = parse(Float64, ARGS[10])
 # reps = parse(Int, ARGS[11])
 # niters = parse(Int, ARGS[12])
-julia --project=. --threads=2 sim.jl 1500 10 0.1 $INTER 1.0 1.0 2 $PREC $ALPHA $BETA 25 5000
+julia --project=. --threads=2 sim.jl 2500 10 0.1 $INTER 1.0 1.0 2 $PREC $ALPHA $BETA 5 5000
