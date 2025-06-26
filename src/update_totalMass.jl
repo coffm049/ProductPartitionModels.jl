@@ -4,6 +4,7 @@
 export sample_totalMass
 
 # following Mulelr 2015 Bayesian Nonparmetric data analysis
+# Escobar-West
 # to update total mass parameter (M) for DP
 # page 19 section 2.4.2
 """

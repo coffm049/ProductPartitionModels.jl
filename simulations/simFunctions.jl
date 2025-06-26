@@ -125,15 +125,17 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     # set priors for base measure sampling
     model.prior.base = Prior_base(0.0, prec, alph, bet)
 
-
-    sim = mcmc!(model, niters; mixDPM=true)
-    model2 = Model_PPMx(df.Y, X, df.group, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=false)
-    sim2 = mcmc!(model2, niters; mixDPM=false)
-    #trimid = Int(niters/2)
     trimid = Int(niters * 3 / 5)
+    simid = Int(niters * 2 / 5)
+    mcmc!(model, trimid; mixDPM=true)
+    sim = mcmc!(model, simid; mixDPM=true)
+    model2 = Model_PPMx(df.Y, X, df.group, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=false)
+    mcmc!(model2, trimid; mixDPM=false)
+    sim2 = mcmc!(model2, simid; mixDPM=false)
+    #trimid = Int(niters/2)
     thin = 1
-    sim = sim[trimid:thin:end]
-    sim2 = sim2[trimid:thin:end]
+    sim = sim[1:thin:end]
+    sim2 = sim2[1:thin:end]
     Ypred1, Cpred1 = postPred(X, model, sim)
     Ypred2, Cpred2 = postPred(X, model2, sim2)
     Ypred1oos, Cpred1oos = postPred(Xoos, model, sim)
@@ -248,8 +250,8 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     df.kclust = string.(kmodel.assignments)
     dfoos.kclust = string.(assign_clusters(Xoos', kmodel.centers))
 
-    rindKclust = Clustering.randindex(df.kclust, df.group)
-    rindKclustoos = Clustering.randindex(dfoos.kclust, dfoos.group)
+    rindKclust = Clustering.randindex(parse.(Int, df.kclust), df.group)
+    rindKclustoos = Clustering.randindex(parse.(Int, dfoos.kclust), dfoos.group)
     # linear model with Y vs X1, X2
     clustlm = lm(@formula(Y ~ (X1 + X2) * kclust), df)
     kmeanMSE = sqrt(mean(residuals(clustlm) .^ 2))
