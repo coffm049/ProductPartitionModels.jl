@@ -82,7 +82,7 @@ function simData(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25,
     df.groupEffect = map(x -> groupEffect[x], df.group)
 
     # df.mean .= (3 * dims .* df.groupEffect) .+ sum(Matrix(df.groupEffect .* df[:, r"^X"]); dims=2)
-    df.mean .= (-6 * dims .* df.groupEffect) .+ (df.groupEffect .* df[:, "X1"]) .- (df.groupEffect .* df[:, "X2"])
+    df.mean .= (1 * dims .* df.groupEffect) .+ (df.groupEffect .* df[:, "X1"]) .- (df.groupEffect .* df[:, "X2"])
     #df.mean = df.groupEffect .+ df.X1 .* df.X2
 
     # Generate the Y column as the sum of globalMean, groupDeviations, and noise
@@ -129,9 +129,11 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     simid = Int(niters * 2 / 5)
     mcmc!(model, trimid; mixDPM=true)
     sim = mcmc!(model, simid; mixDPM=true)
+
     model2 = Model_PPMx(df.Y, X, df.group, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=false)
     mcmc!(model2, trimid; mixDPM=false)
     sim2 = mcmc!(model2, simid; mixDPM=false)
+
     #trimid = Int(niters/2)
     thin = 1
     sim = sim[1:thin:end]

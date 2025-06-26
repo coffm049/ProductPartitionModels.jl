@@ -49,9 +49,12 @@ df <- data.frame("file" = dir()) %>%
         kmean_rmse = kmean_MSE,
         slr_rmse = slrRMSE,
         
-        `ppmx-common_common` = meanBeta1,
-        kmean_common = meanBetakclust1,
-        slr_common = meanBetaSLR,
+        `ppmx-common_common1` = meanBeta1,
+        `ppmx-common_common2` = meanBeta2,
+        kmean_common1 = meanBetakclust1,
+        kmean_common2 = meanBetakclust2,
+        slr_common1 = meanBetaSLR,
+        slr_common2 = meanBetaSLR2,
 
         `ppmx-common_T2` = zeroInDPM,
         kmean_T2 = zeroInk,
@@ -84,9 +87,11 @@ temp <- df %>%
         # coverage
         across(ends_with("_Cov"), function(x) mean(x, na.rm = T)),
         # bias
-        across(ends_with("_common"), function(x) mean(Common - x, na.rm = T), .names= "{.col}-bias"),
+        across(ends_with("_common1"), function(x) mean(Common - x, na.rm = T), .names= "{.col}-bias"),
+        across(ends_with("_common2"), function(x) mean(-Common - x, na.rm = T), .names= "{.col}-bias"),
         # MSE
-        across(ends_with("_common"), function(x) sqrt(mean((Common - x)^2, na.rm = T)), .names= "{.col}-RMSE"),
+        across(ends_with("_common1"), function(x) sqrt(mean((Common - x)^2, na.rm = T)), .names= "{.col}-RMSE"),
+        across(ends_with("_common2"), function(x) sqrt(mean((-Common - x)^2, na.rm = T)), .names= "{.col}-RMSE"),
         .by = c(Common, InterEffect, Alpha, Beta, Precision, Imbalanced, variance)
     ) %>%
     pivot_longer(
@@ -119,10 +124,21 @@ longDF <- df %>%
 #     ggtitle("Common effects sampling distribution (alpha=2, beta=1,prec=0.01), Imbalanced") +
 #     xlab("Common Estimate")
 longDF %>%
-    filter(Metric == "common", Imbalanced == FALSE) %>%
+    filter(Imbalanced == FALSE, Metric == "common1") %>%
     ggplot(aes(x = Statistic, fill = Model)) +
     geom_density(alpha = 0.2) +
     geom_vline(xintercept = 1.0) +
+    facet_grid(
+        rows = vars(Alpha), cols = vars(Beta), scales = "free",
+        labeller = labeller(.rows = label_both, .cols = label_both)
+    ) +
+    ggtitle("Common effects (common=1, Interaction=0.25), Balanced") +
+    xlab("Common Estimate")
+longDF %>%
+    filter(Imbalanced == FALSE, Metric == "common2") %>%
+    ggplot(aes(x = Statistic, fill = Model)) +
+    geom_density(alpha = 0.2) +
+    geom_vline(xintercept = -1.0) +
     facet_grid(
         rows = vars(Alpha), cols = vars(Beta), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)

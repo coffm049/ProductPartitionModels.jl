@@ -45,7 +45,7 @@ default(fillopacity = 0.5, lineopacity = 1.0)
 
 
 ```{julia} 
-N = 1500
+N = 500
 nc =8 
 variance = 0.01
 interEffect = 0.25
