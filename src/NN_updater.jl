@@ -115,6 +115,39 @@ function independent_sampler(XX, mu0, kappa0, alpha0, beta0, nsamps)
     return mu_samples, sigma2_samples
 end
 
+function weighted_sampler(XX, nn, mu0, kappa0, alpha0, beta0, nsamps)
+    n, p = size(XX)  # Number of observations and dimensions
+    XX_bar = mean(XX, dims=1)  # Sample means for each dimension
+
+    # Storage for samples
+    mu_samples = Matrix{Float64}(undef, p, nsamps)
+    sigma2_samples = Matrix{Float64}(undef, p, nsamps)
+
+    kappa_n = kappa0 .+ n
+
+    for j in 1:p
+        # Posterior hyperparameters for the j-th dimension
+        mu_n = (kappa0[j] * mu0[j] + n * XX_bar[j]) / kappa_n[j]
+        alpha_n = alpha0[j] + n / 2
+        beta_n = beta0[j] + 0.5 * sum((XX[:, j] .- XX_bar[j]) .^ 2) +
+                 (kappa0[j] * n * (XX_bar[j] - mu0[j])^2) / (2 * kappa_n[j])
+
+        for i in 1:nsamps
+            # Sample σ_j^2 from Inverse-Gamma
+            sigma2 = rand(InverseGamma(alpha_n, beta_n))
+            sigma2_samples[j, i] = sigma2
+
+            # Sample μ_j from Normal
+            mu = rand(Normal(mu_n, sqrt(sigma2 / kappa_n[j])))
+            mu_samples[j, i] = mu
+        end
+    end
+
+    return mu_samples, sigma2_samples
+end
+
+
+
 function NN_shrinkage(XX, mu_global, tau2, kappa0, alpha0, beta0, nsamps)
     n, p = size(XX)  # Number of observations and dimensions
     XX_bar = mean(XX, dims=1)  # Sample mean for each variable

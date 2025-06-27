@@ -70,13 +70,14 @@ function update_lik_params!(model::Model_PPMx,
 )
 
     if mixDPM
-        clustCounts = sort(countmap(model.state.C))
+        clustCounts = countmap(model.state.C)
         K = maximum(keys(clustCounts))
 
         # [x] Update this as the average of betas (N-Jeffries)
         # concatenate all of the betas across lik_params[j] into a matrix
         # only clusters with sufficient observations
-        Betas = [model.state.lik_params[k].beta for k in 1:K if clustCounts[k] > 3]
+        Betas = [model.state.lik_params[k].beta for k in 1:K if clustCounts[k] > 1]
+        # Betas = [model.state.lik_params[k].beta for k in 1:K]
         # convert the vector of vectos to a matrix (p x K)
         Betas = hcat(Betas...)'
         p = size(Betas)[2]
@@ -135,16 +136,22 @@ function update_lik_params!(model::Model_PPMx,
 
                 model.state.lik_params[k].beta_hypers.tau = update_τ(model.state.lik_params[k].beta_hypers.phi,
                     model.state.lik_params[k].beta ./ model.state.baseline.tau0 ./ model.state.lik_params[k].sig,
-                    1e3 # 1.0 / model.p
+                    1e9 # 1.0 / model.p
                 )
 
                 model.state.lik_params[k].beta_hypers.phi = update_ϕ(model.state.lik_params[k].beta ./ model.state.baseline.tau0 ./ model.state.lik_params[k].sig,
-                    1e3 #1.0 / model.p
+                    1e9 #1.0 / model.p
                 )
             else
                 beta_upd_stats = llik_k(model.y[indx_k], model.X[indx_k, :], model.obsXIndx[indx_k],
                     model.state.lik_params[k], model.state.Xstats[k], model.state.similarity)
             end
+
+            # reduce shrinkage
+            pvars = length(model.state.lik_params[k].beta)
+            model.state.lik_params[k].beta_hypers.tau = 100.0
+            model.state.lik_params[k].beta_hypers.phi = repeat([100.0], pvars)
+            model.state.lik_params[k].beta_hypers.psi = repeat([100.0], pvars)
 
             ## update sig, which preserves means to be modified in the update for means
             if (:sig in update)

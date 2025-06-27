@@ -82,7 +82,7 @@ function simData(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25,
     df.groupEffect = map(x -> groupEffect[x], df.group)
 
     # df.mean .= (3 * dims .* df.groupEffect) .+ sum(Matrix(df.groupEffect .* df[:, r"^X"]); dims=2)
-    df.mean .= (1 * dims .* df.groupEffect) .+ (df.groupEffect .* df[:, "X1"]) .- (df.groupEffect .* df[:, "X2"])
+    df.mean .= (0 * dims .* df.groupEffect) .+ (df.groupEffect .* df[:, "X1"]) .- (df.groupEffect .* df[:, "X2"])
     #df.mean = df.groupEffect .+ df.X1 .* df.X2
 
     # Generate the Y column as the sum of globalMean, groupDeviations, and noise
@@ -127,6 +127,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
     trimid = Int(niters * 3 / 5)
     simid = Int(niters * 2 / 5)
+    model.state.baseline.tau0 = 1e2
     mcmc!(model, trimid; mixDPM=true)
     sim = mcmc!(model, simid; mixDPM=true)
 
@@ -200,7 +201,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     sim2 = sim2[dpmEq:thin:end]
 
     # empirical mean for comparison
-    # output_list = map(step -> mean([c[:beta][2] for c in step[:lik_params]]), sim)
+    output_list = map(step -> mean([c[:beta][2] for c in step[:lik_params]]), sim)
     # plot(output_list)
 
     commonBeta0 = [s[:prior_mean_beta][1] for s in sim]
