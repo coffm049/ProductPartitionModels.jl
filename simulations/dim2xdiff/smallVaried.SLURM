@@ -3,15 +3,15 @@
 #SBATCH --output=../logs/smaller.out
 #SBATCH --error=../logs/smaller.err
 #SBATCH --cpus-per-task=2
-#SBATCH --time=8:00:00
-#SBATCH --mem-per-cpu=4G
-#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --time=5:00:00
+#SBATCH --mem-per-cpu=8G
+#SBATCH --mail-type=ALL
 #SBATCH --mail-user=coffm049@umn.edu
-#SBATCH --array=0-8
+#SBATCH --array=0-9
 
 
 
-PREC=0.01
+PREC=(0.1)
 ALPHAS=(0.1 1.0 2.0)
 BETAS=(0.1 1.0 2.0)
 
@@ -53,4 +53,4 @@ cd ~/software/ProductPartitionModels.jl/simulations
 # bet = parse(Float64, ARGS[10])
 # reps = parse(Int, ARGS[11])
 # niters = parse(Int, ARGS[12])
-julia --project=. --threads=2 sim.jl 150 8 0.1 0.25 1.0 1.0 2 $PREC $ALPHA $BETA 50 5000
+julia --project=. --threads=2 sim.jl 250 8 0.1 0.25 1.0 1.0 2 $PREC $ALPHA $BETA 10 5000

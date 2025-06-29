@@ -241,14 +241,14 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     # lineplot(output_list)
     # plot(output_list)
 
-    commonBeta0 = [s[:prior_mean_beta][1] for s in sim] # .*ystd
+    commonBeta0 = [s[:prior_mean_beta][1] for s in sim]
     meanBeta0 = mean(commonBeta0)
-    commonBeta1 = [s[:prior_mean_beta][2] for s in sim]# .* ystd
-    lineplot(commonBeta1)
+    commonBeta1 = [s[:prior_mean_beta][2] for s in sim]
+    # lineplot(commonBeta1)
     # meanBeta1 = mean(commonBeta1[abs.(commonBeta1) .< 10])
     meanBeta1 = median(commonBeta1)
-    commonBeta2 = [s[:prior_mean_beta][3] for s in sim] # .* ystd
-    lineplot(commonBeta2)
+    commonBeta2 = [s[:prior_mean_beta][3] for s in sim]
+    # lineplot(commonBeta2)
     # meanBeta2 = mean(commonBeta2[abs.(commonBeta2) .< 10])
     meanBeta2 = median(commonBeta2)
 
@@ -275,12 +275,12 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     # dfoos.group .= string.(dfoos.group)
     #contrasts = Dict(:groups => EffectsCoding())  # deviation from mean
     #slr = lm(@formula(Y ~ (X1 + X2) * groups), df; contrasts= contrasts)
-    betaCI = confint(slr)[2, :] .* ystd
-    betaCI2 = confint(slr)[3, :] .* ystd
+    betaCI = confint(slr)[2, :]
+    betaCI2 = confint(slr)[3, :]
     # test if 0 is between the two values in betaCI
     zeroInSLR = (0.0 .>= betaCI[1]) & (0.0 <= betaCI[2])
     commonInSLR = (common .>= betaCI[1]) & (common <= betaCI[2])
-    slrRMSE = sqrt(mean(residuals(slr) .^ 2)) .* ystd
+    slrRMSE = sqrt(mean(residuals(slr) .^ 2))
     zeroInSLR2 = (0.0 .>= betaCI2[1]) & (0.0 <= betaCI2[2])
     commonInSLR2 = (common .>= betaCI2[1]) & (common <= betaCI2[2])
 
@@ -301,16 +301,16 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     clustlm = lm(@formula(Y ~ (X1 + X2) * kclust), df)
     # df.group = string.(df.group)
     # clustlm = lm(@formula(Y ~ (X1 + X2) * group), df)
-    kmeanMSE = sqrt(mean(residuals(clustlm) .^ 2)) .* ystd
-    kmeanMSEoos = sqrt(mean(((predict(clustlm, dfoos) .*ystd) - dfoos.Y) .^ 2))
+    kmeanMSE = sqrt(mean(residuals(clustlm) .^ 2))
+    kmeanMSEoos = sqrt(mean(((predict(clustlm, dfoos)) - dfoos.Y) .^ 2))
     meanBetakclust1 = coef(clustlm)[2]
     meanBetakclust2 = coef(clustlm)[3]
 
     # seef if 95% CI for X1 coefficient in clustlm includes 0
-    kclustCI = confint(clustlm)[2, :] .* ystd
+    kclustCI = confint(clustlm)[2, :]
     zeroInk = (0.0 .>= kclustCI[1]) & (0.0 <= kclustCI[2])
     commonInk = (common .>= kclustCI[1]) & (common <= kclustCI[2])
-    kclustCI2 = confint(clustlm)[3, :] .* ystd
+    kclustCI2 = confint(clustlm)[3, :]
     zeroInk2 = (0.0 .>= kclustCI2[1]) & (0.0 <= kclustCI2[2])
     commonInk2 = (common .>= kclustCI2[1]) & (common <= kclustCI2[2])
 
@@ -319,7 +319,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     #ncK = kclust
     ncK = nclusts
 
-    Mix_beta1_c1 = [s[:lik_params][1][:beta][2] for s in sim if maximum(s[:C]) == ncMix] .* ystd
+    Mix_beta1_c1 = [s[:lik_params][1][:beta][2] for s in sim if maximum(s[:C]) == ncMix]
     dpm_beta1_c1 = [s[:lik_params][1][:beta][1] for s in sim2 if maximum(s[:C]) == ncDPM]
 
 
