@@ -47,46 +47,65 @@ function findEquilibrated(; rmse::Vector{Float64}, rind::Vector{Float64}, tol::F
 end
 
 
-function simData(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25, 0.25, 0.25, 0.25], variance::Real=1.0, interEffect::Real=1.0, common::Float64=1.0, plotSim::Bool=false, xdiff::Real=0.0, dims::Int=2)
-
-    nclusts = length(fractions) # Create a DataFrame with two normally distributed columns, X1 and X2
-
-    df = DataFrame(Dict("X" * string(i) => rand(rng, Normal(0, 1), N) for i in 1:dims))
-
-    # assign groups
-    df.group .= 0
-
-    lastsub = 0
-    for g in 1:nclusts
-        g1 = floor(Int, N * fractions[g])
-        firstsub = lastsub + 1
-        lastsub = lastsub + g1
-        if g != nclusts
-            df[firstsub:lastsub, :group] .= g
-        else
-            df[firstsub:end, :group] .= g
-        end
+function simData( 
+    rng = Random.default_rng();
+    N = 300, 
+    dims = 2, 
+    nclusts = 3, 
+    fractions = repeat([0.2], 5),
+    xdiff = 0.5,
+    interEffect = 1.0,
+    common = 0.0,
+    variance = 1.0,
+    plotSim = false
+)
+    nclusts = length(fractions)
+    # Step 1: Create DataFrame with X1, X2, ..., Xdims
+    df = DataFrame()
+    for d in 1:dims
+        df[!, "X$d"] = rand(rng, Normal(0, 1), N)
     end
 
-    # group effect
-    groupEffect = [quantile(Normal(common, interEffect), i / (nclusts + 1)) for i in 1:nclusts]
-    xDiffs = [quantile(Normal(0, xdiff), i / (nclusts + 1)) for i in 1:nclusts]
+    # Step 2: Assign groups
+    df.group = zeros(Int, N)
+    lastsub = 0
+    for g in 1:nclusts
+        gsize = floor(Int, N * fractions[g])
+        start = lastsub + 1
+        stop = g == nclusts ? N : lastsub + gsize
+        df[start:stop, :group] .= g
+        lastsub = stop
+    end
+    commons = [common, -common]
+    # Step 3: Slopes matrix (nclusts × dims)
+    slopes = [quantile(Normal(commons[d], interEffect), g / (nclusts + 1)) for g in 1:nclusts, d in 1:dims]
 
-    # add xdiff * group to all columns starting with "X"
-    # df[:, r"^X"] .= df[:, r"^X"] .+ map(x-> xDiffs[x], df.group)
-    df[:, r"^X"] .= df[:, r"^X"] .+ df.group .* xdiff
-    xmean = mean(Matrix(df[:, r"^X"]), dims=1)
-    xstd = std(Matrix(df[:, r"^X"]), dims=1)
-    df[:, r"^X"] = (df[:, r"^X"] .- xmean) ./ xstd
+    # Step 4: Group-specific predictor shifts
+    xdiffs = [quantile(Normal(0, xdiff), g / (nclusts + 1)) for g in 1:nclusts]
+    for d in 1:dims
+        xname = "X$d"
+        df[!, xname] .+= xdiffs[df.group]
+    end
 
-    df.groupEffect = map(x -> groupEffect[x], df.group)
+    # Step 5: Center and scale X columns
+    for d in 1:dims
+        xname = "X$d"
+        x = df[!, xname]
+        df[!, xname] = (x .- mean(x)) ./ std(x)
+    end
 
-    # df.mean .= (3 * dims .* df.groupEffect) .+ sum(Matrix(df.groupEffect .* df[:, r"^X"]); dims=2)
-    df.mean .= (0 * dims .* df.groupEffect) .+ (df.groupEffect .* df[:, "X1"]) .- (df.groupEffect .* df[:, "X2"])
-    #df.mean = df.groupEffect .+ df.X1 .* df.X2
+    # Step 6: Compute linear predictors
+    X = Matrix(df[:, ["X$d" for d in 1:dims]])
+    df.mean = [dot(X[i, :], slopes[df.group[i], :]) for i in 1:N]
+    
+    # THIS WORKS
+    # df.groups = string.(df.group)
+    # contrasts = Dict(:groups => EffectsCoding())  # deviation from mean
+    # lm(@formula(mean ~ (X1 + X2) * groups), df; contrasts= contrasts)
 
-    # Generate the Y column as the sum of globalMean, groupDeviations, and noise
+    # THIS WORKS
     df.Y = df.mean .+ rand(rng, Normal(0, variance), N)
+    # lm(@formula(Y ~ (X1 + X2) * groups), df; contrasts= contrasts)
     df.inter .= 1
 
     if plotSim & (dims == 2)
@@ -107,7 +126,6 @@ function simData(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25,
     return df
 end
 
-
 # common = interEffect : promising
 # common < interEffect : 
 # common > interEffect : somewhat promising
@@ -116,18 +134,31 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
     # Simulate data
     df = simData(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotSim=plotSim, xdiff=xdiff, dims=dims)
+    # THIS WORKS
+    # contrasts = Dict(:groups => EffectsCoding())  # deviation from mean
+    # df.groups = string.(df.group)
+    # lm(@formula(Y ~ (X1 + X2) * groups), df; contrasts = contrasts)
+    # ymean = mean(df.Y)
+    # ystd = std(df.Y)
+    #df.Y = (df.Y .- ymean) ./ ystd
     dfoos = simData(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotSim=false, xdiff=xdiff, dims=dims)
+    #dfoos.Y = (dfoos.Y .- ymean) ./ ystd
 
     # Fit 
     X = Matrix(df[:, Cols("inter", r"X")][:, Not(r"eff")])
     Xoos = Matrix(dfoos[:, Cols("inter", r"X")][:, Not(r"eff")])
     model = Model_PPMx(df.Y, X, df.group, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=true)
     # set priors for base measure sampling
-    model.prior.base = Prior_base(0.0, prec, alph, bet)
-
+    model.prior.base = Prior_base(
+       repeat([0.0], dims + 1),
+       repeat([prec], dims + 1),
+       repeat([alph], dims +1),
+       repeat([bet], dims+ 1)
+    )
+  
     trimid = Int(niters * 3 / 5)
     simid = Int(niters * 2 / 5)
-    model.state.baseline.tau0 = 1e2
+    model.state.baseline.tau0 = 1.0
     mcmc!(model, trimid; mixDPM=true)
     sim = mcmc!(model, simid; mixDPM=true)
 
@@ -140,9 +171,13 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     sim = sim[1:thin:end]
     sim2 = sim2[1:thin:end]
     Ypred1, Cpred1 = postPred(X, model, sim)
+    #Ypred1 = (Ypred1 .* ystd) .+ ymean
     Ypred2, Cpred2 = postPred(X, model2, sim2)
+    #Ypred2 = (Ypred2.* ystd) .+ ymean
     Ypred1oos, Cpred1oos = postPred(Xoos, model, sim)
+    #Ypred1oos = (Ypred1oos .* ystd) .+ ymean
     Ypred2oos, Cpred2oos = postPred(Xoos, model2, sim2)
+    #Ypred2oos = (Ypred2oos .* ystd) .+ ymean
 
     # clustering
     adjrindMixvec = [Clustering.randindex(s[:C], df.group)[1] for s in sim]
@@ -201,19 +236,25 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     sim2 = sim2[dpmEq:thin:end]
 
     # empirical mean for comparison
-    output_list = map(step -> mean([c[:beta][2] for c in step[:lik_params]]), sim)
+    # output_list = mean(map(step -> median([c[:beta][2] for c in step[:lik_params]]), sim))
+    # output_list = mean(map(step -> median([c[:beta][2] for c in step[:lik_params]]), sim2))
+    # lineplot(output_list)
     # plot(output_list)
 
-    commonBeta0 = [s[:prior_mean_beta][1] for s in sim]
+    commonBeta0 = [s[:prior_mean_beta][1] for s in sim] # .*ystd
     meanBeta0 = mean(commonBeta0)
-    commonBeta1 = [s[:prior_mean_beta][2] for s in sim]
-    meanBeta1 = mean(commonBeta1)
-    commonBeta2 = [s[:prior_mean_beta][3] for s in sim]
-    meanBeta2 = mean(commonBeta2)
+    commonBeta1 = [s[:prior_mean_beta][2] for s in sim]# .* ystd
+    lineplot(commonBeta1)
+    # meanBeta1 = mean(commonBeta1[abs.(commonBeta1) .< 10])
+    meanBeta1 = median(commonBeta1)
+    commonBeta2 = [s[:prior_mean_beta][3] for s in sim] # .* ystd
+    lineplot(commonBeta2)
+    # meanBeta2 = mean(commonBeta2[abs.(commonBeta2) .< 10])
+    meanBeta2 = median(commonBeta2)
 
     # find 95% credible interval
-    dpmCI = quantile(commonBeta1, [0.025, 0.975])
-    dpmCI2 = quantile(commonBeta2, [0.025, 0.975])
+    dpmCI = quantile(commonBeta1[abs.(commonBeta1) .< 10], [0.025, 0.975])
+    dpmCI2 = quantile(commonBeta2[abs.(commonBeta2) .< 10], [0.025, 0.975])
 
     # check if 3.0 is in dpmCI
     zeroInDPM = (0.0 .>= dpmCI[1]) & (0.0 <= dpmCI[2])
@@ -230,15 +271,16 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
     # Simple linear regresion
     slr = lm(@formula(Y ~ X1 + X2), df)
-    # df.group .= string.(df.group)
+    #df.groups .= string.(df.group)
     # dfoos.group .= string.(dfoos.group)
-    # slr = lm(@formula(Y ~ (X1 + X2) * group), df)
-    betaCI = confint(slr)[2, :]
-    betaCI2 = confint(slr)[3, :]
+    #contrasts = Dict(:groups => EffectsCoding())  # deviation from mean
+    #slr = lm(@formula(Y ~ (X1 + X2) * groups), df; contrasts= contrasts)
+    betaCI = confint(slr)[2, :] .* ystd
+    betaCI2 = confint(slr)[3, :] .* ystd
     # test if 0 is between the two values in betaCI
     zeroInSLR = (0.0 .>= betaCI[1]) & (0.0 <= betaCI[2])
     commonInSLR = (common .>= betaCI[1]) & (common <= betaCI[2])
-    slrRMSE = sqrt(mean(residuals(slr) .^ 2))
+    slrRMSE = sqrt(mean(residuals(slr) .^ 2)) .* ystd
     zeroInSLR2 = (0.0 .>= betaCI2[1]) & (0.0 <= betaCI2[2])
     commonInSLR2 = (common .>= betaCI2[1]) & (common <= betaCI2[2])
 
@@ -257,16 +299,18 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     rindKclustoos = Clustering.randindex(parse.(Int, dfoos.kclust), dfoos.group)
     # linear model with Y vs X1, X2
     clustlm = lm(@formula(Y ~ (X1 + X2) * kclust), df)
-    kmeanMSE = sqrt(mean(residuals(clustlm) .^ 2))
-    kmeanMSEoos = sqrt(mean((predict(clustlm, dfoos) - dfoos.Y) .^ 2))
+    # df.group = string.(df.group)
+    # clustlm = lm(@formula(Y ~ (X1 + X2) * group), df)
+    kmeanMSE = sqrt(mean(residuals(clustlm) .^ 2)) .* ystd
+    kmeanMSEoos = sqrt(mean(((predict(clustlm, dfoos) .*ystd) - dfoos.Y) .^ 2))
     meanBetakclust1 = coef(clustlm)[2]
     meanBetakclust2 = coef(clustlm)[3]
 
     # seef if 95% CI for X1 coefficient in clustlm includes 0
-    kclustCI = confint(clustlm)[2, :]
+    kclustCI = confint(clustlm)[2, :] .* ystd
     zeroInk = (0.0 .>= kclustCI[1]) & (0.0 <= kclustCI[2])
     commonInk = (common .>= kclustCI[1]) & (common <= kclustCI[2])
-    kclustCI2 = confint(clustlm)[3, :]
+    kclustCI2 = confint(clustlm)[3, :] .* ystd
     zeroInk2 = (0.0 .>= kclustCI2[1]) & (0.0 <= kclustCI2[2])
     commonInk2 = (common .>= kclustCI2[1]) & (common <= kclustCI2[2])
 
@@ -275,7 +319,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     #ncK = kclust
     ncK = nclusts
 
-    Mix_beta1_c1 = [s[:lik_params][1][:beta][2] for s in sim if maximum(s[:C]) == ncMix]
+    Mix_beta1_c1 = [s[:lik_params][1][:beta][2] for s in sim if maximum(s[:C]) == ncMix] .* ystd
     dpm_beta1_c1 = [s[:lik_params][1][:beta][1] for s in sim2 if maximum(s[:C]) == ncDPM]
 
 

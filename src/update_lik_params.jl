@@ -84,33 +84,40 @@ function update_lik_params!(model::Model_PPMx,
         p = size(Betas)[2]
 
         if isnothing(model.prior.base)
-            mu0 = 0.0
-            kappa0 = 0.1
-            alpha0 = 0.1
-            beta0 = 0.1
-            #model.prior.base = Prior_base(mu0, kappa0, alpha0, beta0)
+            mu0 = repeat([0.0], p)
+            kappa0 = repeat([0.01], p)
+            alpha0 = repeat([0.1], p)
+            beta0 = repeat([0.1], p)
+            model.prior.base = Prior_base(mu0, kappa0, alpha0, beta0)
         else
             mu0 = model.state.prior_mean_beta
             #mu0 = repeat([0.0], p)
-            kappa0 = repeat([model.prior.base.precision], p)  # Prior precision # [ ] Try out precision of 1.0, and 1e-2
-            alpha0 = repeat([model.prior.base.alpha], p)  # Prior shape for σ^2 # [ ] consider a less informative prior (alpha = 2, beta = 1) for instance 
-            beta0 = repeat([model.prior.base.beta], p)  # Prior scale for σ^2
+            kappa0 = model.prior.base.precision  # Try out precision of 1.0, and 1e-2
+            alpha0 = model.prior.base.alpha # consider a less informative prior (alpha = 2, beta = 1) for instance 
+            beta0 = model.prior.base.beta  # Prior scale for σ^2
         end
 
         # Run the sampler
-        mu_sample, sigma2_sample = weighted_sampler(Betas, clustCounts, mu0, kappa0, alpha0, beta0, 5)
-        # mu_sample, sigma2_sample = independent_sampler(Betas, mu0, kappa0, alpha0, beta0, 1)
-        # mu_sample = median(mu_sample, dims = 2)
-        # sigma2_sample = median(sigma2_sample, dims = 2)
-        # mu_sample .= mu_sample ./ 2
+        # mu_sample, sigma2_sample = weighted_sampler(Betas, clustCounts, mu0, kappa0, alpha0, beta0, 5)
+        mu_sample, sigma2_sample = weighted_nng_sampler(Betas,
+                             collect(values(clustCounts)),
+                             mu0,
+                             kappa0,
+                             alpha0,
+                             beta0,
+                             5)
+        # mu_sample, sigma2_sample = independent_sampler(Betas, mu0, kappa0, alpha0, beta0, 5)
+        mu_sample = median(mu_sample, dims = 2)
+        sigma2_sample = median(sigma2_sample, dims = 2)
         # mu_sample, sigma2_sample = NN_shrinkage(Betas, 0.0, 5e-3, kappa0, alpha0, beta0, 100)
         model.state.prior_mean_beta = mu_sample[:, 1]
         #model.state.prior_mean_beta = zeros(model.p)
-        prior_mean_beta = model.state.prior_mean_beta
-        prior_mean_beta = zeros(model.p)
-        #prior_var_beta = sigma2_sample[:, 1]
-    else
+        # prior_mean_beta = zeros(model.p)
+        prior_mean_beta =model.state.prior_mean_beta 
+        prior_var_beta = sigma2_sample[:, 1]
+   else
         #print(model.state.prior_mean_beta)
+        #prior_mean_beta = model.state.prior_mean_beta
         prior_mean_beta = zeros(model.p)
         K = maximum(model.state.C)
     end
@@ -144,11 +151,11 @@ function update_lik_params!(model::Model_PPMx,
 
                 model.state.lik_params[k].beta_hypers.tau = update_τ(model.state.lik_params[k].beta_hypers.phi,
                     model.state.lik_params[k].beta ./ model.state.baseline.tau0 ./ model.state.lik_params[k].sig,
-                    10.0# 1.0 / model.p
+                    3.0 / model.p
                 )
 
                 model.state.lik_params[k].beta_hypers.phi = update_ϕ(model.state.lik_params[k].beta ./ model.state.baseline.tau0 ./ model.state.lik_params[k].sig,
-                    10.0 # 1.0 / model.p
+                    3.0 / model.p
                 )
             else
                 beta_upd_stats = llik_k(model.y[indx_k], model.X[indx_k, :], model.obsXIndx[indx_k],
@@ -156,10 +163,10 @@ function update_lik_params!(model::Model_PPMx,
             end
 
             # reduce shrinkage
-            pvars = length(model.state.lik_params[k].beta)
-            model.state.lik_params[k].beta_hypers.tau = 1e4
-            model.state.lik_params[k].beta_hypers.phi = repeat([1.0], pvars)
-            model.state.lik_params[k].beta_hypers.psi = repeat([1.0], pvars)
+            # pvars = length(model.state.lik_params[k].beta)
+            # model.state.lik_params[k].beta_hypers.tau = 1.0
+            # model.state.lik_params[k].beta_hypers.phi = repeat([1.0], pvars)
+            # model.state.lik_params[k].beta_hypers.psi = repeat([1.0], pvars)
 
             ## update sig, which preserves means to be modified in the update for means
             if (:sig in update)

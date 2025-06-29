@@ -115,6 +115,49 @@ function independent_sampler(XX, mu0, kappa0, alpha0, beta0, nsamps)
     return mu_samples, sigma2_samples
 end
 
+function weighted_nng_sampler(X::AbstractMatrix,
+                                     w::AbstractVector,
+                                     mu0::AbstractVector,
+                                     kappa0::AbstractVector,
+                                     alpha0::AbstractVector,
+                                     beta0::AbstractVector,
+                                     nsamples::Integer)
+
+    n, p = size(X)
+    @assert length(w) == n "Weight vector length must equal number of rows of X."
+    @assert all(w .>= 0)  "Weights must be non-negative."
+
+    n_eff = sum(w)                      # effective (fractional) sample size
+    wᵀ    = w'                          # row-vector view for inner products
+
+    mu_samples     = Matrix{Float64}(undef, p, nsamples)
+    sigma2_samples = similar(mu_samples)
+
+    for j in 1:p
+        xj  = @view X[:, j]                            # n-vector for variable j
+        x̄w = only(wᵀ * xj) / n_eff                    # weighted mean
+
+        diff = xj .- x̄w
+        ssw  = only(wᵀ * (diff .^ 2))                  # weighted sum of squares
+
+        κ_n = kappa0[j] + n_eff
+        μ_n = (kappa0[j] * mu0[j] + n_eff * x̄w) / κ_n
+        α_n = alpha0[j] + n_eff / 2
+        β_n = beta0[j] + 0.5 * ssw +
+              (kappa0[j] * n_eff * (x̄w - mu0[j])^2) / (2κ_n)
+
+        for t in 1:nsamples
+            σ2 = rand(InverseGamma(α_n, β_n))
+            μ  = rand(Normal(μ_n, sqrt(σ2 / κ_n)))
+
+            mu_samples[j, t]     = μ
+            sigma2_samples[j, t] = σ2
+        end
+    end
+    return mu_samples, sigma2_samples
+end
+
+
 function weighted_sampler(XX, cm, mu0, kappa0, alpha0, beta0, nsamps)
     clustCounts = collect(values(cm))
     nonsingle = clustCounts .> 1
@@ -128,13 +171,16 @@ function weighted_sampler(XX, cm, mu0, kappa0, alpha0, beta0, nsamps)
     sigma2_samples = Matrix{Float64}(undef, p, nsamps)
 
     kappa_n = kappa0 .+ nnn
-
+    
+    # mu_n = ( ((nnn .* XX_bar) ./ std(XX, dims = 1))[1,:] .+ mu0 ./ kappa_n  ) ./ (nnn ./ std(XX, dims = 1)[1,:] .+ 1 ./kappa_n ) 
+    
     for j in 1:p
         # Posterior hyperparameters for the j-th dimension
+        # mu_n = (  )
         mu_n = (kappa0[j] * mu0[j] + nnn * XX_bar[j]) / kappa_n[j]
         alpha_n = alpha0[j] + nnn / 2
-        beta_n = beta0[j] + 0.5 * sum((XX[:, j] .- XX_bar[j]) .^ 2) +
-                 (kappa0[j] * nnn * (XX_bar[j] - mu0[j])^2) / (2 * kappa_n[j])
+        beta_n = beta0[j] + 0.5 * sum(((XX[:, j] .- XX_bar[j]) .^ 2) .* clustCounts) .+
+        (kappa0[j] .* sum(clustCounts) .* (XX_bar[j] - mu0[j])^2) / (2 * kappa_n[j])
 
         for i in 1:nsamps
             # Sample σ_j^2 from Inverse-Gamma

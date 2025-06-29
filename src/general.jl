@@ -228,10 +228,10 @@ mutable struct Prior_baseline_NormUnif{TR<:Real} <: Prior_baseline
 end
 
 mutable struct Prior_base{TR<:Real}
-    center::TR
-    precision::TR
-    alpha::TR
-    beta::TR
+    center::Vector{TR}
+    precision::Vector{TR}
+    alpha::Vector{TR}
+    beta::Vector{TR}
 end
 
 
