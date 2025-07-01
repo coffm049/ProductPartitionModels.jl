@@ -246,6 +246,7 @@ mutable struct Prior_PPMx
     similarity::Union{Nothing,Prior_similarity}
     baseline::Union{Nothing,Prior_baseline}
     base::Union{Nothing,Prior_base}
+    massParams::Union{Nothing,Vector{Real}}
 end
 
 """
@@ -262,7 +263,7 @@ function init_PPMx_prior(sampling_model::Symbol=:Reg)
     end
 
     # store empty space for center prior but don't touch until already instantiated
-    return Prior_PPMx(nothing, nothing, bs, nothing)
+    return Prior_PPMx(nothing, nothing, bs, nothing, nothing)
 end
 
 ## testing unexpected behavior

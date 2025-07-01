@@ -633,8 +633,11 @@ function update_C!(model::Model_PPMx,
 
 
     if mixDPM
+        if isnothing(model.prior.massParams)
+            model.prior.massParams = [1.0, 1.0]
+        end 
         # update total mass parameter
-        α = sample_totalMass(model.state.cohesion.α, model.n, length(unique(model.state.C)), 1.0, 1.0)
+        α = sample_totalMass(model.state.cohesion.α, model.n, length(unique(model.state.C)), model.prior.massParams[1], model.prior.massParams[2])
         model.state.cohesion = Cohesion_CRP(α, K)
     end
 
