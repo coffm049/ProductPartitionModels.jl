@@ -75,7 +75,7 @@ df <- data.frame("file" = dir()) %>%
 
         Common = common, Precision = prec, Alpha = alph,
         Beta = bet, InterEffect = interEffect, Imbalanced,
-        xdiff, variance
+        xdiff, variance, N
     )
 # group by file
 
@@ -96,7 +96,7 @@ temp <- df %>%
         # MSE
         across(ends_with("_common1"), function(x) sqrt(mean((Common - x)^2, na.rm = T)), .names= "{.col}-RMSE"),
         across(ends_with("_common2"), function(x) sqrt(mean((-Common - x)^2, na.rm = T)), .names= "{.col}-RMSE"),
-        .by = c(Common, InterEffect, Alpha, Beta, Precision, Imbalanced, variance)
+        .by = c(N, Common, InterEffect, Alpha, Beta, Precision, Imbalanced, variance)
     ) %>%
     pivot_longer(
         -c(Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance),
@@ -105,7 +105,7 @@ temp <- df %>%
         )
 longDF <- df %>%
     pivot_longer(
-        -c(Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance),
+        -c(N, Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance),
          names_to = c(".value", "Metric"),
          names_pattern = "(.*)\\_(.*)",
         ) %>%
@@ -366,7 +366,7 @@ longDF %>%
 
 ```{r}
 longDF %>%
-    filter(Metric == "rind") %>%
+    filter(Metric == "rind", N == 250) %>%
     ggplot(aes(x = Statistic, fill = Model, y = ..density..)) +
     geom_histogram(alpha = 0.3, color = "black") +
     facet_grid(cols = vars(Alpha), rows = vars(Beta), scales = "free",
@@ -375,3 +375,46 @@ longDF %>%
     xlim(0.5, 1.0) +
     ggtitle("Rand index (common=1, Interaction=0.25), Balanced")
 ```
+
+
+
+# big sim
+```{r}
+longDF %>%
+    filter(Imbalanced == FALSE, Metric == "common1", N== 1000) %>%
+    ggplot(aes(x = Statistic, fill = Model)) +
+    geom_density(alpha = 0.2) +
+    geom_vline(xintercept = 1.0) +
+    geom_vline(xintercept = 0.0) +
+    facet_grid(
+        rows = vars(InterEffect), cols = vars(Beta), scales = "free",
+        #labeller = labeller(.rows = label_both, .cols = label_both)
+    ) +
+    ggtitle("Common effects") +
+    xlab("Common Estimate")
+ggsave("../../psychometrika/figures/bigSimcommon1.png", width = 6, dpi = 300, units = "in")
+
+longDF %>%
+    filter(Imbalanced == FALSE, Metric == "common2", N== 1000) %>%
+    ggplot(aes(x = Statistic, fill = Model)) +
+    geom_density(alpha = 0.2) +
+    geom_vline(xintercept = 1.0) +
+    geom_vline(xintercept = 0.0) +
+    facet_grid(
+        rows = vars(InterEffect), cols = vars(Beta), scales = "free",
+        #labeller = labeller(.rows = label_both, .cols = label_both)
+    ) +
+    ggtitle("Common effects") +
+    xlab("Common Estimate")
+ggsave("../../psychometrika/figures/bigSimcommon2.png", width = 6, dpi = 300, units = "in")
+
+longDF %>%
+    filter(Metric == "rind", N == 1000) %>%
+    ggplot(aes(x = Statistic, fill = Model, y = ..density..)) +
+    geom_histogram(alpha = 0.3, color = "black") +
+    facet_wrap(~InterEffect) + #, labeller = labeller(.rows = label_both, .cols = label_both))
+    ggtitle("Rand index, N = 1000")
+ggsave("../../psychometrika/figures/bigSimRI.png", width = 6, dpi = 300, units = "in")
+
+```
+

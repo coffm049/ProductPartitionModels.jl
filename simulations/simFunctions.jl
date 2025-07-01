@@ -298,7 +298,8 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     rindKclust = Clustering.randindex(parse.(Int, df.kclust), df.group)
     rindKclustoos = Clustering.randindex(parse.(Int, dfoos.kclust), dfoos.group)
     # linear model with Y vs X1, X2
-    clustlm = lm(@formula(Y ~ (X1 + X2) * kclust), df)
+    contrasts = Dict(:groups => EffectsCoding())  # deviation from mean
+    clustlm = lm(@formula(Y ~ (X1 + X2) * kclust), df; contrasts= contrasts)
     # df.group = string.(df.group)
     # clustlm = lm(@formula(Y ~ (X1 + X2) * group), df)
     kmeanMSE = sqrt(mean(residuals(clustlm) .^ 2))
