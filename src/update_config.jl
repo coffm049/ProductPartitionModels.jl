@@ -621,7 +621,7 @@ end
 
 function update_C!(model::Model_PPMx, 
     update_lik_params::Vector{Symbol}=[:mu, :sig, :beta], 
-    method::Symbol=:MH, M_newclust::Int=10; mixDPM::Bool=true)
+    method::Symbol=:MH, M_newclust::Int=25; mixDPM::Bool=true)
     # method one of :MH, :FC (FC mot currently in use--must be corrected)
 
     K = length(model.state.lik_params)

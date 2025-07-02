@@ -130,7 +130,7 @@ end
 # common < interEffect : 
 # common > interEffect : somewhat promising
 
-function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25, 0.25, 0.25, 0.25], variance::Real=1.0, interEffect::Float64=1.0, common::Float64=1.0, plotFit::Bool=false, niters::Int=1000, prec::Real=0.1, alph::Real=1.0, bet::Real=1.0, plotSim::Bool=false, xdiff::Real=0.0, dims::Int=2)
+function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25, 0.25, 0.25, 0.25], variance::Real=1.0, interEffect::Float64=1.0, common::Float64=1.0, plotFit::Bool=false, niters::Int=1000, prec::Real=10.0, alph::Real=10.0, bet::Real=20.0, plotSim::Bool=false, xdiff::Real=0.0, dims::Int=2)
 
     # Simulate data
     df = simData(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotSim=plotSim, xdiff=xdiff, dims=dims)
@@ -150,15 +150,16 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     model = Model_PPMx(df.Y, X, df.group, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=true)
     # set priors for base measure sampling
     model.prior.base = Prior_base(
-       repeat([0.0], dims + 1),
-       repeat([prec], dims + 1),
-       repeat([alph], dims +1),
-       repeat([bet], dims+ 1)
+       repeat([0.0], dims + 1), 
+       repeat([prec], dims + 1), #1.0
+       repeat([alph], dims +1), # 1.0
+       repeat([bet], dims+ 1) # 1.0
     )
+    model.prior.massParams = [3.0, 3.0]
   
     trimid = Int(niters * 3 / 5)
     simid = Int(niters * 2 / 5)
-    model.state.baseline.tau0 = 1.0
+    #model.state.baseline.tau0 = 1e-1
     mcmc!(model, trimid; mixDPM=true)
     sim = mcmc!(model, simid; mixDPM=true)
 
@@ -180,6 +181,11 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     #Ypred2oos = (Ypred2oos .* ystd) .+ ymean
 
     # clustering
+    # clustCounts= countmap(model.state.C)
+    # nonsingle = collect(keys(clustCounts))[values(clustCounts)  .> 3]
+    # filt = model.state.C .∈ Ref(nonsingle)
+    # Clustering.randindex(model.state.C[filt], df.group[filt])
+    # Clustering.randindex(model.state.C, df.group)
     adjrindMixvec = [Clustering.randindex(s[:C], df.group)[1] for s in sim]
     adjrindDPMvec = [Clustering.randindex(s[:C], df.group)[1] for s in sim2]
     rindMixvec = [Clustering.randindex(s[:C], df.group)[2] for s in sim]

@@ -99,17 +99,18 @@ function update_lik_params!(model::Model_PPMx,
 
         # Run the sampler
         # mu_sample, sigma2_sample = weighted_sampler(Betas, clustCounts, mu0, kappa0, alpha0, beta0, 5)
-        mu_sample, sigma2_sample = weighted_nng_sampler(Betas,
-                             collect(values(clustCounts)),
-                             mu0,
-                             kappa0,
-                             alpha0,
-                             beta0,
-                             5)
-        # mu_sample, sigma2_sample = independent_sampler(Betas, mu0, kappa0, alpha0, beta0, 5)
+        # mu_sample, sigma2_sample = weighted_nng_sampler(Betas,
+        #                      collect(values(clustCounts)),
+        #                      mu0,
+        #                      kappa0,
+        #                      alpha0,
+        #                      beta0,
+        #                      5000)
+        # mean(mu_sample, dims = 2)
+        mu_sample, sigma2_sample = independent_sampler(Betas, mu0, kappa0, alpha0, beta0, 10)
+        # mu_sample, sigma2_sample = NN_shrinkage(Betas, 0.0, 5e-3, kappa0, alpha0, beta0, 2)
         mu_sample = median(mu_sample, dims = 2)
         sigma2_sample = median(sigma2_sample, dims = 2)
-        # mu_sample, sigma2_sample = NN_shrinkage(Betas, 0.0, 5e-3, kappa0, alpha0, beta0, 100)
         model.state.prior_mean_beta = mu_sample[:, 1]
         #model.state.prior_mean_beta = zeros(model.p)
         # prior_mean_beta = zeros(model.p)
