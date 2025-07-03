@@ -32,8 +32,8 @@ alph = parse(Float64, ARGS[9])
 bet = parse(Float64, ARGS[10])
 reps = parse(Int, ARGS[11])
 niters = parse(Int, ARGS[12])
-massa = parse(Int, ARGS[13])
-massb = parse(Int, ARGS[14])
+massa = parse(Float64, ARGS[13])
+massb = parse(Float64, ARGS[14])
 
 # construct a file name from the user inputs
 outputName = "results/N$(N)_c$(nc)_inter$(interEffect)_common$(common)_xd$(xdiff)_v$(variance)_dim$(dims)_prec$(prec)alph$(alph)bet$(bet)_mass$(massa)$(massb)"

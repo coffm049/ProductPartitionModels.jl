@@ -90,8 +90,8 @@ function independent_sampler(XX, mu0, clustCounts, kappa0, alpha0, beta0, nsamps
     clustCounts = clustCounts[nonsingle]
     XX = XX[nonsingle, :]
     n, p = size(XX)  # Number of observations and dimensions
-    XX_bar = sum(clustCounts .* XX, dims=1) ./ sum(clustCounts)
-    #XX_bar = mean(XX, dims=1)  # Sample means for each dimension
+    # XX_bar = sum(clustCounts .* XX, dims=1) ./ sum(clustCounts)
+    XX_bar = mean(XX, dims=1)  # Sample means for each dimension
 
     # Storage for samples
     mu_samples = Matrix{Float64}(undef, p, nsamps)
@@ -112,10 +112,15 @@ function independent_sampler(XX, mu0, clustCounts, kappa0, alpha0, beta0, nsamps
             sigma2_samples[j, i] = sigma2
 
             # Sample μ_j from Normal
-            mu = rand(Normal(mu_n, sqrt(sigma2 / kappa_n[j])))
+            mu = rand(Normal(mu_n, sqrt(sigma2 / kappa_n[j] / 4.0)))
             mu_samples[j, i] = mu
         end
     end
+
+    di = abs.(mu_samples .- median(mu_samples,dims=2)) ./ map(x -> diff(quantile(x, [0.25, 0.75]))[1], eachrow(mu_samples)) .> 1.5
+    
+    mu_samples = mu_samples[:, (sum(di, dims =1) .== 0)[1,:]]
+  
 
     return mu_samples, sigma2_samples
 end

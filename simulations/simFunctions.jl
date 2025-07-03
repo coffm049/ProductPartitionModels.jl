@@ -80,8 +80,9 @@ function simData(
     # Step 3: Slopes matrix (nclusts × dims)
     # slopes = [quantile(Normal(commons[d], interEffect), g / (nclusts + 1)) for g in 1:nclusts, d in 1:dims]
     # more separation in parameter space
-    slopes = (commons') .+ (grid_maximin(nc, dims) .- ones(dims)' ./ 2) .* interEffect
-    scatter(slopes[:, 1], slopes[:, 2])
+    gri = grid_maximin(nc, dims)
+    slopes = commons' .+ (gri .- mean(gri, dims = 2)) .* interEffect
+    # scatterplot(slopes[:, 1], slopes[:, 2])
 
 
     # Step 4: Group-specific predictor shifts
@@ -164,7 +165,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
     trimid = Int(niters * 3 / 5)
     simid = Int(niters * 2 / 5)
-    model.state.baseline.tau0 = 1e0
+    model.state.baseline.tau0 = 1e3
     mcmc!(model, trimid; mixDPM=true)
     sim = mcmc!(model, simid; mixDPM=true)
 
@@ -247,16 +248,16 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     sim2 = sim2[dpmEq:thin:end]
 
     # empirical mean for comparison
-    output_list = map(step -> median([c[:beta][3] for c in step[:lik_params]]), sim)
+    # output_list = map(step -> median([c[:beta][3] for c in step[:lik_params]]), sim)
     # output_list = map(step -> median([c[:beta][2] for c in step[:lik_params]]), sim)
     # output_list = mean(map(step -> median([c[:beta][2] for c in step[:lik_params]]), sim2))
     # lineplot(output_list)
     # plot(output_list)
 
-    # output_list = map(step -> [c[:beta] for c in step[:lik_params]], sim)
-    # clusterEff = reduce(hcat, reduce(vcat, output_list))[2:3, :]'
-    # clusterEff = clusterEff[all(abs.(clusterEff) .< 3.0, dims=2)[:, 1], :]
-    # scatter(clusterEff[:, 1], clusterEff[:, 2]; markersize=0.5)
+    output_list = map(step -> [c[:beta] for c in step[:lik_params]], sim)
+    clusterEff = reduce(hcat, reduce(vcat, output_list))[2:3, :]'
+    clusterEff = clusterEff[all(abs.(clusterEff) .< 20.0, dims=2)[:, 1], :]
+    scatterplot(clusterEff[:, 1], clusterEff[:, 2]; markersize=0.5)
     # KDE on an automatically chosen grid (fast FFT method)
     # kde2d = kde((clusterEff[:, 1], clusterEff[:, 2]); npoints=(20, 20))
     # p = contourf(xg, yg, dens_mat';
@@ -281,15 +282,18 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     commonBeta0 = [s[:prior_mean_beta][1] for s in sim]
     meanBeta0 = mean(commonBeta0)
     commonBeta1 = [s[:prior_mean_beta][2] for s in sim]
+
     # lineplot(commonBeta1)
-    dpmCI = quantile(commonBeta1[abs.(commonBeta1).<10], [0.05, 0.95])
+    # dpmCI = quantile(commonBeta1[abs.(commonBeta1).<10], [0.05, 0.95])
+    dpmCI = quantile(commonBeta1, [0.05, 0.95])
     # plot(commonBeta1)
     # histogram(commonBeta1)
     # vline!(dpmCI)
     # meanBeta1 = mean(commonBeta1[abs.(commonBeta1) .< 10])
     meanBeta1 = median(commonBeta1)
     commonBeta2 = [s[:prior_mean_beta][3] for s in sim]
-    dpmCI2 = quantile(commonBeta2[abs.(commonBeta2).<10], [0.05, 0.95])
+    dpmCI2 = quantile(commonBeta2, [0.05, 0.95])
+    # dpmCI2 = quantile(commonBeta2[abs.(commonBeta2).<10], [0.05, 0.95])
     # lineplot(commonBeta2)
     # plot(commonBeta2)
     # histogram(commonBeta2)
