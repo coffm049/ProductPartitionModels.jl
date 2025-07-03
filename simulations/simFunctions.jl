@@ -26,7 +26,7 @@
 # niters= 500
 # xdiff=1.0
 #
-
+include("gridSim.jl")
 
 function assign_clusters(X, centroids)
     return [argmin([norm(X[:, i] - centroids[:, j]) for j in 1:size(centroids, 2)]) for i in 1:size(X, 2)]
@@ -47,17 +47,17 @@ function findEquilibrated(; rmse::Vector{Float64}, rind::Vector{Float64}, tol::F
 end
 
 
-function simData( 
-    rng = Random.default_rng();
-    N = 300, 
-    dims = 2, 
-    nclusts = 3, 
-    fractions = repeat([0.2], 5),
-    xdiff = 0.5,
-    interEffect = 1.0,
-    common = 0.0,
-    variance = 1.0,
-    plotSim = false
+function simData(
+    rng=Random.default_rng();
+    N=300,
+    dims=2,
+    nclusts=3,
+    fractions=repeat([0.2], 5),
+    xdiff=0.5,
+    interEffect=1.0,
+    common=0.0,
+    variance=1.0,
+    plotSim=false
 )
     nclusts = length(fractions)
     # Step 1: Create DataFrame with X1, X2, ..., Xdims
@@ -78,7 +78,11 @@ function simData(
     end
     commons = [common, -common]
     # Step 3: Slopes matrix (nclusts × dims)
-    slopes = [quantile(Normal(commons[d], interEffect), g / (nclusts + 1)) for g in 1:nclusts, d in 1:dims]
+    # slopes = [quantile(Normal(commons[d], interEffect), g / (nclusts + 1)) for g in 1:nclusts, d in 1:dims]
+    # more separation in parameter space
+    slopes = (commons') .+ (grid_maximin(nc, dims) .- ones(dims)' ./ 2) .* interEffect
+    scatter(slopes[:, 1], slopes[:, 2])
+
 
     # Step 4: Group-specific predictor shifts
     xdiffs = [quantile(Normal(0, xdiff), g / (nclusts + 1)) for g in 1:nclusts]
@@ -88,16 +92,16 @@ function simData(
     end
 
     # Step 5: Center and scale X columns
-    for d in 1:dims
-        xname = "X$d"
-        x = df[!, xname]
-        df[!, xname] = (x .- mean(x)) ./ std(x)
-    end
+    # for d in 1:dims
+    #     xname = "X$d"
+    #     x = df[!, xname]
+    #     df[!, xname] = (x .- mean(x)) ./ std(x)
+    # end
 
     # Step 6: Compute linear predictors
     X = Matrix(df[:, ["X$d" for d in 1:dims]])
     df.mean = [dot(X[i, :], slopes[df.group[i], :]) for i in 1:N]
-    
+
     # THIS WORKS
     # df.groups = string.(df.group)
     # contrasts = Dict(:groups => EffectsCoding())  # deviation from mean
@@ -130,7 +134,7 @@ end
 # common < interEffect : 
 # common > interEffect : somewhat promising
 
-function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25, 0.25, 0.25, 0.25], variance::Real=1.0, interEffect::Float64=1.0, common::Float64=1.0, plotFit::Bool=false, niters::Int=1000, prec::Real=10.0, alph::Real=10.0, bet::Real=20.0, plotSim::Bool=false, xdiff::Real=0.0, dims::Int=2)
+function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25, 0.25, 0.25, 0.25], variance::Real=1.0, interEffect::Float64=1.0, common::Float64=1.0, plotFit::Bool=false, niters::Int=1000, prec::Real=10.0, alph::Real=10.0, bet::Real=20.0, plotSim::Bool=false, xdiff::Real=2.0, dims::Int=2, massParams::Vector{Float64}=[1.0, 1.0])
 
     # Simulate data
     df = simData(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotSim=plotSim, xdiff=xdiff, dims=dims)
@@ -150,16 +154,17 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     model = Model_PPMx(df.Y, X, df.group, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=true)
     # set priors for base measure sampling
     model.prior.base = Prior_base(
-       repeat([0.0], dims + 1), 
-       repeat([prec], dims + 1), #1.0
-       repeat([alph], dims +1), # 1.0
-       repeat([bet], dims+ 1) # 1.0
+        repeat([0.0], dims + 1),
+        repeat([prec], dims + 1), #1.0
+        repeat([alph], dims + 1), # 1.0
+        repeat([bet], dims + 1) # 1.0
     )
-    model.prior.massParams = [3.0, 3.0]
-  
+    model.prior.massParams = massParams # 1e-3 for  common 10, inter 5 
+    #model.prior.massParams = [3.0, 3.0]
+
     trimid = Int(niters * 3 / 5)
     simid = Int(niters * 2 / 5)
-    #model.state.baseline.tau0 = 1e-1
+    model.state.baseline.tau0 = 1e0
     mcmc!(model, trimid; mixDPM=true)
     sim = mcmc!(model, simid; mixDPM=true)
 
@@ -181,11 +186,11 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     #Ypred2oos = (Ypred2oos .* ystd) .+ ymean
 
     # clustering
-    # clustCounts= countmap(model.state.C)
-    # nonsingle = collect(keys(clustCounts))[values(clustCounts)  .> 3]
-    # filt = model.state.C .∈ Ref(nonsingle)
-    # Clustering.randindex(model.state.C[filt], df.group[filt])
-    # Clustering.randindex(model.state.C, df.group)
+    clustCounts = countmap(model.state.C)
+    nonsingle = collect(keys(clustCounts))[values(clustCounts).>3]
+    filt = model.state.C .∈ Ref(nonsingle)
+    Clustering.randindex(model.state.C[filt], df.group[filt])
+    Clustering.randindex(model.state.C, df.group)
     adjrindMixvec = [Clustering.randindex(s[:C], df.group)[1] for s in sim]
     adjrindDPMvec = [Clustering.randindex(s[:C], df.group)[1] for s in sim2]
     rindMixvec = [Clustering.randindex(s[:C], df.group)[2] for s in sim]
@@ -242,25 +247,70 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     sim2 = sim2[dpmEq:thin:end]
 
     # empirical mean for comparison
-    # output_list = mean(map(step -> median([c[:beta][2] for c in step[:lik_params]]), sim))
+    output_list = map(step -> median([c[:beta][3] for c in step[:lik_params]]), sim)
+    # output_list = map(step -> median([c[:beta][2] for c in step[:lik_params]]), sim)
     # output_list = mean(map(step -> median([c[:beta][2] for c in step[:lik_params]]), sim2))
     # lineplot(output_list)
     # plot(output_list)
+
+    # output_list = map(step -> [c[:beta] for c in step[:lik_params]], sim)
+    # clusterEff = reduce(hcat, reduce(vcat, output_list))[2:3, :]'
+    # clusterEff = clusterEff[all(abs.(clusterEff) .< 3.0, dims=2)[:, 1], :]
+    # scatter(clusterEff[:, 1], clusterEff[:, 2]; markersize=0.5)
+    # KDE on an automatically chosen grid (fast FFT method)
+    # kde2d = kde((clusterEff[:, 1], clusterEff[:, 2]); npoints=(20, 20))
+    # p = contourf(xg, yg, dens_mat';
+    #     fill=true,        # colour fill
+    #     levels=20,          # # of contour bands
+    #     c=terrain,
+    #     linewidth=0,         # no border on filled bands
+    #     clims=(0, maximum(dens_mat)),  # full dynamic range
+    #     xlabel="x", ylabel="y",
+    #     aspect_ratio=:equal,
+    #     title="2-D KDE topography")
+    # # Plot – transpose so orientation matches xg/yg
+    # contourf(kde2d.x, kde2d.y, kde2d.density' .+ 1e-6;            # note '
+    #     xlabel="x", ylabel="y",
+    #     title="2-D kernel-density estimate",
+    #     colorbar_title="density")#, colorbar_scale=:log10)
+    # xlims!(-1, 2.5)
+    # ylims!(-2.5, 1.1)
+
+
 
     commonBeta0 = [s[:prior_mean_beta][1] for s in sim]
     meanBeta0 = mean(commonBeta0)
     commonBeta1 = [s[:prior_mean_beta][2] for s in sim]
     # lineplot(commonBeta1)
+    dpmCI = quantile(commonBeta1[abs.(commonBeta1).<10], [0.05, 0.95])
+    # plot(commonBeta1)
+    # histogram(commonBeta1)
+    # vline!(dpmCI)
     # meanBeta1 = mean(commonBeta1[abs.(commonBeta1) .< 10])
     meanBeta1 = median(commonBeta1)
     commonBeta2 = [s[:prior_mean_beta][3] for s in sim]
+    dpmCI2 = quantile(commonBeta2[abs.(commonBeta2).<10], [0.05, 0.95])
     # lineplot(commonBeta2)
+    # plot(commonBeta2)
+    # histogram(commonBeta2)
+    # vline!(dpmCI2)
     # meanBeta2 = mean(commonBeta2[abs.(commonBeta2) .< 10])
     meanBeta2 = median(commonBeta2)
 
-    # find 95% credible interval
-    dpmCI = quantile(commonBeta1[abs.(commonBeta1) .< 10], [0.025, 0.975])
-    dpmCI2 = quantile(commonBeta2[abs.(commonBeta2) .< 10], [0.025, 0.975])
+    # find central 90% credible interval
+    # using KernelDensity
+    # cb1dens = kde(commonBeta1)
+    # dx = cb1dens.x[2] - cb1dens.x[1]
+    # idx = sortperm(cb1dens.density, rev=true)
+    # ecdf = cumsum(cb1dens.density[idx]) * dx
+    # minSet = cb1dens.x[idx[1:findfirst(ecdf .> 0.9)]]
+    # minx = minimum(minSet)
+    # maxx = maximum(minSet)
+    # histogram(commonBeta1)
+    # vline!([minx, maxx], label = "HPD")
+    # vline!(quantile(commonBeta1), [0.05, 0.95], label = "CI")
+    # xlims!(-0.2, 1.4)
+    # find central 90% credible interval
 
     # check if 3.0 is in dpmCI
     zeroInDPM = (0.0 .>= dpmCI[1]) & (0.0 <= dpmCI[2])
@@ -305,7 +355,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     rindKclustoos = Clustering.randindex(parse.(Int, dfoos.kclust), dfoos.group)
     # linear model with Y vs X1, X2
     contrasts = Dict(:groups => EffectsCoding())  # deviation from mean
-    clustlm = lm(@formula(Y ~ (X1 + X2) * kclust), df; contrasts= contrasts)
+    clustlm = lm(@formula(Y ~ (X1 + X2) * kclust), df; contrasts=contrasts)
     # df.group = string.(df.group)
     # clustlm = lm(@formula(Y ~ (X1 + X2) * group), df)
     kmeanMSE = sqrt(mean(residuals(clustlm) .^ 2))

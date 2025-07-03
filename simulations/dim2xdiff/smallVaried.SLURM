@@ -9,8 +9,6 @@
 #SBATCH --mail-user=coffm049@umn.edu
 #SBATCH --array=0-9
 
-
-
 PREC=(0.1)
 ALPHAS=(0.1 1.0 2.0)
 BETAS=(0.1 1.0 2.0)
@@ -19,18 +17,17 @@ len_ALPHA=${#ALPHAS[@]}
 len_BETA=${#BETAS[@]}
 
 # Compute indices
-i=$(( SLURM_ARRAY_TASK_ID / len_ALPHA ))
-j=$(( SLURM_ARRAY_TASK_ID %  len_BETA))
+i=$((SLURM_ARRAY_TASK_ID / len_ALPHA))
+j=$((SLURM_ARRAY_TASK_ID % len_BETA))
 
 # for ((id = 0; id < 9; id++)); do
 #   i=$(( $id / len_ALPHA ))
 #   j=$(( $id % len_BETA ))
 #   ALPHA=${ALPHAS[$i]}
 #   BETA=${BETAS[$j]}
-#   
+#
 #   echo "$PREC $ALPHA $BETA"
 # done
-
 
 # Fetch actual parameters
 ALPHA=${ALPHAS[$i]}
@@ -53,4 +50,4 @@ cd ~/software/ProductPartitionModels.jl/simulations
 # bet = parse(Float64, ARGS[10])
 # reps = parse(Int, ARGS[11])
 # niters = parse(Int, ARGS[12])
-julia --project=. --threads=2 sim.jl 250 8 0.1 0.25 1.0 1.0 2 $PREC $ALPHA $BETA 20 5000
+julia --project=. --threads=2 sim.jl 250 8 1.0 5.0 2.5 2.0 2 $PREC $ALPHA $BETA 20 5000 0.001 0.001

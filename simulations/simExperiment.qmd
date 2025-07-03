@@ -47,13 +47,13 @@ default(fillopacity = 0.5, lineopacity = 1.0)
 ```{julia} 
 N = 500
 nc =8 
-variance = 0.01
-interEffect = 0.25
-common = 1.0
+variance = 1.0
+interEffect = 10.0
+common = 5.0
 niters=2000
 rng = Random.MersenneTwister(0)
 reps = 25
-xdiff=1.0
+xdiff=2.0
 fractions = repeat([1/nc], nc)
 dims = 2
 ```
@@ -119,7 +119,7 @@ Results from a single simulation is shown in @fig-singleSim.
 
 fractions = repeat([1/nc], nc)
 #results = Vector{DataFrame}(undef, reps)
-results = simExperiment(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotFit=true, niters=niters, prec=0.1, alph=1.0, bet=1.0, plotSim=false, xdiff=xdiff, dims=dims)
+results = simExperiment(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotFit=true, niters=niters, prec=0.1, alph=1.0, bet=1.0, plotSim=false, xdiff=xdiff, dims=dims, massParams = [1e-4, 1e-4])
 #results = simExperiment(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotFit=false, niters=niters, prec=0.1, alph=1.0, bet=1.0, plotSim=false, xdiff=xdiff, dims=dims)
 ```
 

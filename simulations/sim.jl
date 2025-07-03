@@ -32,9 +32,11 @@ alph = parse(Float64, ARGS[9])
 bet = parse(Float64, ARGS[10])
 reps = parse(Int, ARGS[11])
 niters = parse(Int, ARGS[12])
+massa = parse(Int, ARGS[13])
+massb = parse(Int, ARGS[14])
 
 # construct a file name from the user inputs
-outputName = "results/N$(N)_c$(nc)_inter$(interEffect)_common$(common)_xd$(xdiff)_v$(variance)_dim$(dims)_prec$(prec)alph$(alph)bet$(bet)"
+outputName = "results/N$(N)_c$(nc)_inter$(interEffect)_common$(common)_xd$(xdiff)_v$(variance)_dim$(dims)_prec$(prec)alph$(alph)bet$(bet)_mass$(massa)$(massb)"
 
 # END user input
 #
@@ -49,7 +51,7 @@ seeds = MersenneTwister.(rand(1:10^8, Threads.nthreads()))  # or generate from o
 Threads.@threads for i in 1:reps
     try
         println(i)
-        results[i] = simExperiment(seeds[Threads.threadid()]; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, niters=niters, plotSim=false, xdiff=xdiff, dims=dims, prec=prec, alph=alph, bet=bet)
+        results[i] = simExperiment(seeds[Threads.threadid()]; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, niters=niters, plotSim=false, xdiff=xdiff, dims=dims, prec=prec, alph=alph, bet=bet, massParams = [massa, massb])
     catch err
         println("sim Failed")
     end
