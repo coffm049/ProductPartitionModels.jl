@@ -86,7 +86,7 @@ end
 
 function independent_sampler(XX, mu0, clustCounts, kappa0, alpha0, beta0, nsamps)
     clustCounts = collect(values(clustCounts))
-    nonsingle = clustCounts .> 1
+    nonsingle = clustCounts .> 2
     clustCounts = clustCounts[nonsingle]
     XX = XX[nonsingle, :]
     n, p = size(XX)  # Number of observations and dimensions

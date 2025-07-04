@@ -107,12 +107,12 @@ function update_lik_params!(model::Model_PPMx,
         #                      beta0,
         #                      5000)
         # mean(mu_sample, dims = 2)
-        mu_sample, sigma2_sample = independent_sampler(Betas, mu0, clustCounts, kappa0, alpha0, beta0, 10)
+        mu_sample, sigma2_sample = independent_sampler(Betas, mu0, clustCounts, kappa0, alpha0, beta0, 2)
         # mu_sample, sigma2_sample = NN_shrinkage(Betas, 0.0, 5e-3, kappa0, alpha0, beta0, 2)
         mu_sample = median(mu_sample, dims=2)
         sigma2_sample = median(sigma2_sample, dims=2)
         model.state.prior_mean_beta = mu_sample[:, 1]
-        model.state.prior_mean_beta = mean(Betas, dims = 1)[1,:]
+        model.state.prior_mean_beta = median(Betas, dims = 1)[1,:]
         # prior_mean_beta = zeros(model.p)
         prior_mean_beta = model.state.prior_mean_beta
         prior_var_beta = sigma2_sample[:, 1]
@@ -152,11 +152,11 @@ function update_lik_params!(model::Model_PPMx,
 
                 model.state.lik_params[k].beta_hypers.tau = update_τ(model.state.lik_params[k].beta_hypers.phi,
                     model.state.lik_params[k].beta ./ model.state.baseline.tau0 ./ model.state.lik_params[k].sig,
-                    1.0/ model.p
+                    2.0/ model.p
                 )
 
                 model.state.lik_params[k].beta_hypers.phi = update_ϕ(model.state.lik_params[k].beta ./ model.state.baseline.tau0 ./ model.state.lik_params[k].sig,
-                    1.0 / model.p
+                    2.0 / model.p
                 )
             else
                 beta_upd_stats = llik_k(model.y[indx_k], model.X[indx_k, :], model.obsXIndx[indx_k],

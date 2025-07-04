@@ -10,8 +10,8 @@
 #SBATCH --array=0-9
 
 PREC=(0.1)
-ALPHAS=(0.1 1.0 2.0)
-BETAS=(0.1 1.0 2.0)
+ALPHAS=(1.0 2.0 3.0)
+BETAS=(1.0 2.0 3.0)
 
 len_ALPHA=${#ALPHAS[@]}
 len_BETA=${#BETAS[@]}
@@ -50,4 +50,4 @@ cd ~/software/ProductPartitionModels.jl/simulations
 # bet = parse(Float64, ARGS[10])
 # reps = parse(Int, ARGS[11])
 # niters = parse(Int, ARGS[12])
-julia --project=. --threads=2 sim.jl 250 8 1.0 5.0 2.5 2.0 2 $PREC $ALPHA $BETA 20 5000 0.001 0.001
+julia --project=. --threads=2 sim.jl 1000 8 1.0 5.0 5.0 3.0 2 $PREC $ALPHA $BETA 20 1000 3.0 3.0

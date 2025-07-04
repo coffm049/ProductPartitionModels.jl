@@ -81,15 +81,15 @@ function simData(
     # slopes = [quantile(Normal(commons[d], interEffect), g / (nclusts + 1)) for g in 1:nclusts, d in 1:dims]
     # more separation in parameter space
     gri = grid_maximin(nc, dims)
-    slopes = commons' .+ (gri .- mean(gri, dims = 2)) .* interEffect
+    slopes = commons' .+ (gri .- mean(gri, dims = 1)) .* interEffect
     # scatterplot(slopes[:, 1], slopes[:, 2])
 
 
     # Step 4: Group-specific predictor shifts
-    xdiffs = [quantile(Normal(0, xdiff), g / (nclusts + 1)) for g in 1:nclusts]
+    xdiffs = (gri .- mean(gri, dims = 1)) .* xdiff
+    
     for d in 1:dims
-        xname = "X$d"
-        df[!, xname] .+= xdiffs[df.group]
+        df[!, "X$d"] .+= xdiffs[df.group]
     end
 
     # Step 5: Center and scale X columns
@@ -165,7 +165,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
     trimid = Int(niters * 3 / 5)
     simid = Int(niters * 2 / 5)
-    model.state.baseline.tau0 = 1e3
+    model.state.baseline.tau0 = 50.0
     mcmc!(model, trimid; mixDPM=true)
     sim = mcmc!(model, simid; mixDPM=true)
 
@@ -248,16 +248,16 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     sim2 = sim2[dpmEq:thin:end]
 
     # empirical mean for comparison
-    # output_list = map(step -> median([c[:beta][3] for c in step[:lik_params]]), sim)
+    # output_list = map(step -> median([c[:beta][2] for c in step[:lik_params]]), sim)
     # output_list = map(step -> median([c[:beta][2] for c in step[:lik_params]]), sim)
     # output_list = mean(map(step -> median([c[:beta][2] for c in step[:lik_params]]), sim2))
     # lineplot(output_list)
     # plot(output_list)
 
-    output_list = map(step -> [c[:beta] for c in step[:lik_params]], sim)
-    clusterEff = reduce(hcat, reduce(vcat, output_list))[2:3, :]'
-    clusterEff = clusterEff[all(abs.(clusterEff) .< 20.0, dims=2)[:, 1], :]
-    scatterplot(clusterEff[:, 1], clusterEff[:, 2]; markersize=0.5)
+    # output_list = map(step -> [c[:beta] for c in step[:lik_params]], sim)
+    # clusterEff = reduce(hcat, reduce(vcat, output_list))[2:3, :]'
+    # clusterEff = clusterEff[all(abs.(clusterEff) .< 20.0, dims=2)[:, 1], :]
+    # scatterplot(clusterEff[:, 1], clusterEff[:, 2]; markersize=0.5)
     # KDE on an automatically chosen grid (fast FFT method)
     # kde2d = kde((clusterEff[:, 1], clusterEff[:, 2]); npoints=(20, 20))
     # p = contourf(xg, yg, dens_mat';

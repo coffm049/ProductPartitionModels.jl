@@ -46,16 +46,20 @@ default(fillopacity = 0.5, lineopacity = 1.0)
 
 ```{julia} 
 N = 500
-nc =8 
+nc = 7
 variance = 1.0
-interEffect = 10.0
+interEffect = 5.0
 common = 5.0
-niters=2000
+niters=500
 rng = Random.MersenneTwister(0)
 reps = 25
-xdiff=2.0
+xdiff=3.0
 fractions = repeat([1/nc], nc)
 dims = 2
+massParams = [3.0, 3.0]
+alph = 2.5
+bet = 2.5
+prec = 0.1
 ```
 
 # Simulation experiment
