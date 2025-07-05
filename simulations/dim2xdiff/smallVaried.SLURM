@@ -7,11 +7,11 @@
 #SBATCH --mem-per-cpu=8G
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=coffm049@umn.edu
-#SBATCH --array=0-9
+#SBATCH --array=0-3
 
 PREC=(0.1)
-ALPHAS=(1.0 2.0 3.0)
-BETAS=(1.0 2.0 3.0)
+ALPHAS=(3.0 5.0)
+BETAS=(3.0 5.0)
 
 len_ALPHA=${#ALPHAS[@]}
 len_BETA=${#BETAS[@]}
