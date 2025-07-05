@@ -1,5 +1,6 @@
 using StatsBase
 using Statistics
+using Distributions
 using Plots
 using Random
 using CSV
