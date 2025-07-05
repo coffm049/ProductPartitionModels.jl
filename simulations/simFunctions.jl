@@ -88,7 +88,7 @@ function simData(
 
     # Step 4: Group-specific predictor shifts
     # xdiffs = (gri .- mean(gri, dims=1)) .* xdiff
-    xdiffs = ([quantile(Uniform(0, 1), g / (nclusts + 1)) for g in 1:nclusts, d in 1:dims] .* xdiff ) .- (xdiff/2)
+    xdiffs = ([quantile(Uniform(0, 1), g / (nclusts + 1)) for g in 1:nclusts, d in 1:dims] .* xdiff) .- (xdiff / 2)
 
     for d in 1:dims
         df[!, "X$d"] .+= xdiffs[df.group]
@@ -333,10 +333,11 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
     # Simple linear regresion
     slr = lm(@formula(Y ~ X1 + X2), df)
+    #slr = lm(@formula(Y ~ X1 + X2), df)
     #df.groups .= string.(df.group)
     # dfoos.group .= string.(dfoos.group)
-    #contrasts = Dict(:groups => EffectsCoding())  # deviation from mean
-    #slr = lm(@formula(Y ~ (X1 + X2) * groups), df; contrasts= contrasts)
+    contrasts = Dict(:groups => EffectsCoding())  # deviation from mean
+    #slr = lm(@formula(Y ~ (X1 + X2) * groups), df; contrasts=contrasts)
     betaCI = confint(slr)[2, :]
     betaCI2 = confint(slr)[3, :]
     # test if 0 is between the two values in betaCI

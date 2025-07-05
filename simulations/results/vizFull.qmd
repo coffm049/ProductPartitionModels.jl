@@ -29,9 +29,14 @@ theme_update(
 )
 
 df <- data.frame("file" = dir()) %>%
-    mutate(Imbalanced = grepl("^Imbal_", file)) %>%
     filter(grepl(".csv$", file)) %>%
-    filter(grepl("xd1.0", file)) %>%
+    mutate(
+        Imbalanced = grepl("^Imbal_", file),
+        mass1 = str_extract(file, "mass[0-9].0"),
+        mass1 = as.numeric(str_remove(mass1, "^mass")),
+        mass2 = str_extract(file, "[0-9].0.csv"),
+        mass2 = as.numeric(str_remove(mass1, ".csv$")),
+    ) %>%
     # map read these csvs into nested dataframe
     mutate(data = map(file, read_csv))  %>%
     # unnest them
@@ -75,14 +80,11 @@ df <- data.frame("file" = dir()) %>%
 
         Common = common, Precision = prec, Alpha = alph,
         Beta = bet, InterEffect = interEffect, Imbalanced,
-        xdiff, variance, N
+        xdiff, variance, N, mass1, mass2
     )
 # group by file
 
     
-
-
-
 temp <- df %>%
     select(-contains("rind"), -contains("bayes")) %>%
     reframe(
@@ -128,37 +130,37 @@ longDF <- df %>%
 #     ggtitle("Common effects sampling distribution (alpha=2, beta=1,prec=0.01), Imbalanced") +
 #     xlab("Common Estimate")
 longDF %>%
-    filter(Imbalanced == FALSE, Metric == "common1", InterEffect == 0.25) %>%
+    filter(Imbalanced == FALSE, Metric == "common1") %>%
     ggplot(aes(x = Statistic, fill = Model)) +
     geom_density(alpha = 0.2) +
-    geom_vline(xintercept = 1.0) +
+    geom_vline(aes(xintercept = unique(Common))) +
     geom_vline(xintercept = 0.0) +
     facet_grid(
         rows = vars(Alpha), cols = vars(Beta), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
-    ggtitle("Common effects (common=1, Interaction=0.25), Balanced") +
+    ggtitle("Common effects (common=5, Interaction=5), Balanced") +
     xlab("Common Estimate")
 ggsave("media/beta1Tuning.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
-    filter(Imbalanced == FALSE, Metric == "common2", InterEffect == 0.25) %>%
+    filter(Imbalanced == FALSE, Metric == "common2") %>%
     ggplot(aes(x = Statistic, fill = Model)) +
     geom_density(alpha = 0.2) +
-    geom_vline(xintercept = -1.0) +
+    geom_vline(xintercept = -5.0) +
     geom_vline(xintercept = 0.0) +
     facet_grid(
         rows = vars(Alpha), cols = vars(Beta), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
-    ggtitle("Common effects (common=-1, Interaction=0.25), Balanced") +
+    ggtitle("Common effects (common=-5, Interaction=5), Balanced") +
     xlab("Common Estimate")
 ggsave("media/beta2Tuning.png", width = 6, dpi = 300, units = "in")
 ```
 
 ```{r}
 longDF %>%
-    filter(Imbalanced == FALSE, grepl("^common", Metric), Alpha == 0.1, Beta==0.1) %>%
+    filter(Imbalanced == FALSE, grepl("^common", Metric), Alpha == 3.0, Beta==3.0) %>%
     ggplot(aes(x = Statistic, fill = Model)) +
     geom_density(alpha = 0.2) +
     geom_vline(xintercept = 0.0) +
@@ -270,7 +272,7 @@ temp %>%
 - vs InterEffects
 ```{r}
 temp %>%
-    filter(Alpha == 0.1, Beta == 0.1) %>%
+    filter(Alpha == 3.0, Beta == 3.0) %>%
     select(-c(Alpha, Beta, Precision, variance, Common, Imbalanced)) %>%
     arrange(Metric) %>%
     pivot_wider(names_from = Metric, values_from = c(`ppmx-common`, kmean, slr)) |>
@@ -358,7 +360,7 @@ temp %>%
 ## clustering and prediction vs inter effect
 ```{r}
 longDF %>%
-    filter(Alpha == 0.1, Beta == 0.1, grepl("rind", Metric) | grepl("bayes", Metric)) %>%
+    filter(Alpha == 3.0, Beta == 3.0, grepl("rind", Metric) | grepl("bayes", Metric)) %>%
     select(-c(Alpha, Beta, Precision, variance, Common, Imbalanced)) %>%
     arrange(InterEffect, Metric)
 ```
@@ -366,7 +368,7 @@ longDF %>%
 
 ```{r}
 longDF %>%
-    filter(Metric == "rind", N == 250) %>%
+    filter(Metric == "rind") %>%
     ggplot(aes(x = Statistic, fill = Model, y = ..density..)) +
     geom_histogram(alpha = 0.3, color = "black") +
     facet_grid(cols = vars(Alpha), rows = vars(Beta), scales = "free",
