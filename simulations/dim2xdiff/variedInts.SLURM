@@ -15,7 +15,7 @@ PREC=0.01
 ALPHA=0.1
 BETA=0.1
 
-INTERS=(0.5 1.0)
+INTERS=(5.0 15.0)
 
 INTER=${INTERS[$SLURM_ARRAY_TASK_ID]}
 
@@ -34,4 +34,4 @@ cd ~/software/ProductPartitionModels.jl/simulations
 # bet = parse(Float64, ARGS[10])
 # reps = parse(Int, ARGS[11])
 # niters = parse(Int, ARGS[12])
-julia --project=. --threads=2 sim.jl 150 8 0.1 $INTER 1.0 1.0 2 $PREC $ALPHA $BETA 10 5000
+julia --project=. --threads=2 sim.jl 1000 8 1.0 $INTER 5.0 3.0 2 $PREC $ALPHA $BETA 80 1000 15.0 15.0

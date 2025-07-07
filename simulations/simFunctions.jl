@@ -167,7 +167,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
     trimid = Int(niters * 3 / 5)
     simid = Int(niters * 2 / 5)
-    model.state.baseline.tau0 = 50.0
+    model.state.baseline.tau0 = 3e3
     mcmc!(model, trimid; mixDPM=true)
     sim = mcmc!(model, simid; mixDPM=true)
 
@@ -336,7 +336,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     #slr = lm(@formula(Y ~ X1 + X2), df)
     #df.groups .= string.(df.group)
     # dfoos.group .= string.(dfoos.group)
-    contrasts = Dict(:groups => EffectsCoding())  # deviation from mean
+    # contrasts = Dict(:groups => EffectsCoding())  # deviation from mean
     #slr = lm(@formula(Y ~ (X1 + X2) * groups), df; contrasts=contrasts)
     betaCI = confint(slr)[2, :]
     betaCI2 = confint(slr)[3, :]
@@ -361,7 +361,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     rindKclust = Clustering.randindex(parse.(Int, df.kclust), df.group)
     rindKclustoos = Clustering.randindex(parse.(Int, dfoos.kclust), dfoos.group)
     # linear model with Y vs X1, X2
-    contrasts = Dict(:groups => EffectsCoding())  # deviation from mean
+    contrasts = Dict(:kclust => EffectsCoding())  # deviation from mean
     clustlm = lm(@formula(Y ~ (X1 + X2) * kclust), df; contrasts=contrasts)
     # df.group = string.(df.group)
     # clustlm = lm(@formula(Y ~ (X1 + X2) * group), df)
