@@ -3,7 +3,7 @@
 #SBATCH --output=../logs/smaller.out
 #SBATCH --error=../logs/smaller.err
 #SBATCH --cpus-per-task=2
-#SBATCH --time=2:00:00
+#SBATCH --time=12:30:00
 #SBATCH --mem-per-cpu=4G
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=coffm049@umn.edu
@@ -12,10 +12,10 @@
 
 
 PREC=0.01
-ALPHA=0.1
-BETA=0.1
+ALPHA=1.0
+BETA=1.0
 
-INTERS=(5.0 15.0)
+INTERS=(0.5 0.75)
 
 INTER=${INTERS[$SLURM_ARRAY_TASK_ID]}
 
@@ -34,4 +34,4 @@ cd ~/software/ProductPartitionModels.jl/simulations
 # bet = parse(Float64, ARGS[10])
 # reps = parse(Int, ARGS[11])
 # niters = parse(Int, ARGS[12])
-julia --project=. --threads=2 sim.jl 1000 8 1.0 $INTER 5.0 3.0 2 $PREC $ALPHA $BETA 80 1000 15.0 15.0
+julia --project=. --threads=2 sim.jl 1000 8 0.1 $INTER 1.0 1.0 2 $PREC $ALPHA $BETA 80 1000 5.0 5.0
