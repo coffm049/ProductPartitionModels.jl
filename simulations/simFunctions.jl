@@ -76,20 +76,12 @@ function simData(
         df[start:stop, :group] .= g
         lastsub = stop
     end
-    commons = [common, -common]
-    # Step 3: Slopes matrix (nclusts × dims)
-    # slopes = [quantile(Normal(commons[d], interEffect), g / (nclusts + 1)) for g in 1:nclusts, d in 1:dims]
-    slopes = [quantile(Uniform(commons[d] - interEffect / 2, commons[d] + interEffect / 2), g / (nclusts + 1)) for g in 1:nclusts, d in 1:dims]
-    # more separation in parameter space
-    # gri = grid_maximin(nc, dims)
-    #slopes = commons' .+ (gri .- mean(gri, dims = 1)) .* interEffect
-    # scatterplot(slopes[:, 1], slopes[:, 2])
-
-
+    slopes = collect(range(common - (nclusts * interEffect), common + (nclusts * interEffect), length=nclusts))
+    slopes = hcat(slopes, -slopes)
     # Step 4: Group-specific predictor shifts
     # xdiffs = (gri .- mean(gri, dims=1)) .* xdiff
-    xdiffs = [quantile(Uniform(-common, common), g / (nclusts + 1)) for g in 1:nclusts, d in 1:dims]
-    xdiffs = range(-xdiff * nc, xdiff * nc, length=nc) .+ common
+    xdiffs = collect(range(-xdiff * nclusts, xdiff * nclusts, length=nclusts))
+    xdiffs = hcat(xdiffs, -xdiffs)
 
     for d in 1:dims
         df[!, "X$d"] .+= xdiffs[df.group]
