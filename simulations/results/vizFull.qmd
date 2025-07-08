@@ -61,12 +61,18 @@ df <- data.frame("file" = dir()) %>%
         slr_common1 = meanBetaSLR,
         slr_common2 = meanBetaSLR2,
 
-        `ppmx-common_T2` = zeroInDPM,
-        kmean_T2 = zeroInk,
-        slr_T2 = zeroInSLR,
-        `ppmx-common_Cov` = commonInDPM,
-        kmean_Cov = commonInk,
-        slr_Cov = commonInSLR,
+        `ppmx-common1_T2` = zeroInDPM,
+        `ppmx-common2_T2` = zeroInDPM2,
+        kmean1_T2 = zeroInk,
+        kmean2_T2 = zeroInk2,
+        slr1_T2 = zeroInSLR,
+        slr2_T2 = zeroInSLR2,
+        `ppmx-common1_Cov` = commonInDPM,
+        `ppmx-common2_Cov` = commonInDPM2,
+        kmean1_Cov = commonInk,
+        kmean2_Cov = commonInk2,
+        slr1_Cov = commonInSLR,
+        slr2_Cov = commonInSLR2,
 
         `ppmx-common_NC` = ncMix,
         `ppmx_NC` = ncDPM,
@@ -86,7 +92,7 @@ df <- data.frame("file" = dir()) %>%
 
     
 temp <- df %>%
-    select(-contains("rind"), -contains("bayes")) %>%
+    # select(-contains("rind"), -contains("bayes")) %>%
     reframe(
         # type 2 error
         across(ends_with("T2"), function(x) mean(x, na.rm = T)),
@@ -98,16 +104,25 @@ temp <- df %>%
         # MSE
         across(ends_with("_common1"), function(x) sqrt(mean((Common - x)^2, na.rm = T)), .names= "{.col}-RMSE"),
         across(ends_with("_common2"), function(x) sqrt(mean((-Common - x)^2, na.rm = T)), .names= "{.col}-RMSE"),
-        .by = c(N, Common, InterEffect, Alpha, Beta, Precision, Imbalanced, variance)
+        across(ends_with("_bayesP"), function(x) mean(x, na.rm = T), .names= "{.col}-bayesP"),
+        across(ends_with("_rind"), function(x) mean(x, na.rm = T), .names= "{.col}-rind"),
+        .by = c(N, Common, InterEffect, Alpha, Beta, Precision, Imbalanced, variance, xdiff)
     ) %>%
     pivot_longer(
-        -c(Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance),
+        -c(Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance, xdiff),
          names_to = c(".value", "Metric"),
          names_pattern = "(.*)_(.*)",
-        )
+        ) %>%
+    select(-c(`ppmx-common`, kmean, slr, ppmx))
+    mutate(
+        `ppmx-common1` = coalesce(`ppmx-common1`, `ppmx-common`),
+        `ppmx-common2` = coalesce(`ppmx-common2`, `ppmx-common`),
+        kmean1 = coalesce(`ppmx-common1`, `ppmx-common`)
+    ) %>%
+    select(-c(`ppmx-common`, kmean))
 longDF <- df %>%
     pivot_longer(
-        -c(N, Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance),
+        -c(N, Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance, xdiff),
          names_to = c(".value", "Metric"),
          names_pattern = "(.*)\\_(.*)",
         ) %>%
@@ -136,41 +151,41 @@ longDF %>%
     geom_vline(aes(xintercept = unique(Common))) +
     geom_vline(xintercept = 0.0) +
     facet_grid(
-        rows = vars(Alpha), cols = vars(Beta), scales = "free",
+        rows = vars(xdiff, Alpha), cols = vars(Beta), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
     ggtitle("Common effects (common=5, Interaction=5), Balanced") +
     xlab("Common Estimate")
-ggsave("media/beta1Tuning.png", width = 6, dpi = 300, units = "in")
+ggsave("../../psychometrika/figures/beta1Tuning.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
     filter(Imbalanced == FALSE, Metric == "common2") %>%
     ggplot(aes(x = Statistic, fill = Model)) +
     geom_density(alpha = 0.2) +
-    geom_vline(xintercept = -5.0) +
+    geom_vline(aes(xintercept = unique(Common))) +
     geom_vline(xintercept = 0.0) +
     facet_grid(
-        rows = vars(Alpha), cols = vars(Beta), scales = "free",
+        rows = vars(xdiff, Alpha), cols = vars(Beta), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
     ggtitle("Common effects (common=-5, Interaction=5), Balanced") +
     xlab("Common Estimate")
-ggsave("media/beta2Tuning.png", width = 6, dpi = 300, units = "in")
+ggsave("../../psychometrika/figures/beta2Tuning.png", width = 6, dpi = 300, units = "in")
 ```
 
 ```{r}
 longDF %>%
-    filter(Imbalanced == FALSE, grepl("^common", Metric), Alpha == 3.0, Beta==3.0) %>%
+    filter(Imbalanced == FALSE, grepl("^common", Metric)) %>%
     ggplot(aes(x = Statistic, fill = Model)) +
     geom_density(alpha = 0.2) +
     geom_vline(xintercept = 0.0) +
     facet_grid(
-        rows = vars(InterEffect), cols = vars(Metric), scales = "free",
+        rows = vars(xdiff, Alpha, Beta), cols = vars(Metric), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
-    ggtitle("Common effects (common=-1, Interaction=0.25), Balanced") +
+    ggtitle("Common effects (common=5, Interaction=5), Balanced") +
     xlab("Common Estimate")
-ggsave("media/betaVinter.png", width = 6, dpi = 300, units = "in")
+ggsave("../../psychometrika/figures/betaVinter.png", width = 6, dpi = 300, units = "in")
 ```
 
 
@@ -178,7 +193,104 @@ ggsave("media/betaVinter.png", width = 6, dpi = 300, units = "in")
 - tuning InterEffect = 0.25, variance = 0.1, Common = 1.0
 ```{r}
 temp %>%
-    filter(InterEffect == 0.25) %>%
+    # filter(InterEffect == 0.25) %>%
+    select(-c(InterEffect, Precision, variance, Common, Imbalanced)) |>
+    arrange(xdiff, Alpha, Beta, Metric) |>
+    group_by(xdiff, Alpha,Beta) |>
+    # filter(grepl("common1", Metric)) %>%
+    # pivot_wider(names_from = Metric, values_from = c(`ppmx-common`, kmean, slr)) |>
+    gt() |>
+    tab_options(row_group.as_column = TRUE)
+    
+    fmt_number(
+      n_sigfig = 2,
+      use_seps = FALSE
+    ) |>
+    fmt_number(
+      columns = c(Alpha, Beta),
+      n_sigfig = 2,
+      use_seps = FALSE
+    ) |>
+    tab_spanner(
+        label = "Priors",
+        columns = c(Alpha, Beta)
+    ) |>
+    tab_spanner(
+        id = "Beta1 T2 Error",
+        label = "T2 Error",
+        columns = c(`ppmx-common_T2`, kmean_T2, slr_T2)
+    ) |>
+    tab_spanner(
+        id = "Beta1 RMSE",
+        label = "RMSE",
+        columns = c(`ppmx-common_common1-RMSE`, `kmean_common1-RMSE`, `slr_common1-RMSE`)
+    ) |>
+    tab_spanner(
+        id = "Beta1 Bias",
+        label = "Bias",
+        columns = c(`ppmx-common_common1-bias`, `kmean_common1-bias`, `slr_common1-bias`)
+    ) |>
+    tab_spanner(
+        id = "Beta1 Coverage",
+        label = "Coverage",
+        columns = c(`ppmx-common_Cov`, kmean_Cov, slr_Cov)
+    ) |>
+    tab_spanner(
+        id = "Beta2 RMSE",
+        label = "RMSE",
+        columns = c(`ppmx-common_common2-RMSE`, `kmean_common2-RMSE`, `slr_common2-RMSE`)
+    ) |>
+    tab_spanner(
+        id = "Beta2 Bias",
+        label = "Bias",
+        columns = c(`ppmx-common_common2-bias`, `kmean_common2-bias`, `slr_common2-bias`)
+    ) |>
+    tab_spanner(
+        label = "Common β1",
+        columns = c(
+            `ppmx-common_T2`, kmean_T2, slr_T2, 
+            `ppmx-common_common1-RMSE`, `kmean_common1-RMSE`, `slr_common1-RMSE`,
+            `ppmx-common_common1-bias`, `kmean_common1-bias`, `slr_common1-bias`,
+            `ppmx-common_Cov`, kmean_Cov, slr_Cov,
+        )
+    ) |>
+    tab_spanner(
+        label = "Common β2",
+        columns = c(
+            `ppmx-common_common2-RMSE`, `kmean_common2-RMSE`, `slr_common2-RMSE`,
+            `ppmx-common_common2-bias`, `kmean_common2-bias`, `slr_common2-bias`,
+        )
+    ) |>
+    cols_label(
+        `ppmx-common_Cov` = "ppmx-common",
+        `ppmx-common_common1-bias` = "ppmx-common",
+        `ppmx-common_common1-RMSE` = "ppmx-common",
+        `ppmx-common_common2-bias` = "ppmx-common",
+        `ppmx-common_common2-RMSE` = "ppmx-common",
+        `ppmx-common_T2` = "ppmx-common",
+
+        kmean_T2 = "kmean",
+        kmean_Cov = "kmean",
+        `kmean_common1-RMSE` = "kmean",
+        `kmean_common1-bias` = "kmean",
+        `kmean_common2-RMSE` = "kmean",
+        `kmean_common2-bias` = "kmean",
+        
+        slr_T2 = "SLR",
+        slr_Cov = "SLR",
+        `slr_common1-RMSE` = "SLR",
+        `slr_common1-bias` = "SLR",
+        `slr_common2-RMSE` = "SLR",
+        `slr_common2-bias` = "SLR",
+        Alpha = "a",
+        Beta = "b",
+    )
+
+```
+
+```{r}
+temp %>%
+    # filter(InterEffect == 0.25) %>%
     select(-c(InterEffect, Precision, variance, Common, Imbalanced)) %>%
     arrange(Metric) %>%
     pivot_wider(names_from = Metric, values_from = c(`ppmx-common`, kmean, slr)) |>
@@ -268,6 +380,7 @@ temp %>%
     )
 
 ```
+
 
 - vs InterEffects
 ```{r}

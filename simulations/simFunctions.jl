@@ -88,7 +88,8 @@ function simData(
 
     # Step 4: Group-specific predictor shifts
     # xdiffs = (gri .- mean(gri, dims=1)) .* xdiff
-    xdiffs = ([quantile(Uniform(0, 1), g / (nclusts + 1)) for g in 1:nclusts, d in 1:dims] .* xdiff) .- (xdiff / 2)
+    xdiffs = [quantile(Uniform(-common, common), g / (nclusts + 1)) for g in 1:nclusts, d in 1:dims]
+    xdiffs = range(-xdiff * nc, xdiff * nc, length=nc) .+ common
 
     for d in 1:dims
         df[!, "X$d"] .+= xdiffs[df.group]
