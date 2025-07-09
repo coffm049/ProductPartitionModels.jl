@@ -112,7 +112,7 @@ function update_lik_params!(model::Model_PPMx,
         mu_sample = median(mu_sample, dims=2)
         sigma2_sample = median(sigma2_sample, dims=2)
         model.state.prior_mean_beta = mu_sample[:, 1]
-        model.state.prior_mean_beta = median(Betas, dims = 1)[1,:]
+        model.state.prior_mean_beta = median(Betas, dims=1)[1, :]
         # prior_mean_beta = zeros(model.p)
         prior_mean_beta = model.state.prior_mean_beta
         prior_var_beta = sigma2_sample[:, 1]
@@ -152,7 +152,7 @@ function update_lik_params!(model::Model_PPMx,
 
                 model.state.lik_params[k].beta_hypers.tau = update_τ(model.state.lik_params[k].beta_hypers.phi,
                     model.state.lik_params[k].beta ./ model.state.baseline.tau0 ./ model.state.lik_params[k].sig,
-                    2.0/ model.p
+                    2.0 / model.p
                 )
 
                 model.state.lik_params[k].beta_hypers.phi = update_ϕ(model.state.lik_params[k].beta ./ model.state.baseline.tau0 ./ model.state.lik_params[k].sig,

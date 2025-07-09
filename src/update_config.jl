@@ -1,9 +1,9 @@
 # update_config.jl
 
-function update_Ci!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, 
+function update_Ci!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int},
     llik_old::Vector{T}, update_lik_params::Vector{Symbol}=[:mu, :sig, :beta],
     M_newclust::Int=10
-    ) where T <: Real
+) where {T<:Real}
 
     ## Currently implemented ONLY for the :Reg type model and not the :Mean type
 
@@ -26,11 +26,11 @@ function update_Ci!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int},
     lcohesions1 = deepcopy(model.state.lcohesions)
     Xstats1 = deepcopy(model.state.Xstats)
     lsimilar1 = deepcopy(model.state.lsimilarities)
-    
+
     ## get cohesion and similarity for the extra cluster(s)
     lcohes_newclust = log_cohesion(Cohesion_CRP(model.state.cohesion.logα, 1, true))
-    Xstats_newclust = [ Similarity_stats(model.state.similarity, [model.X[i,j]]) for j = 1:model.p ]
-    lsimilar_newclust = [ log_similarity(model.state.similarity, Xstats_newclust[j], true) for j in 1:model.p ]
+    Xstats_newclust = [Similarity_stats(model.state.similarity, [model.X[i, j]]) for j = 1:model.p]
+    lsimilar_newclust = [log_similarity(model.state.similarity, Xstats_newclust[j], true) for j in 1:model.p]
 
     # do the above in the style of llik calculations below
     for k in 1:K
@@ -40,7 +40,7 @@ function update_Ci!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int},
             # lcohesions1[k] is the old value that was copied
 
             for j in 1:model.p
-                Xstats0[k][j] = Similarity_stats(model.state.Xstats[k][j], model.X[i,j], :subtract)
+                Xstats0[k][j] = Similarity_stats(model.state.Xstats[k][j], model.X[i, j], :subtract)
                 lsimilar0[k][j] = log_similarity(model.state.similarity, Xstats0[k][j], true)
 
                 # Xstats1[k][j] is the old value that was copied
@@ -69,7 +69,7 @@ function update_Ci!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int},
                 # Xstats0[k][j] is the old value that was copied
                 # lsimilar0[k][j] is the old value that was copied
 
-                Xstats1[k][j] = Similarity_stats(model.state.Xstats[k][j], model.X[i,j], :add)
+                Xstats1[k][j] = Similarity_stats(model.state.Xstats[k][j], model.X[i, j], :add)
                 lsimilar1[k][j] = log_similarity(model.state.similarity, Xstats1[k][j], true)
             end
 
@@ -82,14 +82,14 @@ function update_Ci!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int},
     for k in 1:K
         indx_k = findall(model.state.C .== k) ## currently, C[i] = 0, so obs i gets omitted from the calculation
         if wasnot_single && (k == Ci_old)
-            llik0[k] = llik_k(model.y[indx_k], model.X[indx_k,:], model.obsXIndx[indx_k], model.state.lik_params[k], Xstats0[k], model.state.similarity)[:llik]
+            llik0[k] = llik_k(model.y[indx_k], model.X[indx_k, :], model.obsXIndx[indx_k], model.state.lik_params[k], Xstats0[k], model.state.similarity)[:llik]
             llik1[k] = deepcopy(llik_old[k])
         elseif (k == Ci_old)
             llik0[k] = 0.0
             llik1[k] = deepcopy(llik_old[k])
         else # k != Ci_old
             indx_k_cand = vcat(indx_k, i)
-            llik1[k] = llik_k(model.y[indx_k_cand], model.X[indx_k_cand,:], model.obsXIndx[indx_k_cand], model.state.lik_params[k], Xstats1[k], model.state.similarity)[:llik]
+            llik1[k] = llik_k(model.y[indx_k_cand], model.X[indx_k_cand, :], model.obsXIndx[indx_k_cand], model.state.lik_params[k], Xstats1[k], model.state.similarity)[:llik]
         end
     end
 
@@ -100,8 +100,8 @@ function update_Ci!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int},
     end
 
     if M_newclust > 0
-        lik_params_extra = [ simpri_lik_params(model.state.baseline, model.p, model.state.lik_params[1], update_lik_params) for kk in 1:M_newclust ]
-        llik_newclust = [ llik_k(model.y[[i]], model.X[[i],:], [model.obsXIndx[i]], lik_params_extra[kk], Xstats_newclust, model.state.similarity)[:llik] for kk in 1:M_newclust ]
+        lik_params_extra = [simpri_lik_params(model.state.baseline, model.p, model.state.lik_params[1], update_lik_params) for kk in 1:M_newclust]
+        llik_newclust = [llik_k(model.y[[i]], model.X[[i], :], [model.obsXIndx[i]], lik_params_extra[kk], Xstats_newclust, model.state.similarity)[:llik] for kk in 1:M_newclust]
         llik_wgts_newclust = sum_llik0 .+ llik_newclust
     end
 
@@ -118,14 +118,14 @@ function update_Ci!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int},
     ## weight for new singleton cluster(s)
     if M_newclust > 0
         for kk in 1:M_newclust
-            lw[K + kk] = lcohes_newclust + sum(lsimilar_newclust) - logM_nc + llik_wgts_newclust[kk] 
+            lw[K+kk] = lcohes_newclust + sum(lsimilar_newclust) - logM_nc + llik_wgts_newclust[kk]
         end
     end
 
     ## sample membership
     lw .-= maximum(lw)
     Ci_out = StatsBase.sample(StatsBase.Weights(exp.(lw)))
-    
+
     if Ci_out > K
         which_newclust = Ci_out - K
         Ci_out = K + 1
@@ -136,7 +136,7 @@ function update_Ci!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int},
     moved = (Ci_out != Ci_old)
 
     ## continuing log likelihood
-    if moved 
+    if moved
         llik_out = deepcopy(llik0)
     else
         llik_out = deepcopy(llik_old)
@@ -192,7 +192,7 @@ end
 
 
 function update_Ci_MH_Reg!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, llik_vec::Vector{T},
-    update_lik_params::Vector{Symbol}=[:mu, :sig, :beta], pswap = 0.5) where T <: Real
+    update_lik_params::Vector{Symbol}=[:mu, :sig, :beta], pswap=0.5) where {T<:Real}
 
     ### Adaptation of Neal's (2000) Algorithm 7
 
@@ -213,8 +213,8 @@ function update_Ci_MH_Reg!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, ll
             lcg_ratios = Vector{Float64}(undef, K)
             for k in ks_use
                 lcohesions1[k] = log_cohesion(Cohesion_CRP(model.state.cohesion.logα, S[k] + 1, true))
-                Xstats1[k] = [ Similarity_stats(model.state.Xstats[k][j], model.X[i,j], :add) for j in 1:model.p ]
-                lsimilar1[k] = [ log_similarity(model.state.similarity, Xstats1[k][j], true) for j in 1:model.p ]
+                Xstats1[k] = [Similarity_stats(model.state.Xstats[k][j], model.X[i, j], :add) for j in 1:model.p]
+                lsimilar1[k] = [log_similarity(model.state.similarity, Xstats1[k][j], true) for j in 1:model.p]
                 lcg_ratios[k] = lcohesions1[k] + sum(lsimilar1[k]) - model.state.lcohesions[k] - sum(model.state.lsimilarities[k])
             end
             lsum_cgratios = logsumexp(lcg_ratios[ks_use])
@@ -229,7 +229,7 @@ function update_Ci_MH_Reg!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, ll
 
             indx_Ci_cand = findall(model.state.C .== Ci_cand)
             indx_Ci_cand = vcat(indx_Ci_cand, i)
-            llik_Ci_cand = llik_k(model.y[indx_Ci_cand], model.X[indx_Ci_cand,:], model.obsXIndx[indx_Ci_cand], model.state.lik_params[Ci_cand], Xstats1[Ci_cand], model.state.similarity)[:llik]
+            llik_Ci_cand = llik_k(model.y[indx_Ci_cand], model.X[indx_Ci_cand, :], model.obsXIndx[indx_Ci_cand], model.state.lik_params[Ci_cand], Xstats1[Ci_cand], model.state.similarity)[:llik]
             llik_as_single = llik_vec[Ci_cand] + llik_vec[Ci_old]
 
             lp_accpt = lsum_cgratios + llik_Ci_cand - lcg_single - llik_as_single
@@ -260,20 +260,20 @@ function update_Ci_MH_Reg!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, ll
 
             ## get cohesion, similarity, llik for the extra cluster
             lcohes_newclust = log_cohesion(Cohesion_CRP(model.state.cohesion.logα, 1, true))
-            Xstats_newclust = [ Similarity_stats(model.state.similarity, [model.X[i,j]]) for j = 1:model.p ]
-            lsimilar_newclust = [ log_similarity(model.state.similarity, Xstats_newclust[j], true) for j in 1:model.p ]
+            Xstats_newclust = [Similarity_stats(model.state.similarity, [model.X[i, j]]) for j = 1:model.p]
+            lsimilar_newclust = [log_similarity(model.state.similarity, Xstats_newclust[j], true) for j in 1:model.p]
 
             lcg_single = lcohes_newclust + sum(lsimilar_newclust)
 
             lik_params_extra = simpri_lik_params(model.state.baseline, model.p, model.state.lik_params[1], update_lik_params)
-            llik_newclust = llik_k(model.y[[i]], model.X[[i],:], [model.obsXIndx[i]], lik_params_extra, Xstats_newclust, model.state.similarity)[:llik]
+            llik_newclust = llik_k(model.y[[i]], model.X[[i], :], [model.obsXIndx[i]], lik_params_extra, Xstats_newclust, model.state.similarity)[:llik]
 
             ## get cohesions, Xstats, and similarities each with obs i hypothetically in or out of each cluster
             lcohesions0 = deepcopy(model.state.lcohesions)
             lsimilar0 = deepcopy(model.state.lsimilarities)
 
             lcohesions0[Ci_old] = log_cohesion(Cohesion_CRP(model.state.cohesion.logα, S[Ci_old] - 1, true))
-            Xstats0_Ci_old = [ Similarity_stats(model.state.Xstats[Ci_old][j], model.X[i,j], :subtract) for j in 1:model.p ]
+            Xstats0_Ci_old = [Similarity_stats(model.state.Xstats[Ci_old][j], model.X[i, j], :subtract) for j in 1:model.p]
             for j in 1:model.p
                 lsimilar0[Ci_old][j] = log_similarity(model.state.similarity, Xstats0_Ci_old[j], true)
             end
@@ -288,8 +288,8 @@ function update_Ci_MH_Reg!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, ll
             lcg_ratios = Vector{Float64}(undef, K)
             for k in ks_other
                 lcohesions1[k] = log_cohesion(Cohesion_CRP(model.state.cohesion.logα, S[k] + 1, true))
-                Xstats1[k] = [ Similarity_stats(model.state.Xstats[k][j], model.X[i,j], :add) for j in 1:model.p ]
-                lsimilar1[k] = [ log_similarity(model.state.similarity, Xstats1[k][j], true) for j in 1:model.p ]
+                Xstats1[k] = [Similarity_stats(model.state.Xstats[k][j], model.X[i, j], :add) for j in 1:model.p]
+                lsimilar1[k] = [log_similarity(model.state.similarity, Xstats1[k][j], true) for j in 1:model.p]
                 lcg_ratios[k] = lcohesions1[k] + sum(lsimilar1[k]) - lcohesions0[k] - sum(lsimilar0[k])
             end
             lcg_ratios[Ci_old] = model.state.lcohesions[Ci_old] + sum(model.state.lsimilarities[Ci_old]) - lcohesions0[Ci_old] - sum(lsimilar0[Ci_old])
@@ -299,8 +299,8 @@ function update_Ci_MH_Reg!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, ll
             ## compute acceptance probability
             indx_Ci_wo_i = findall(model.state.C .== Ci_old)
             indx_Ci_wo_i = setdiff(indx_Ci_wo_i, i)
-            llik_Ci_wo_i = llik_k(model.y[indx_Ci_wo_i], model.X[indx_Ci_wo_i,:], model.obsXIndx[indx_Ci_wo_i],
-                                  model.state.lik_params[Ci_old], Xstats0_Ci_old, model.state.similarity)[:llik]
+            llik_Ci_wo_i = llik_k(model.y[indx_Ci_wo_i], model.X[indx_Ci_wo_i, :], model.obsXIndx[indx_Ci_wo_i],
+                model.state.lik_params[Ci_old], Xstats0_Ci_old, model.state.similarity)[:llik]
             llik_as_single = llik_Ci_wo_i + llik_newclust
 
             lp_accpt = lcg_single + llik_as_single - lsum_cgratios - llik_vec[Ci_old]
@@ -337,7 +337,7 @@ function update_Ci_MH_Reg!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, ll
             lsimilar0 = deepcopy(model.state.lsimilarities)
 
             lcohesions0[Ci_old] = log_cohesion(Cohesion_CRP(model.state.cohesion.logα, S[Ci_old] - 1, true))
-            Xstats0_Ci_old = [ Similarity_stats(model.state.Xstats[Ci_old][j], model.X[i,j], :subtract) for j in 1:model.p ]
+            Xstats0_Ci_old = [Similarity_stats(model.state.Xstats[Ci_old][j], model.X[i, j], :subtract) for j in 1:model.p]
             for j in 1:model.p
                 lsimilar0[Ci_old][j] = log_similarity(model.state.similarity, Xstats0_Ci_old[j], true)
             end
@@ -352,8 +352,8 @@ function update_Ci_MH_Reg!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, ll
             lcg_ratios = Vector{Float64}(undef, K)
             for k in ks_notCi_old
                 lcohesions1[k] = log_cohesion(Cohesion_CRP(model.state.cohesion.logα, S[k] + 1, true))
-                Xstats1[k] = [ Similarity_stats(model.state.Xstats[k][j], model.X[i,j], :add) for j in 1:model.p ]
-                lsimilar1[k] = [ log_similarity(model.state.similarity, Xstats1[k][j], true) for j in 1:model.p ]
+                Xstats1[k] = [Similarity_stats(model.state.Xstats[k][j], model.X[i, j], :add) for j in 1:model.p]
+                lsimilar1[k] = [log_similarity(model.state.similarity, Xstats1[k][j], true) for j in 1:model.p]
                 lcg_ratios[k] = lcohesions1[k] + sum(lsimilar1[k]) - lcohesions0[k] - sum(lsimilar0[k])
             end
             lcg_ratios[Ci_old] = model.state.lcohesions[Ci_old] + sum(model.state.lsimilarities[Ci_old]) - lcohesions0[Ci_old] - sum(lsimilar0[Ci_old])
@@ -377,15 +377,15 @@ function update_Ci_MH_Reg!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, ll
 
             indx_Ci_old_wo = findall(model.state.C .== Ci_old)
             indx_Ci_old_wo = setdiff(indx_Ci_old_wo, i)
-            llik_Ci_old_wo = llik_k(model.y[indx_Ci_old_wo], model.X[indx_Ci_old_wo,:], model.obsXIndx[indx_Ci_old_wo],
-                                  model.state.lik_params[Ci_old], Xstats0_Ci_old, model.state.similarity)[:llik]
+            llik_Ci_old_wo = llik_k(model.y[indx_Ci_old_wo], model.X[indx_Ci_old_wo, :], model.obsXIndx[indx_Ci_old_wo],
+                model.state.lik_params[Ci_old], Xstats0_Ci_old, model.state.similarity)[:llik]
 
             llik_Ci_cand_wo = llik_vec[Ci_cand]
 
             indx_Ci_cand_w = findall(model.state.C .== Ci_cand)
             indx_Ci_cand_w = push!(indx_Ci_cand_w, i)
-            llik_Ci_cand_w = llik_k(model.y[indx_Ci_cand_w], model.X[indx_Ci_cand_w,:], model.obsXIndx[indx_Ci_cand_w],
-                                  model.state.lik_params[Ci_cand], Xstats1[Ci_cand], model.state.similarity)[:llik]
+            llik_Ci_cand_w = llik_k(model.y[indx_Ci_cand_w], model.X[indx_Ci_cand_w, :], model.obsXIndx[indx_Ci_cand_w],
+                model.state.lik_params[Ci_cand], Xstats1[Ci_cand], model.state.similarity)[:llik]
 
             lp_accpt = lsum_cgratios_num + llik_Ci_cand_w + llik_Ci_old_wo - lsum_cgratios_denom - llik_Ci_cand_wo - llik_Ci_old_w
 
@@ -416,7 +416,7 @@ function update_Ci_MH_Reg!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, ll
 end
 
 function update_Ci_MH_Mean!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, llik_vec::Vector{T},
-    update_lik_params::Vector{Symbol}=[:mu, :sig], pswap = 0.5) where T <: Real
+    update_lik_params::Vector{Symbol}=[:mu, :sig], pswap=0.5) where {T<:Real}
 
     ### Adaptation of Neal's (2000) Algorithm 7
 
@@ -437,8 +437,8 @@ function update_Ci_MH_Mean!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, l
             lcg_ratios = Vector{Float64}(undef, K)
             for k in ks_use
                 lcohesions1[k] = log_cohesion(Cohesion_CRP(model.state.cohesion.logα, S[k] + 1, true))
-                Xstats1[k] = [ Similarity_stats(model.state.Xstats[k][j], model.X[i,j], :add) for j in 1:model.p ]
-                lsimilar1[k] = [ log_similarity(model.state.similarity, Xstats1[k][j], true) for j in 1:model.p ]
+                Xstats1[k] = [Similarity_stats(model.state.Xstats[k][j], model.X[i, j], :add) for j in 1:model.p]
+                lsimilar1[k] = [log_similarity(model.state.similarity, Xstats1[k][j], true) for j in 1:model.p]
                 lcg_ratios[k] = lcohesions1[k] + sum(lsimilar1[k]) - model.state.lcohesions[k] - sum(model.state.lsimilarities[k])
             end
             lsum_cgratios = logsumexp(lcg_ratios[ks_use])
@@ -480,8 +480,8 @@ function update_Ci_MH_Mean!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, l
 
             ## get cohesion, similarity, llik for the extra cluster
             lcohes_newclust = log_cohesion(Cohesion_CRP(model.state.cohesion.logα, 1, true))
-            Xstats_newclust = [ Similarity_stats(model.state.similarity, [model.X[i,j]]) for j = 1:model.p ]
-            lsimilar_newclust = [ log_similarity(model.state.similarity, Xstats_newclust[j], true) for j in 1:model.p ]
+            Xstats_newclust = [Similarity_stats(model.state.similarity, [model.X[i, j]]) for j = 1:model.p]
+            lsimilar_newclust = [log_similarity(model.state.similarity, Xstats_newclust[j], true) for j in 1:model.p]
 
             lcg_single = lcohes_newclust + sum(lsimilar_newclust)
 
@@ -493,7 +493,7 @@ function update_Ci_MH_Mean!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, l
             lsimilar0 = deepcopy(model.state.lsimilarities)
 
             lcohesions0[Ci_old] = log_cohesion(Cohesion_CRP(model.state.cohesion.logα, S[Ci_old] - 1, true))
-            Xstats0_Ci_old = [ Similarity_stats(model.state.Xstats[Ci_old][j], model.X[i,j], :subtract) for j in 1:model.p ]
+            Xstats0_Ci_old = [Similarity_stats(model.state.Xstats[Ci_old][j], model.X[i, j], :subtract) for j in 1:model.p]
             for j in 1:model.p
                 lsimilar0[Ci_old][j] = log_similarity(model.state.similarity, Xstats0_Ci_old[j], true)
             end
@@ -508,8 +508,8 @@ function update_Ci_MH_Mean!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, l
             lcg_ratios = Vector{Float64}(undef, K)
             for k in ks_other
                 lcohesions1[k] = log_cohesion(Cohesion_CRP(model.state.cohesion.logα, S[k] + 1, true))
-                Xstats1[k] = [ Similarity_stats(model.state.Xstats[k][j], model.X[i,j], :add) for j in 1:model.p ]
-                lsimilar1[k] = [ log_similarity(model.state.similarity, Xstats1[k][j], true) for j in 1:model.p ]
+                Xstats1[k] = [Similarity_stats(model.state.Xstats[k][j], model.X[i, j], :add) for j in 1:model.p]
+                lsimilar1[k] = [log_similarity(model.state.similarity, Xstats1[k][j], true) for j in 1:model.p]
                 lcg_ratios[k] = lcohesions1[k] + sum(lsimilar1[k]) - lcohesions0[k] - sum(lsimilar0[k])
             end
             lcg_ratios[Ci_old] = model.state.lcohesions[Ci_old] + sum(model.state.lsimilarities[Ci_old]) - lcohesions0[Ci_old] - sum(lsimilar0[Ci_old])
@@ -552,7 +552,7 @@ function update_Ci_MH_Mean!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, l
             lsimilar0 = deepcopy(model.state.lsimilarities)
 
             lcohesions0[Ci_old] = log_cohesion(Cohesion_CRP(model.state.cohesion.logα, S[Ci_old] - 1, true))
-            Xstats0_Ci_old = [ Similarity_stats(model.state.Xstats[Ci_old][j], model.X[i,j], :subtract) for j in 1:model.p ]
+            Xstats0_Ci_old = [Similarity_stats(model.state.Xstats[Ci_old][j], model.X[i, j], :subtract) for j in 1:model.p]
             for j in 1:model.p
                 lsimilar0[Ci_old][j] = log_similarity(model.state.similarity, Xstats0_Ci_old[j], true)
             end
@@ -567,8 +567,8 @@ function update_Ci_MH_Mean!(model::Model_PPMx, i::Int, K::Int, S::Vector{Int}, l
             lcg_ratios = Vector{Float64}(undef, K)
             for k in ks_notCi_old
                 lcohesions1[k] = log_cohesion(Cohesion_CRP(model.state.cohesion.logα, S[k] + 1, true))
-                Xstats1[k] = [ Similarity_stats(model.state.Xstats[k][j], model.X[i,j], :add) for j in 1:model.p ]
-                lsimilar1[k] = [ log_similarity(model.state.similarity, Xstats1[k][j], true) for j in 1:model.p ]
+                Xstats1[k] = [Similarity_stats(model.state.Xstats[k][j], model.X[i, j], :add) for j in 1:model.p]
+                lsimilar1[k] = [log_similarity(model.state.similarity, Xstats1[k][j], true) for j in 1:model.p]
                 lcg_ratios[k] = lcohesions1[k] + sum(lsimilar1[k]) - lcohesions0[k] - sum(lsimilar0[k])
             end
             lcg_ratios[Ci_old] = model.state.lcohesions[Ci_old] + sum(model.state.lsimilarities[Ci_old]) - lcohesions0[Ci_old] - sum(lsimilar0[Ci_old])
@@ -619,9 +619,9 @@ end
 
 
 
-function update_C!(model::Model_PPMx, 
-    update_lik_params::Vector{Symbol}=[:mu, :sig, :beta], 
-    method::Symbol=:MH, M_newclust::Int=15; mixDPM::Bool=true)
+function update_C!(model::Model_PPMx,
+    update_lik_params::Vector{Symbol}=[:mu, :sig, :beta],
+    method::Symbol=:MH, M_newclust::Int=10; mixDPM::Bool=true)
     # method one of :MH, :FC (FC mot currently in use--must be corrected)
 
     K = length(model.state.lik_params)
@@ -635,7 +635,7 @@ function update_C!(model::Model_PPMx,
     if mixDPM
         if isnothing(model.prior.massParams)
             model.prior.massParams = [1.0, 1.0]
-        end 
+        end
         # update total mass parameter
         α = sample_totalMass(model.state.cohesion.α, model.n, length(unique(model.state.C)), model.prior.massParams[1], model.prior.massParams[2])
         model.state.cohesion = Cohesion_CRP(α, K)
@@ -645,8 +645,8 @@ function update_C!(model::Model_PPMx,
     if typeof(model.state.lik_params[1]) <: LikParams_PPMxReg
 
         for k in 1:K
-            indx_k = findall(model.state.C.==k)
-            llik_now[k] = llik_k(model.y[indx_k], model.X[indx_k,:], model.obsXIndx[indx_k], model.state.lik_params[k], model.state.Xstats[k], model.state.similarity)[:llik]
+            indx_k = findall(model.state.C .== k)
+            llik_now[k] = llik_k(model.y[indx_k], model.X[indx_k, :], model.obsXIndx[indx_k], model.state.lik_params[k], model.state.Xstats[k], model.state.similarity)[:llik]
         end
 
         if method == :MH
@@ -656,7 +656,7 @@ function update_C!(model::Model_PPMx,
         elseif method == :FC
             for i in obs_ord
                 llik_now, K, S = update_Ci!(model, i, K, S, llik_now, update_lik_params, M_newclust)  # full Gibbs, Algo 8
-            end            
+            end
         end
 
 

@@ -160,7 +160,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
     trimid = Int(niters * 3 / 5)
     simid = Int(niters * 2 / 5)
-    model.state.baseline.tau0 = 3e3
+    model.state.baseline.tau0 = 1e5
     mcmc!(model, trimid; mixDPM=true)
     sim = mcmc!(model, simid; mixDPM=true)
 
@@ -173,20 +173,14 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     sim = sim[1:thin:end]
     sim2 = sim2[1:thin:end]
     Ypred1, Cpred1 = postPred(X, model, sim)
-    #Ypred1 = (Ypred1 .* ystd) .+ ymean
     Ypred2, Cpred2 = postPred(X, model2, sim2)
-    #Ypred2 = (Ypred2.* ystd) .+ ymean
     Ypred1oos, Cpred1oos = postPred(Xoos, model, sim)
-    #Ypred1oos = (Ypred1oos .* ystd) .+ ymean
     Ypred2oos, Cpred2oos = postPred(Xoos, model2, sim2)
-    #Ypred2oos = (Ypred2oos .* ystd) .+ ymean
 
     # clustering
-    clustCounts = countmap(model.state.C)
-    nonsingle = collect(keys(clustCounts))[values(clustCounts).>3]
-    filt = model.state.C .∈ Ref(nonsingle)
-    Clustering.randindex(model.state.C[filt], df.group[filt])
-    Clustering.randindex(model.state.C, df.group)
+    # clustCounts = countmap(model.state.C)
+    # Clustering.randindex(model.state.C, df.group)
+    # adjrindMixvec = [Clustering.randindex(s, df.group)[1] for s in eachrow(Cpred1)]
     adjrindMixvec = [Clustering.randindex(s[:C], df.group)[1] for s in sim]
     adjrindDPMvec = [Clustering.randindex(s[:C], df.group)[1] for s in sim2]
     rindMixvec = [Clustering.randindex(s[:C], df.group)[2] for s in sim]
@@ -312,10 +306,10 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     # find central 90% credible interval
 
     # check if 3.0 is in dpmCI
-    zeroInDPM = (0.0 .>= dpmCI[1]) & (0.0 <= dpmCI[2])
-    commonInDPM = (common .>= dpmCI[1]) & (common <= dpmCI[2])
-    zeroInDPM2 = (0.0 .>= dpmCI2[1]) & (0.0 <= dpmCI2[2])
-    commonInDPM2 = (common .>= dpmCI2[1]) & (common <= dpmCI2[2])
+    zeroInDPM = dpmCI[1] < 0.0 < dpmCI[2]
+    commonInDPM = dpmCI[1] < common < dpmCI[2]
+    zeroInDPM2 = dpmCI2[1] < 0.0 < dpmCI2[2]
+    commonInDPM2 = dpmCI2[1] < common < dpmCI2[2]
 
 
     # is each obs in the 0.05 0.95 quantiles of the posterior predictive?

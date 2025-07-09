@@ -89,9 +89,7 @@ df <- data.frame("file" = dir()) %>%
         xdiff, variance, N, mass1, mass2
     )
 # group by file
-
-    
-temp <- df %>%
+modLoc <- df %>%
     # select(-contains("rind"), -contains("bayes")) %>%
     reframe(
         # type 2 error
@@ -104,6 +102,24 @@ temp <- df %>%
         # MSE
         across(ends_with("_common1"), function(x) sqrt(mean((Common - x)^2, na.rm = T)), .names= "{.col}-RMSE"),
         across(ends_with("_common2"), function(x) sqrt(mean((-Common - x)^2, na.rm = T)), .names= "{.col}-RMSE"),
+        .by = c(N, Common, InterEffect, Alpha, Beta, Precision, Imbalanced, variance, xdiff)
+    ) %>%
+    pivot_longer(
+        -c(Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance, xdiff),
+         names_to = c(".value", "Metric"),
+         names_pattern = "(.*)_(.*)",
+        ) %>%
+    select(-c(slr1, slr2, kmean1, kmean2, `ppmx-common1`, `ppmx-common2`)) %>%
+    # filter out global assesses
+    drop_na(`ppmx-common`, kmean, slr)
+
+
+
+
+    
+modGlob <- df %>%
+    # select(-contains("rind"), -contains("bayes")) %>%
+    reframe(
         across(ends_with("_bayesP"), function(x) mean(x, na.rm = T), .names= "{.col}-bayesP"),
         across(ends_with("_rind"), function(x) mean(x, na.rm = T), .names= "{.col}-rind"),
         .by = c(N, Common, InterEffect, Alpha, Beta, Precision, Imbalanced, variance, xdiff)
@@ -113,13 +129,7 @@ temp <- df %>%
          names_to = c(".value", "Metric"),
          names_pattern = "(.*)_(.*)",
         ) %>%
-    select(-c(`ppmx-common`, kmean, slr, ppmx))
-    mutate(
-        `ppmx-common1` = coalesce(`ppmx-common1`, `ppmx-common`),
-        `ppmx-common2` = coalesce(`ppmx-common2`, `ppmx-common`),
-        kmean1 = coalesce(`ppmx-common1`, `ppmx-common`)
-    ) %>%
-    select(-c(`ppmx-common`, kmean))
+    drop_na()
 longDF <- df %>%
     pivot_longer(
         -c(N, Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance, xdiff),
@@ -128,6 +138,22 @@ longDF <- df %>%
         ) %>%
     pivot_longer(c(`ppmx-common`, ppmx, kmean, slr), names_to = "Model", values_to = "Statistic") # %>%
     # filter(Metric != "rind" | Statistic >=0.4)
+```
+
+# local interp
+```{r}
+modLoc |> 
+    arrange(InterEffect, Alpha, Beta, Metric) |>
+    mutate(
+        group_label = sprintf("InterEffect = %s, Alpha = %s, Beta = %s", InterEffect, Alpha,Beta),
+        parameter= ifelse(grepl("1", Metric), "1", "2"),
+        Metric = ifelse(grepl("bias", Metric), "bias", "RMSE"),
+    ) |> glimpse()
+    reframe(.by = c(group_label, grepl("")))
+    group_by(group_label) |>
+    select(-c(InterEffect, Alpha, Beta, Precision)) |>
+    gt()
+
 ```
 
 
@@ -147,28 +173,28 @@ longDF <- df %>%
 longDF %>%
     filter(Imbalanced == FALSE, Metric == "common1") %>%
     ggplot(aes(x = Statistic, fill = Model)) +
-    geom_density(alpha = 0.2) +
+    geom_density(alpha = 0.35) +
     geom_vline(aes(xintercept = unique(Common))) +
     geom_vline(xintercept = 0.0) +
     facet_grid(
-        rows = vars(xdiff, Alpha), cols = vars(Beta), scales = "free",
+        rows = vars(Alpha), cols = vars(Beta), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
-    ggtitle("Common effects (common=5, Interaction=5), Balanced") +
+    ggtitle("Common effects (common=1, Interaction=1)") +
     xlab("Common Estimate")
 ggsave("../../psychometrika/figures/beta1Tuning.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
     filter(Imbalanced == FALSE, Metric == "common2") %>%
     ggplot(aes(x = Statistic, fill = Model)) +
-    geom_density(alpha = 0.2) +
-    geom_vline(aes(xintercept = unique(Common))) +
+    geom_density(alpha = 0.35) +
+    geom_vline(aes(xintercept = -unique(Common))) +
     geom_vline(xintercept = 0.0) +
     facet_grid(
-        rows = vars(xdiff, Alpha), cols = vars(Beta), scales = "free",
+        rows = vars(Alpha), cols = vars(Beta), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
-    ggtitle("Common effects (common=-5, Interaction=5), Balanced") +
+    ggtitle("Common effects (common=-1, Interaction=1), Balanced") +
     xlab("Common Estimate")
 ggsave("../../psychometrika/figures/beta2Tuning.png", width = 6, dpi = 300, units = "in")
 ```
@@ -177,8 +203,9 @@ ggsave("../../psychometrika/figures/beta2Tuning.png", width = 6, dpi = 300, unit
 longDF %>%
     filter(Imbalanced == FALSE, grepl("^common", Metric)) %>%
     ggplot(aes(x = Statistic, fill = Model)) +
-    geom_density(alpha = 0.2) +
+    geom_density(alpha = 0.35) +
     geom_vline(xintercept = 0.0) +
+    # geom_vline(aes(xintercept = unique(Common))) +
     facet_grid(
         rows = vars(xdiff, Alpha, Beta), cols = vars(Metric), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
@@ -194,12 +221,14 @@ ggsave("../../psychometrika/figures/betaVinter.png", width = 6, dpi = 300, units
 ```{r}
 temp %>%
     # filter(InterEffect == 0.25) %>%
-    select(-c(InterEffect, Precision, variance, Common, Imbalanced)) |>
-    arrange(xdiff, Alpha, Beta, Metric) |>
-    group_by(xdiff, Alpha,Beta) |>
+    select(-c(xdiff, Precision, variance, Common, Imbalanced)) |>
+    arrange(InterEffect, Alpha, Beta, Metric) |>
+    mutate(group_label = sprintf("InterEffect = %s, Alpha = %s, Beta = %s", InterEffect, Alpha,Beta)) |>
+    group_by(group_label) |>
+    select(-c(Alpha, Beta, InterEffect)) |>
     # filter(grepl("common1", Metric)) %>%
     # pivot_wider(names_from = Metric, values_from = c(`ppmx-common`, kmean, slr)) |>
-    gt() |>
+    gt()
     tab_options(row_group.as_column = TRUE)
     
     fmt_number(
