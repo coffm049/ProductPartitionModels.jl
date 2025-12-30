@@ -84,35 +84,36 @@ end
 # plot!([it[3] for it in mu_samples], label = "mu3")
 # plot!(true_mu[3] * ones(nsamples), label = nothing, color = "black")
 
-function independent_sampler(XX, mu0, clustCounts, kappa0, alpha0, beta0, nsamps)
+# kappa - precision
+# alpha, beta of IG
+
+function independent_sampler(XX, beta_sigs, mu0, clustCounts, kappa0, alpha0, beta0, nsamps)
+
+    kappa_n = sum(1 ./ beta_sigs, dims= 1)[1,:]
+    bb = sum(XX ./ beta_sigs, dims = 1)[1,:]
+    mu_n = bb ./ kappa_n
     clustCounts = collect(values(clustCounts))
     nonsingle = clustCounts .> 3 
     clustCounts = clustCounts[nonsingle]
     XX = XX[nonsingle, :]
-    n, p = size(XX)  # Number of observations and dimensions
+    N, p = size(XX)  # Number of observations and dimensions
     # XX_bar = sum(clustCounts .* XX, dims=1) ./ sum(clustCounts)
     XX_bar = mean(XX, dims=1)  # Sample means for each dimension
 
     # Storage for samples
     mu_samples = Matrix{Float64}(undef, p, nsamps)
     sigma2_samples = Matrix{Float64}(undef, p, nsamps)
-
-    kappa_n = kappa0 .+ n
-
+    
+    alpha_n = alpha0 .+ N / 2
+    beta_n = beta0 .+ 0.5 .* sum((XX .- XX_bar) .^ 2, dims = 1)[1,:] .+ (kappa0 .* N .* (XX_bar[1,:] .- mu0).^2) ./ (2 .* kappa_n)
     for j in 1:p
-        # Posterior hyperparameters for the j-th dimension
-        mu_n = (kappa0[j] * mu0[j] + n * XX_bar[j]) / kappa_n[j]
-        alpha_n = alpha0[j] + n / 2
-        beta_n = beta0[j] + 0.5 * sum((XX[:, j] .- XX_bar[j]) .^ 2) +
-                 (kappa0[j] * n * (XX_bar[j] - mu0[j])^2) / (2 * kappa_n[j])
-
         for i in 1:nsamps
             # Sample σ_j^2 from Inverse-Gamma
-            sigma2 = rand(InverseGamma(alpha_n, beta_n))
+            sigma2 = rand(InverseGamma(alpha_n[j], beta_n[j]))
             sigma2_samples[j, i] = sigma2
 
             # Sample μ_j from Normal
-            mu = rand(Normal(mu_n, sqrt(sigma2 / kappa_n[j] / 4.0)))
+            mu = rand(Normal(mu_n[j], sqrt(1 / kappa_n[j])))
             mu_samples[j, i] = mu
         end
     end

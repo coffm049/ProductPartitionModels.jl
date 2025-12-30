@@ -138,26 +138,39 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
     ## sampling
     for i in 1:n_keep
         for j in 1:thin
+            success = false
+            while !success
+                try
 
-            if (:C in update_outer)
-                update_C!(model, update_lik, upd_c_mtd, M_newclust; mixDPM=mixDPM) # refreshes model state except llik
-            end
+                    if (:C in update_outer)
+                        update_C!(model, update_lik, upd_c_mtd, M_newclust; mixDPM=mixDPM) # refreshes model state except llik
+                    end
 
-            if up_lik
-                update_lik_params!(model, update_lik, slice_max_iter; mixDPM=mixDPM)
-                # update_lik_params!(model.state, model.prior, model.y, update_mixcomps, n_procs=n_procs) # if we want to go parallel at some point
-            end
+                    if up_lik
+                        update_lik_params!(model, update_lik, slice_max_iter; mixDPM=mixDPM)
+                    end
+                        # update_lik_params!(model.state, model.prior, model.y, update_mixcomps, n_procs=n_procs) # if we want to go parallel at some point
 
-            if up_baseline
-                update_baseline!(model, update_baseline, slice_max_iter)
-                refresh!(model.state, model.y, model.X, model.obsXIndx, false)
-            end
+                    if up_baseline
+                    #if false
+                        update_baseline!(model, update_baseline, slice_max_iter)
+                        refresh!(model.state, model.y, model.X, model.obsXIndx, false)
+                    end
 
-            model.state.iter += 1
-            if model.state.iter % report_freq == 0
-                write(report_file, "Iter $(model.state.iter) at $(Dates.now())\n")
-                model.state.llik = llik_all(model)[:llik]
-                write(report_file, "Log-likelihood $(model.state.llik)\n")
+                    model.state.iter += 1
+                    if model.state.iter % report_freq == 0
+                        write(report_file, "Iter $(model.state.iter) at $(Dates.now())\n")
+                        model.state.llik = llik_all(model)[:llik]
+                        write(report_file, "Log-likelihood $(model.state.llik)\n")
+                    end
+                    success = true
+              catch e
+                  if isa(e, InterruptException)
+                      throw("error retrying")
+                  else 
+                      @warn "Error retrying"
+                  end
+              end
             end
 
         end

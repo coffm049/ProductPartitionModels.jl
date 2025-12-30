@@ -160,9 +160,10 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
     trimid = Int(niters * 3 / 5)
     simid = Int(niters * 2 / 5)
-    model.state.baseline.tau0 = 1e5
+    model.state.baseline.tau0 = 1e2
     mcmc!(model, trimid; mixDPM=true)
     sim = mcmc!(model, simid; mixDPM=true)
+    mean([s[:prior_mean_beta][3] for s in sim])
 
     model2 = Model_PPMx(df.Y, X, df.group, similarity_type=:NN, sampling_model=:Reg, init_lik_rand=false)
     mcmc!(model2, trimid; mixDPM=false)

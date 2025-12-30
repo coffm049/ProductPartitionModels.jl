@@ -45,6 +45,12 @@ function ellipSlice(x::Vector{T}, mu::Vector{T}, sig2::Vector{T},
 
     L = length(x)
     length(mu) == length(sig2) == L || throw("All arguments must have same length.")
+    
+    if all(sig2 .<= 0.0)
+        sig2 .= 0.1
+    elseif any(sig2 .<= 0.0)
+        sig2[sig2 .<= 0.0] .= maximum(sig2)
+    end
     all(sig2 .> 0.0) || throw("Prior variances must be positive.")
 
     nu = randn(L) .* sqrt.(sig2) + mu

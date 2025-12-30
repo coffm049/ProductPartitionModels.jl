@@ -114,6 +114,9 @@ modLoc <- df %>%
     drop_na(`ppmx-common`, kmean, slr)
 
 
+modLoc |>
+  filter(xdiff %in% c(0.4, 0.6)) |>
+  reframe(.by = c(xdiff, Metric), across(c(`ppmx-common`, kmean, slr), mean))
 
 
     
@@ -138,6 +141,15 @@ longDF <- df %>%
         ) %>%
     pivot_longer(c(`ppmx-common`, ppmx, kmean, slr), names_to = "Model", values_to = "Statistic") # %>%
     # filter(Metric != "rind" | Statistic >=0.4)
+
+
+df |>
+  filter(xdiff == 0.4) |>
+  reframe(.by = xdiff, across(ends_with("_Cov"), mean))
+
+modGlob |>
+  filter(xdiff%in% c(0.4, 0.6))
+
 ```
 
 # local interp
@@ -145,13 +157,13 @@ longDF <- df %>%
 modLoc |> 
     arrange(InterEffect, Alpha, Beta, Metric) |>
     mutate(
-        group_label = sprintf("InterEffect = %s, Alpha = %s, Beta = %s", InterEffect, Alpha,Beta),
+        group_label = sprintf("InterEffect = %s, Alpha = %s, Beta = %s, xdiff = %s", InterEffect, Alpha,Beta, xdiff ),
         parameter= ifelse(grepl("1", Metric), "1", "2"),
         Metric = ifelse(grepl("bias", Metric), "bias", "RMSE"),
-    ) |> glimpse()
-    reframe(.by = c(group_label, grepl("")))
+    ) |>
     group_by(group_label) |>
     select(-c(InterEffect, Alpha, Beta, Precision)) |>
+    filter(xdiff %in% c(0.4, 0.6))
     gt()
 
 ```
@@ -212,24 +224,25 @@ longDF %>%
     ) +
     ggtitle("Common effects (common=5, Interaction=5), Balanced") +
     xlab("Common Estimate")
-ggsave("../../psychometrika/figures/betaVinter.png", width = 6, dpi = 300, units = "in")
+ggsave("betaVinter.png", width = 6, dpi = 300, units = "in")
 ```
 
 
 ## Model comparison tables 
 - tuning InterEffect = 0.25, variance = 0.1, Common = 1.0
 ```{r}
-temp %>%
+longDF %>%
     # filter(InterEffect == 0.25) %>%
+    filter(xdiff==0.4) |>
     select(-c(xdiff, Precision, variance, Common, Imbalanced)) |>
     arrange(InterEffect, Alpha, Beta, Metric) |>
-    mutate(group_label = sprintf("InterEffect = %s, Alpha = %s, Beta = %s", InterEffect, Alpha,Beta)) |>
-    group_by(group_label) |>
+    mutate(group_label = sprintf("InterEffect = %s, Alpha = %s, Beta = %s", InterEffect, Alpha,Beta)) |> glimpse()
+    reframe(.by = group_label, kmean1= mean(kmean1),  ) |> glimpse()
     select(-c(Alpha, Beta, InterEffect)) |>
     # filter(grepl("common1", Metric)) %>%
     # pivot_wider(names_from = Metric, values_from = c(`ppmx-common`, kmean, slr)) |>
-    gt()
-    tab_options(row_group.as_column = TRUE)
+    gt() |>
+    tab_options(row_group.as_column = TRUE) |>
     
     fmt_number(
       n_sigfig = 2,
@@ -311,8 +324,8 @@ temp %>%
         `slr_common1-bias` = "SLR",
         `slr_common2-RMSE` = "SLR",
         `slr_common2-bias` = "SLR",
-        Alpha = "a",
-        Beta = "b",
+        Alpha = "\alpha",
+        Beta = "\beta",
     )
 
 ```

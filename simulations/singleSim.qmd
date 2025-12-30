@@ -27,7 +27,7 @@ using Random
 using CSV
 using GLM
 using LinearAlgebra
-using HypothesisTests
+#using HypothesisTests
 using LaTeXStrings
 using SpecialFunctions
 using SummaryTables 
@@ -38,7 +38,7 @@ using TidierData
 using Revise
 using ProductPartitionModels
 
-include("simFunctions.jl")
+include("simulations/simFunctions.jl")
 # set plot defaults
 default(fillopacity = 0.5, lineopacity = 1.0)
 ```

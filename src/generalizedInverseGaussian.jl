@@ -234,6 +234,8 @@ function _hormann(λ::Real, β::Real, maxiter=2000)
         end
         if u * h <= _gigqdf(x, λ, β)
             return x
+        elseif iter == maxiter
+            return x
         end
         iter += 1
     end
