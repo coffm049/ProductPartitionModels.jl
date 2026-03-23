@@ -20,6 +20,8 @@ Run with multiple threads to speed it up [not done yet]
 
 
 ```{julia}
+using Pkg
+Pkg.activate(".")
 using StatsBase
 using Statistics
 using Plots
@@ -46,7 +48,7 @@ default(fillopacity = 0.5, lineopacity = 1.0)
 
 ```{julia} 
 N = 500
-c = 8
+nc = 8
 variance = 0.05
 interEffect = 1.0
 common = 1.0

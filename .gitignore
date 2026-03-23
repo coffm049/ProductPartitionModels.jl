@@ -7,4 +7,10 @@ psychometrika/*
 *.js
 *.css
 *.woff
+*.csv
+*.jld2
+*.png
+*.html
+**/archive/**
 ABCD-adhd/*
+**/old/**

@@ -87,29 +87,31 @@ end
 # kappa - precision
 # alpha, beta of IG
 
-function independent_sampler(XX, beta_sigs, mu0, clustCounts, kappa0, alpha0, beta0, nsamps)
+function independent_sampler(Betas, beta_sigs, mu0, clustCounts, kappa0, alpha0, beta0, nsamps)
 
     kappa_n = sum(1 ./ beta_sigs, dims= 1)[1,:]
-    bb = sum(XX ./ beta_sigs, dims = 1)[1,:]
+    bb = sum(Betas ./ beta_sigs, dims = 1)[1,:]
     mu_n = bb ./ kappa_n
     clustCounts = collect(values(clustCounts))
-    nonsingle = clustCounts .> 3 
-    clustCounts = clustCounts[nonsingle]
-    XX = XX[nonsingle, :]
-    N, p = size(XX)  # Number of observations and dimensions
-    # XX_bar = sum(clustCounts .* XX, dims=1) ./ sum(clustCounts)
-    XX_bar = mean(XX, dims=1)  # Sample means for each dimension
+    #nonsingle = clustCounts .> 3 
+    #clustCounts = clustCounts[nonsingle]
+    #Betas = Betas[nonsingle, :]
+    N, p = size(Betas)  # Number of observations and dimensions
+    # Betas_bar = sum(clustCounts .* Betas, dims=1) ./ sum(clustCounts)
+    Betas_bar = mean(Betas, dims=1)  # Sample means for each dimension
 
     # Storage for samples
     mu_samples = Matrix{Float64}(undef, p, nsamps)
     sigma2_samples = Matrix{Float64}(undef, p, nsamps)
     
-    alpha_n = alpha0 .+ N / 2
-    beta_n = beta0 .+ 0.5 .* sum((XX .- XX_bar) .^ 2, dims = 1)[1,:] .+ (kappa0 .* N .* (XX_bar[1,:] .- mu0).^2) ./ (2 .* kappa_n)
+    # alpha_n = alpha0 .+ N / 2
+    # beta_n = beta0 .+ 0.5 .* sum((Betas .- Betas_bar) .^ 2, dims = 1)[1,:] .+ (kappa0 .* N .* (Betas_bar[1,:] .- mu0).^2) ./ (2 .* kappa_n)
+    alpha_n = alpha0 .+ 1 / 2
     for j in 1:p
+        beta_n = beta0[j] .+ ((mu0[j] .- mu_samples[j, :]) .^ 2) ./2
         for i in 1:nsamps
             # Sample σ_j^2 from Inverse-Gamma
-            sigma2 = rand(InverseGamma(alpha_n[j], beta_n[j]))
+            sigma2 = rand(InverseGamma(alpha_n[j], beta_n[i]))
             sigma2_samples[j, i] = sigma2
 
             # Sample μ_j from Normal
@@ -118,9 +120,9 @@ function independent_sampler(XX, beta_sigs, mu0, clustCounts, kappa0, alpha0, be
         end
     end
 
-    di = abs.(mu_samples .- median(mu_samples,dims=2)) ./ map(x -> diff(quantile(x, [0.25, 0.75]))[1], eachrow(mu_samples)) .> 1.5
-    
-    mu_samples = mu_samples[:, (sum(di, dims =1) .== 0)[1,:]]
+    # di = abs.(mu_samples .- median(mu_samples,dims=2)) ./ map(x -> diff(quantile(x, [0.25, 0.75]))[1], eachrow(mu_samples)) .> 1.5
+    # 
+    # mu_samples = mu_samples[:, (sum(di, dims =1) .== 0)[1,:]]
   
 
     return mu_samples, sigma2_samples

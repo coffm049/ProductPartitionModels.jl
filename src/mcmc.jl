@@ -147,7 +147,16 @@ function mcmc!(model::Model_PPMx, n_keep::Int;
                     end
 
                     if up_lik
-                        update_lik_params!(model, update_lik, slice_max_iter; mixDPM=mixDPM)
+                        try 
+                          update_lik_params!(model, update_lik, slice_max_iter; mixDPM=mixDPM)
+                        catch e 
+                          if isa(e, InterruptException)
+                              throw("Interrupting")
+                          else 
+                              @warn "Retrying update params"
+                          end
+                        end
+                          
                     end
                         # update_lik_params!(model.state, model.prior, model.y, update_mixcomps, n_procs=n_procs) # if we want to go parallel at some point
 
