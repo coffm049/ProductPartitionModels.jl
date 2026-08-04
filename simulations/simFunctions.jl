@@ -32,6 +32,11 @@ function assign_clusters(X, centroids)
     return [argmin([norm(X[:, i] - centroids[:, j]) for j in 1:size(centroids, 2)]) for i in 1:size(X, 2)]
 end
 
+# distance to nearest centroid (columns of X are points, columns of centroids are centers)
+function assign_to_centroids(X::AbstractMatrix, centroids::AbstractMatrix)
+    return [argmin([norm(X[:, i] .- centroids[:, k]) for k in 1:size(centroids, 2)]) for i in 1:size(X, 2)]
+end
+
 # note rmse will hvae to be inverted
 function findEquilibrated(; rmse::Vector{Float64}, rind::Vector{Float64}, tol::Float64=0.01)
     rmseEq = abs.(rmse .- minimum(rmse)) .<= (tol .* minimum(rmse))
@@ -130,7 +135,7 @@ end
 # common < interEffect : 
 # common > interEffect : somewhat promising
 
-function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25, 0.25, 0.25, 0.25], variance::Real=1.0, interEffect::Float64=1.0, common::Float64=1.0, plotFit::Bool=false, niters::Int=1000, prec::Real=10.0, alph::Real=10.0, bet::Real=20.0, plotSim::Bool=false, xdiff::Real=2.0, dims::Int=2, massParams::Vector{Float64}=[1.0, 1.0])
+function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25, 0.25, 0.25, 0.25], variance::Real=1.0, interEffect::Float64=1.0, common::Float64=1.0, plotFit::Bool=false, niters::Int=1000, prec::Real=10.0, alph::Real=10.0, bet::Real=20.0, plotSim::Bool=false, xdiff::Real=2.0, dims::Int=2, massParams::Vector{Float64}=[1.0, 1.0], runDPM::Bool=false, DPMalpha::Float64=1.0, DPMiters::Int=200)
 
     # Simulate data
     df = simData(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotSim=plotSim, xdiff=xdiff, dims=dims)
@@ -367,6 +372,32 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     zeroInk2 = (0.0 .>= kclustCI2[1]) & (0.0 <= kclustCI2[2])
     commonInk2 = (common .>= kclustCI2[1]) & (common <= kclustCI2[2])
 
+    # DP Gaussian mixture clustering baseline (DirichletProcessMixtures.jl / DPMM.jl).
+    # Cluster on the covariate columns (drop the intercept), then fit a per-cluster
+    # interaction regression -- mirrors the k-means baseline. Columns of X are points.
+    dpmARI = dpmARIoos = dpmRMSEoos = dpmnclusts = NaN
+    if runDPM
+        Xc = X[:, 2:end]'   # dims x N
+        dpm_labels = DPMM.fit(Xc; algorithm=DPMM.SplitMergeAlgorithm, α=DPMalpha, T=DPMiters)
+        dpm_labels = Vector{Int}(dpm_labels)
+
+        centroids = hcat([vec(mean(Xc[:, dpm_labels .== k], dims=2)) for k in unique(dpm_labels)]...)
+        df.dpmk = string.(dpm_labels)
+        dfoos.dpmk = string.(assign_to_centroids(Xoos[:, 2:end]', centroids))
+
+        linearTerms = reduce(+, [Term(Symbol("X", d)) for d in 1:dims])
+        dpmForm = Term(:Y) ~ linearTerms * Term(:dpmk)
+        contrastsD = Dict(:dpmk => EffectsCoding())
+        if length(unique(dpm_labels)) >= 2
+            dpmclustlm = lm(dpmForm, df; contrasts=contrastsD)
+            dpmRMSEoos = sqrt(mean(((predict(dpmclustlm, dfoos)) .- dfoos.Y) .^ 2))
+        end
+
+        dpmARI    = Clustering.randindex(dpm_labels, df.group)[1]
+        dpmARIoos = Clustering.randindex(parse.(Int, dfoos.dpmk), dfoos.group)[1]
+        dpmnclusts = length(unique(dpm_labels))
+    end
+
     ncMix = mode([maximum(s[:C]) for s in sim])
     ncDPM = mode([maximum(s[:C]) for s in sim2])
     #ncK = kclust
@@ -434,6 +465,12 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
         ncMix=ncMix,
         ncDPM=ncDPM,
         ncK=ncK,
+
+        # DP Gaussian mixture (cluster-then-regression)
+        dpmARI=dpmARI,
+        dpmARIoos=dpmARIoos,
+        dpmRMSEoos=dpmRMSEoos,
+        dpmnclusts=dpmnclusts,
 
         # setup
         N=N, fractions=string(fractions), variance=variance,

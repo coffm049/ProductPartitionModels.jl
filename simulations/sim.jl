@@ -5,6 +5,7 @@ using Plots
 using Random
 using CSV
 using GLM
+using StatsModels
 using LinearAlgebra
 using HypothesisTests
 using LaTeXStrings
@@ -16,6 +17,7 @@ using DataFrames
 using TidierData
 using Revise
 using ProductPartitionModels
+using DPMM
 
 include("simFunctions.jl")
 
