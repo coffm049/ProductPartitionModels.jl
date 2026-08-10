@@ -37,9 +37,16 @@ reps = parse(Int, ARGS[11])
 niters = parse(Int, ARGS[12])
 massa = parse(Float64, ARGS[13])
 massb = parse(Float64, ARGS[14])
+# optional DPM baseline arguments (default off so existing invocations are unchanged)
+runDPM = length(ARGS) >= 15 ? parse(Int, ARGS[15]) : 0
+DPMalpha = length(ARGS) >= 16 ? parse(Float64, ARGS[16]) : 1.0
+DPMiters = length(ARGS) >= 17 ? parse(Int, ARGS[17]) : 500
 
 # construct a file name from the user inputs
 outputName = "results/N$(N)_c$(nc)_inter$(interEffect)_common$(common)_xd$(xdiff)_v$(variance)_dim$(dims)_prec$(prec)alph$(alph)bet$(bet)_mass$(massa)$(massb)"
+if runDPM == 1
+    outputName = outputName * "_dpm$(DPMalpha)_$(DPMiters)"
+end
 
 # END user input
 #
@@ -54,7 +61,7 @@ seeds = MersenneTwister.(rand(1:10^8, Threads.nthreads()))  # or generate from o
 Threads.@threads for i in 1:reps
     try
         println(i)
-        results[i] = simExperiment(seeds[Threads.threadid()]; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, niters=niters, plotSim=false, xdiff=xdiff, dims=dims, prec=prec, alph=alph, bet=bet, massParams = [massa, massb])
+        results[i] = simExperiment(seeds[Threads.threadid()]; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, niters=niters, plotSim=false, xdiff=xdiff, dims=dims, prec=prec, alph=alph, bet=bet, massParams = [massa, massb], runDPM=(runDPM == 1), DPMalpha=DPMalpha, DPMiters=DPMiters)
     catch err
         println("sim Failed")
     end
