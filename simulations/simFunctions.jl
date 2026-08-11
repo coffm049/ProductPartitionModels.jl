@@ -378,11 +378,13 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     dpmARI = dpmARIoos = dpmRMSEoos = dpmnclusts = NaN
     if runDPM
         Xc = X[:, 2:end]'   # dims x N
-        dpm_labels = DPMM.fit(Xc; algorithm=DPMM.SplitMergeAlgorithm, α=DPMalpha, T=DPMiters)
+        dpm_labels = DPMM.fit(Xc; algorithm=DPMM.CollapsedAlgorithm, α=DPMalpha, T=DPMiters)
         dpm_labels = Vector{Int}(dpm_labels)
 
         centroids = hcat([vec(mean(Xc[:, dpm_labels .== k], dims=2)) for k in unique(dpm_labels)]...)
-        df.dpmk = string.(dpm_labels)
+        # relabel train compactly (1..K in the same order as the centroid columns) so that
+        # train labels and OOS nearest-centroid labels use the same scheme
+        df.dpmk = string.(indexin(dpm_labels, unique(dpm_labels)))
         dfoos.dpmk = string.(assign_to_centroids(Xoos[:, 2:end]', centroids))
 
         linearTerms = reduce(+, [Term(Symbol("X", d)) for d in 1:dims])
