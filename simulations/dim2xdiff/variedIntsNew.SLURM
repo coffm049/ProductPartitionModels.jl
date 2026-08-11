@@ -19,6 +19,8 @@ XDIFFS=(0.4 0.6 0.8 1.0)
 
 XDIFF=${XDIFFS[$SLURM_ARRAY_TASK_ID]}
 
+export PATH="$HOME/software/julia-1.11.7/bin:$PATH"
+
 cd ~/software/ProductPartitionModels.jl/simulations
 
 # read arguments from command line
@@ -34,5 +36,5 @@ cd ~/software/ProductPartitionModels.jl/simulations
 # bet = parse(Float64, ARGS[10])
 # reps = parse(Int, ARGS[11])
 # niters = parse(Int, ARGS[12])
-julia --project=. --threads=2 sim.jl 1000 8 0.05 1.0 1.0 $XDIFF 2 $PREC $ALPHA $BETA 80 1000 1.0 1.0
+julia --project=. --threads=2 sim.jl 1000 8 0.05 1.0 1.0 $XDIFF 2 $PREC $ALPHA $BETA 80 1000 1.0 1.0 1 1.0 500
 
