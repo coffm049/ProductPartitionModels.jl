@@ -20,6 +20,8 @@ XDIFFS=(0.0 0.2)
 
 XDIFF=${XDIFFS[$SLURM_ARRAY_TASK_ID]}
 
+export PATH="$HOME/software/julia-1.11.7/bin:$PATH"
+
 cd ~/software/ProductPartitionModels.jl/simulations
 
 # read arguments from command line
