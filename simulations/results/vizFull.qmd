@@ -11,6 +11,7 @@ execute:
   cache: false
   warning: false
   error: false
+  fig-dev: png
 ---
 
 
