@@ -203,7 +203,7 @@ longDF %>%
     geom_vline(aes(xintercept = unique(Common))) +
     geom_vline(xintercept = 0.0) +
     facet_grid(
-        rows = vars(Alpha), cols = vars(Beta), scales = "free",
+        rows = vars(Alpha, xdiff), cols = vars(Beta), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
     ggtitle("Common effects (common=1, Interaction=1)") +
@@ -217,7 +217,7 @@ longDF %>%
     geom_vline(aes(xintercept = -unique(Common))) +
     geom_vline(xintercept = 0.0) +
     facet_grid(
-        rows = vars(Alpha), cols = vars(Beta), scales = "free",
+        rows = vars(Alpha, xdiff), cols = vars(Beta), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
     ggtitle("Common effects (common=-1, Interaction=1), Balanced") +
@@ -557,7 +557,7 @@ longDF %>%
     geom_vline(xintercept = 1.0) +
     geom_vline(xintercept = 0.0) +
     facet_grid(
-        rows = vars(InterEffect), cols = vars(Beta), scales = "free",
+        rows = vars(InterEffect, xdiff), cols = vars(Beta), scales = "free",
         #labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
     ggtitle("Common effects") +
@@ -571,7 +571,7 @@ longDF %>%
     geom_vline(xintercept = 1.0) +
     geom_vline(xintercept = 0.0) +
     facet_grid(
-        rows = vars(InterEffect), cols = vars(Beta), scales = "free",
+        rows = vars(InterEffect, xdiff), cols = vars(Beta), scales = "free",
         #labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
     ggtitle("Common effects") +
@@ -582,7 +582,7 @@ longDF %>%
     filter(Metric == "rind", N == 1000) %>%
     ggplot(aes(x = Statistic, fill = Model, y = ..density..)) +
     geom_histogram(alpha = 0.3, color = "black") +
-    facet_wrap(~InterEffect) + #, labeller = labeller(.rows = label_both, .cols = label_both))
+    facet_grid(rows = vars(InterEffect), cols = vars(xdiff)) + #, labeller = labeller(.rows = label_both, .cols = label_both))
     ggtitle("Rand index, N = 1000")
 ggsave("bigSimRI.png", width = 6, dpi = 300, units = "in")
 
