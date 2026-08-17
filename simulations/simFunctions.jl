@@ -338,6 +338,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     zeroInSLR = (0.0 .>= betaCI[1]) & (0.0 <= betaCI[2])
     commonInSLR = (common .>= betaCI[1]) & (common <= betaCI[2])
     slrRMSE = sqrt(mean(residuals(slr) .^ 2))
+    slrRMSEoos = sqrt(mean(((predict(slr, dfoos)) .- dfoos.Y) .^ 2))
     zeroInSLR2 = (0.0 .>= betaCI2[1]) & (0.0 <= betaCI2[2])
     commonInSLR2 = (common .>= betaCI2[1]) & (common <= betaCI2[2])
 
@@ -376,6 +377,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     # Cluster on the covariate columns (drop the intercept), then fit a per-cluster
     # interaction regression -- mirrors the k-means baseline. Columns of X are points.
     dpmARI = dpmARIoos = dpmRMSEoos = dpmnclusts = NaN
+    dpmRI = dpmRIoos = dpmRMSE = NaN
     dpmBetaclust1 = dpmBetaclust2 = NaN
     dpmzeroIn1 = dpmcommonIn1 = dpmzeroIn2 = dpmcommonIn2 = NaN
     if runDPM
@@ -394,6 +396,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
         contrastsD = Dict(:dpmk => EffectsCoding())
         if length(unique(dpm_labels)) >= 2
             dpmclustlm = lm(dpmForm, df; contrasts=contrastsD)
+            dpmRMSE = sqrt(mean(residuals(dpmclustlm) .^ 2))
             dpmRMSEoos = sqrt(mean(((predict(dpmclustlm, dfoos)) .- dfoos.Y) .^ 2))
             dpmBetaclust1 = coef(dpmclustlm)[2]
             dpmBetaclust2 = coef(dpmclustlm)[3]
@@ -406,7 +409,9 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
         end
 
         dpmARI    = Clustering.randindex(dpm_labels, df.group)[1]
+        dpmRI     = Clustering.randindex(dpm_labels, df.group)[2]
         dpmARIoos = Clustering.randindex(parse.(Int, dfoos.dpmk), dfoos.group)[1]
+        dpmRIoos  = Clustering.randindex(parse.(Int, dfoos.dpmk), dfoos.group)[2]
         dpmnclusts = length(unique(dpm_labels))
     end
 
@@ -472,6 +477,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
         zeroInSLR2=zeroInSLR2,
         commonInSLR2=commonInSLR2,
         slrRMSE=slrRMSE,
+        slrRMSEoos=slrRMSEoos,
 
         # number of clusts
         ncMix=ncMix,
@@ -480,7 +486,10 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
         # DP Gaussian mixture (cluster-then-regression)
         dpmARI=dpmARI,
+        dpmRI=dpmRI,
         dpmARIoos=dpmARIoos,
+        dpmRIoos=dpmRIoos,
+        dpmRMSE=dpmRMSE,
         dpmRMSEoos=dpmRMSEoos,
         dpmnclusts=dpmnclusts,
         dpmBetaclust1=dpmBetaclust1,

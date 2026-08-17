@@ -46,20 +46,20 @@ df <- data.frame("file" = dir()) %>%
     # unnest them
     unnest(data) %>%
     select(
-        `ppmx-common_rind` = rind_Mix,
-        ppmx_rind = rind_DPM,
+        `ppmx-common_rind` = adjrind_Mix,
+        ppmx_rind = adjrind_DPM,
         dpm_rind = dpmARI,
-        kmean_rind = rind_K,
-        `ppmx-common_arind` = adjrind_Mix,
-        ppmx_arind = adjrind_DPM,
+        kmean_rind = adjrind_K,
+        `ppmx-common_arind` = adjrindMixoos,
+        ppmx_arind = adjrindDPMoos,
         dpm_arind = dpmARIoos,
-        kmean_arind = adjrind_K,
+        kmean_arind = adjrind_Koos,
 
-        `ppmx-common_rmse` = midMix,
-        ppmx_rmse = midDPM,
+        `ppmx-common_rmse` = midMixoos,
+        ppmx_rmse = midDPMoos,
         dpm_rmse = dpmRMSEoos,
-        kmean_rmse = kmean_MSE,
-        slr_rmse = slrRMSE,
+        kmean_rmse = kmean_MSEoos,
+        slr_rmse = slrRMSEoos,
         
         `ppmx-common_common1` = meanBeta1,
         `ppmx-common_common2` = meanBeta2,
@@ -158,7 +158,7 @@ longDF <- df %>%
 
 
 df |>
-  filter(xdiff == 0.4) |>
+  filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)) |>
   reframe(.by = xdiff, across(ends_with("_Cov"), mean))
 
 modGlob |>
