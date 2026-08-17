@@ -552,7 +552,7 @@ longDF %>%
     ) +
     ggtitle("Common effects") +
     xlab("Common Estimate")
-ggsave("../../psychometrika/figures/bigSimcommon1.png", width = 6, dpi = 300, units = "in")
+ggsave("bigSimcommon1.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
     filter(Imbalanced == FALSE, Metric == "common2", N== 1000) %>%
@@ -566,7 +566,7 @@ longDF %>%
     ) +
     ggtitle("Common effects") +
     xlab("Common Estimate")
-ggsave("../../psychometrika/figures/bigSimcommon2.png", width = 6, dpi = 300, units = "in")
+ggsave("bigSimcommon2.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
     filter(Metric == "rind", N == 1000) %>%
@@ -574,7 +574,7 @@ longDF %>%
     geom_histogram(alpha = 0.3, color = "black") +
     facet_wrap(~InterEffect) + #, labeller = labeller(.rows = label_both, .cols = label_both))
     ggtitle("Rand index, N = 1000")
-ggsave("../../psychometrika/figures/bigSimRI.png", width = 6, dpi = 300, units = "in")
+ggsave("bigSimRI.png", width = 6, dpi = 300, units = "in")
 
 ```
 
