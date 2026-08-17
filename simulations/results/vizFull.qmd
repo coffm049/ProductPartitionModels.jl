@@ -44,13 +44,16 @@ df <- data.frame("file" = dir()) %>%
     select(
         `ppmx-common_rind` = rind_Mix,
         ppmx_rind = rind_DPM,
+        dpm_rind = dpmARI,
         kmean_rind = rind_K,
         `ppmx-common_arind` = adjrind_Mix,
         ppmx_arind = adjrind_DPM,
+        dpm_arind = dpmARIoos,
         kmean_arind = adjrind_K,
 
         `ppmx-common_rmse` = midMix,
         ppmx_rmse = midDPM,
+        dpm_rmse = dpmRMSEoos,
         kmean_rmse = kmean_MSE,
         slr_rmse = slrRMSE,
         
@@ -76,6 +79,7 @@ df <- data.frame("file" = dir()) %>%
 
         `ppmx-common_NC` = ncMix,
         `ppmx_NC` = ncDPM,
+        dpm_NC = dpmnclusts,
         kmean_NC = ncK,
         
         `ppmx-common_bayesP` = bayesPmix,
@@ -139,7 +143,7 @@ longDF <- df %>%
          names_to = c(".value", "Metric"),
          names_pattern = "(.*)\\_(.*)",
         ) %>%
-    pivot_longer(c(`ppmx-common`, ppmx, kmean, slr), names_to = "Model", values_to = "Statistic") # %>%
+    pivot_longer(c(`ppmx-common`, ppmx, dpm, kmean, slr), names_to = "Model", values_to = "Statistic") # %>%
     # filter(Metric != "rind" | Statistic >=0.4)
 
 
