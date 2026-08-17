@@ -546,7 +546,33 @@ longDF %>%
     ggtitle("Rand index (common=1, Interaction=0.25), Balanced")
 ```
 
+# covariate distributions
+```{r}
+covs <- read_csv("covariates.csv", show_col_types = FALSE) %>%
+    pivot_longer(c(X1, X2), names_to = "covariate", values_to = "value")
 
+covs %>%
+    ggplot(aes(x = value, fill = factor(group))) +
+    geom_density(alpha = 0.35, linewidth = 0.4) +
+    facet_grid(
+        rows = vars(covariate), cols = vars(xdiff),
+        labeller = labeller(xdiff = function(l) sprintf("xdiff = %s", l))
+    ) +
+    scale_fill_npg() +
+    labs(
+        x = "Covariate value",
+        y = "Density",
+        fill = "Group"
+    ) +
+    theme_minimal(base_size = 11) +
+    theme(
+        legend.position = "right",
+        strip.text = element_text(size = 9),
+        axis.title.x = element_text(margin = margin(t = 8))
+    ) +
+    guides(fill = guide_legend(ncol = 1))
+ggsave("covariateDist.png", width = 10, height = 4, dpi = 300, units = "in")
+```
 
 # big sim
 ```{r}
