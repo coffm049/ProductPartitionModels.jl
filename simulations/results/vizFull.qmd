@@ -11,6 +11,7 @@ execute:
   cache: false
   warning: false
   error: false
+  fig-format: png
 knitr:
   opts_chunk:
     dev: png
@@ -62,6 +63,8 @@ df <- data.frame("file" = dir()) %>%
         
         `ppmx-common_common1` = meanBeta1,
         `ppmx-common_common2` = meanBeta2,
+        dpm_common1 = dpmBetaclust1,
+        dpm_common2 = dpmBetaclust2,
         kmean_common1 = meanBetakclust1,
         kmean_common2 = meanBetakclust2,
         slr_common1 = meanBetaSLR,
@@ -69,12 +72,16 @@ df <- data.frame("file" = dir()) %>%
 
         `ppmx-common1_T2` = zeroInDPM,
         `ppmx-common2_T2` = zeroInDPM2,
+        dpm1_T2 = dpmzeroIn1,
+        dpm2_T2 = dpmzeroIn2,
         kmean1_T2 = zeroInk,
         kmean2_T2 = zeroInk2,
         slr1_T2 = zeroInSLR,
         slr2_T2 = zeroInSLR2,
         `ppmx-common1_Cov` = commonInDPM,
         `ppmx-common2_Cov` = commonInDPM2,
+        dpm1_Cov = dpmcommonIn1,
+        dpm2_Cov = dpmcommonIn2,
         kmean1_Cov = commonInk,
         kmean2_Cov = commonInk2,
         slr1_Cov = commonInSLR,
@@ -116,14 +123,14 @@ modLoc <- df %>%
          names_to = c(".value", "Metric"),
          names_pattern = "(.*)_(.*)",
         ) %>%
-    select(-c(slr1, slr2, kmean1, kmean2, `ppmx-common1`, `ppmx-common2`)) %>%
+    select(-c(slr1, slr2, kmean1, kmean2, dpm1, dpm2, `ppmx-common1`, `ppmx-common2`)) %>%
     # filter out global assesses
     drop_na(`ppmx-common`, kmean, slr)
 
 
 modLoc |>
-  filter(xdiff %in% c(0.4, 0.6)) |>
-  reframe(.by = c(xdiff, Metric), across(c(`ppmx-common`, kmean, slr), mean))
+  filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)) |>
+  reframe(.by = c(xdiff, Metric), across(c(`ppmx-common`, dpm, kmean, slr), mean))
 
 
     
@@ -155,7 +162,7 @@ df |>
   reframe(.by = xdiff, across(ends_with("_Cov"), mean))
 
 modGlob |>
-  filter(xdiff%in% c(0.4, 0.6))
+  filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0))
 
 ```
 
@@ -170,7 +177,7 @@ modLoc |>
     ) |>
     group_by(group_label) |>
     select(-c(InterEffect, Alpha, Beta, Precision)) |>
-    filter(xdiff %in% c(0.4, 0.6))
+    filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0))
     gt()
 
 ```

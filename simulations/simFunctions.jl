@@ -376,6 +376,8 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     # Cluster on the covariate columns (drop the intercept), then fit a per-cluster
     # interaction regression -- mirrors the k-means baseline. Columns of X are points.
     dpmARI = dpmARIoos = dpmRMSEoos = dpmnclusts = NaN
+    dpmBetaclust1 = dpmBetaclust2 = NaN
+    dpmzeroIn1 = dpmcommonIn1 = dpmzeroIn2 = dpmcommonIn2 = NaN
     if runDPM
         Xc = X[:, 2:end]'   # dims x N
         dpm_labels = DPMM.fit(Xc; algorithm=DPMM.CollapsedAlgorithm, α=DPMalpha, T=DPMiters)
@@ -393,6 +395,14 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
         if length(unique(dpm_labels)) >= 2
             dpmclustlm = lm(dpmForm, df; contrasts=contrastsD)
             dpmRMSEoos = sqrt(mean(((predict(dpmclustlm, dfoos)) .- dfoos.Y) .^ 2))
+            dpmBetaclust1 = coef(dpmclustlm)[2]
+            dpmBetaclust2 = coef(dpmclustlm)[3]
+            dpmclustCI = confint(dpmclustlm)[2, :]
+            dpmzeroIn1 = (0.0 .>= dpmclustCI[1]) & (0.0 <= dpmclustCI[2])
+            dpmcommonIn1 = (common .>= dpmclustCI[1]) & (common <= dpmclustCI[2])
+            dpmclustCI2 = confint(dpmclustlm)[3, :]
+            dpmzeroIn2 = (0.0 .>= dpmclustCI2[1]) & (0.0 <= dpmclustCI2[2])
+            dpmcommonIn2 = (common .>= dpmclustCI2[1]) & (common <= dpmclustCI2[2])
         end
 
         dpmARI    = Clustering.randindex(dpm_labels, df.group)[1]
@@ -473,6 +483,12 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
         dpmARIoos=dpmARIoos,
         dpmRMSEoos=dpmRMSEoos,
         dpmnclusts=dpmnclusts,
+        dpmBetaclust1=dpmBetaclust1,
+        dpmBetaclust2=dpmBetaclust2,
+        dpmzeroIn1=dpmzeroIn1,
+        dpmcommonIn1=dpmcommonIn1,
+        dpmzeroIn2=dpmzeroIn2,
+        dpmcommonIn2=dpmcommonIn2,
 
         # setup
         N=N, fractions=string(fractions), variance=variance,
