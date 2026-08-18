@@ -82,14 +82,14 @@ function simData(
         lastsub = stop
     end
     slopes = collect(range(common - (nclusts * interEffect), common + (nclusts * interEffect), length=nclusts))
-    slopes = hcat(slopes, -slopes)
+    slopes = hcat([(-1)^(d-1) .* slopes for d in 1:dims]...)
     # Step 4: Group-specific predictor shifts
     # xdiffs = (gri .- mean(gri, dims=1)) .* xdiff
     xdiffs = collect(range(-xdiff * nclusts, xdiff * nclusts, length=nclusts))
-    xdiffs = hcat(xdiffs, -xdiffs)
+    xdiffs = hcat([(-1)^(d-1) .* xdiffs for d in 1:dims]...)
 
     for d in 1:dims
-        df[!, "X$d"] .+= xdiffs[df.group]
+        df[!, "X$d"] .+= xdiffs[df.group, d]
     end
 
     # Step 5: Center and scale X columns
@@ -318,6 +318,14 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     zeroInDPM2 = dpmCI2[1] < 0.0 < dpmCI2[2]
     commonInDPM2 = dpmCI2[1] < common < dpmCI2[2]
 
+    # common-effect CI coverage averaged across all covariates. The true common
+    # effect for covariate d is (-1)^(d-1) * common (see simData slope pattern).
+    commonCovAll = mean([
+        let ci = quantile([s[:prior_mean_beta][d+1] for s in sim], [0.05, 0.95])
+            ci[1] < (-1)^(d-1) * common < ci[2]
+        end for d in 1:dims
+    ])
+
 
     # is each obs in the 0.05 0.95 quantiles of the posterior predictive?
     bayesPmix = median(mean(df.Y .<= Ypred1', dims=2))
@@ -325,8 +333,18 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     bayesPmixoos = median(mean(df.Y .<= Ypred1oos', dims=2))
     bayesPDPMoos = median(mean(df.Y .<= Ypred2oos', dims=2))
 
+    # log predictive scores (reviewer: replace Bayesian p-values with proper
+    # scoring rules). OOS expected log predictive density, evaluated at the
+    # observed outcome.
+    function logscore(lDens)
+        return mean(logsumexp(lDens, 1)[1, :] .- log(size(lDens, 1)))
+    end
+    lpsMixoos = logscore(postPredLogdens(Xoos, dfoos.Y, model, sim; crossxy=false))
+    lpsDPMoos = logscore(postPredLogdens(Xoos, dfoos.Y, model2, sim2; crossxy=false))
+
     # Simple linear regresion
-    slr = lm(@formula(Y ~ X1 + X2), df)
+    linearTerms = reduce(+, [Term(Symbol("X", d)) for d in 1:dims])
+    slr = lm(Term(:Y) ~ linearTerms, df)
     #slr = lm(@formula(Y ~ X1 + X2), df)
     #df.groups .= string.(df.group)
     # dfoos.group .= string.(dfoos.group)
@@ -357,7 +375,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     rindKclustoos = Clustering.randindex(parse.(Int, dfoos.kclust), dfoos.group)
     # linear model with Y vs X1, X2
     contrasts = Dict(:kclust => EffectsCoding())  # deviation from mean
-    clustlm = lm(@formula(Y ~ (X1 + X2) * kclust), df; contrasts=contrasts)
+    clustlm = lm(Term(:Y) ~ linearTerms * Term(:kclust), df; contrasts=contrasts)
     # df.group = string.(df.group)
     # clustlm = lm(@formula(Y ~ (X1 + X2) * group), df)
     kmeanMSE = sqrt(mean(residuals(clustlm) .^ 2))
@@ -434,6 +452,8 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
         midMixoos=midMixoos,
         bayesPmix=bayesPmix,
         bayesPmixoos=bayesPmixoos,
+        lpsMixoos=lpsMixoos,
+        lpsDPMoos=lpsDPMoos,
         meanBeta1=meanBeta1,
         meanBeta2=meanBeta2,
         Mix_beta1_c1=median(Mix_beta1_c1),
@@ -442,6 +462,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
         commonInDPM=commonInDPM,
         zeroInDPM2=zeroInDPM2,
         commonInDPM2=commonInDPM2,
+        commonCovAll=commonCovAll,
 
         # PPMx model
         rind_DPM=rindDPM,
@@ -501,7 +522,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
         # setup
         N=N, fractions=string(fractions), variance=variance,
-        interEffect=interEffect, common=common, prec=prec, alph=alph, bet=bet, xdiff=xdiff
+        interEffect=interEffect, common=common, prec=prec, alph=alph, bet=bet, xdiff=xdiff, dims=dims
     )
 
     if plotFit

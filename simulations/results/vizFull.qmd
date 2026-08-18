@@ -80,6 +80,7 @@ df <- data.frame("file" = dir()) %>%
         slr2_T2 = zeroInSLR2,
         `ppmx-common1_Cov` = commonInDPM,
         `ppmx-common2_Cov` = commonInDPM2,
+        `ppmx-common_ccov` = commonCovAll,
         dpm1_Cov = dpmcommonIn1,
         dpm2_Cov = dpmcommonIn2,
         kmean1_Cov = commonInk,
@@ -94,6 +95,8 @@ df <- data.frame("file" = dir()) %>%
         
         `ppmx-common_bayesP` = bayesPmix,
         `ppmx_bayesP` = bayesPDPM,
+        `ppmx-common_lps` = lpsMixoos,
+        `ppmx_lps` = lpsDPMoos,
 
         `ppmx-common_binder` = salsoBinderARI_Mix,
         `ppmx-common_vi` = salsoVIARI_Mix,
@@ -109,7 +112,7 @@ df <- data.frame("file" = dir()) %>%
 
         Common = common, Precision = prec, Alpha = alph,
         Beta = bet, InterEffect = interEffect, Imbalanced,
-        xdiff, variance, N, mass1, mass2
+        xdiff, variance, N, mass1, mass2, dims
     )
 # group by file
 modLoc <- df %>%
@@ -125,10 +128,10 @@ modLoc <- df %>%
         # MSE
         across(ends_with("_common1"), function(x) sqrt(mean((Common - x)^2, na.rm = T)), .names= "{.col}-RMSE"),
         across(ends_with("_common2"), function(x) sqrt(mean((-Common - x)^2, na.rm = T)), .names= "{.col}-RMSE"),
-        .by = c(N, Common, InterEffect, Alpha, Beta, Precision, Imbalanced, variance, xdiff)
+        .by = c(N, Common, InterEffect, Alpha, Beta, Precision, Imbalanced, variance, xdiff, dims)
     ) %>%
     pivot_longer(
-        -c(Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance, xdiff),
+        -c(Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance, xdiff, dims),
          names_to = c(".value", "Metric"),
          names_pattern = "(.*)_(.*)",
         ) %>%
@@ -138,7 +141,7 @@ modLoc <- df %>%
 
 
 modLoc |>
-  filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)) |>
+  filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), dims == 5) |>
   reframe(.by = c(xdiff, Metric), across(c(`ppmx-common`, dpm, kmean, slr), mean))
 
 
@@ -148,17 +151,17 @@ modGlob <- df %>%
     reframe(
         across(ends_with("_bayesP"), function(x) mean(x, na.rm = T), .names= "{.col}-bayesP"),
         across(ends_with("_rind"), function(x) mean(x, na.rm = T), .names= "{.col}-rind"),
-        .by = c(N, Common, InterEffect, Alpha, Beta, Precision, Imbalanced, variance, xdiff)
+        .by = c(N, Common, InterEffect, Alpha, Beta, Precision, Imbalanced, variance, xdiff, dims)
     ) %>%
     pivot_longer(
-        -c(Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance, xdiff),
+        -c(Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance, xdiff, dims),
          names_to = c(".value", "Metric"),
          names_pattern = "(.*)_(.*)",
         ) %>%
     drop_na()
 longDF <- df %>%
     pivot_longer(
-        -c(N, Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance, xdiff),
+        -c(N, Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance, xdiff, dims),
          names_to = c(".value", "Metric"),
          names_pattern = "(.*)\\_(.*)",
         ) %>%
@@ -167,11 +170,11 @@ longDF <- df %>%
 
 
 df |>
-  filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)) |>
+  filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), dims == 5) |>
   reframe(.by = xdiff, across(ends_with("_Cov"), mean))
 
 modGlob |>
-  filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0))
+  filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), dims == 5)
 
 ```
 
@@ -186,7 +189,7 @@ modLoc |>
     ) |>
     group_by(group_label) |>
     select(-c(InterEffect, Alpha, Beta, Precision)) |>
-    filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0))
+    filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), dims == 5)
     gt()
 
 ```
@@ -206,30 +209,30 @@ modLoc |>
 #     ggtitle("Common effects sampling distribution (alpha=2, beta=1,prec=0.01), Imbalanced") +
 #     xlab("Common Estimate")
 longDF %>%
-    filter(Imbalanced == FALSE, Metric == "common1") %>%
+    filter(Imbalanced == FALSE, Metric == "common1", dims == 5, Common == 1.0) %>%
     ggplot(aes(x = Statistic, fill = Model)) +
     geom_density(alpha = 0.35) +
     geom_vline(aes(xintercept = unique(Common))) +
     geom_vline(xintercept = 0.0) +
     facet_grid(
-        rows = vars(Alpha, xdiff), cols = vars(Beta), scales = "free",
+        rows = vars(xdiff), cols = vars(Alpha, Beta), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
-    ggtitle("Common effects (common=1, Interaction=1)") +
+    ggtitle("Common effects (common=1, Interaction=1), dims=5") +
     xlab("Common Estimate")
 ggsave("beta1Tuning.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
-    filter(Imbalanced == FALSE, Metric == "common2") %>%
+    filter(Imbalanced == FALSE, Metric == "common2", dims == 5, Common == 1.0) %>%
     ggplot(aes(x = Statistic, fill = Model)) +
     geom_density(alpha = 0.35) +
     geom_vline(aes(xintercept = -unique(Common))) +
     geom_vline(xintercept = 0.0) +
     facet_grid(
-        rows = vars(Alpha, xdiff), cols = vars(Beta), scales = "free",
+        rows = vars(xdiff), cols = vars(Alpha, Beta), scales = "free",
         labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
-    ggtitle("Common effects (common=-1, Interaction=1), Balanced") +
+    ggtitle("Common effects (common=-1, Interaction=1), dims=5") +
     xlab("Common Estimate")
 ggsave("beta2Tuning.png", width = 6, dpi = 300, units = "in")
 ```
@@ -355,7 +358,7 @@ longDF %>%
 ```{r}
 temp %>%
     # filter(InterEffect == 0.25) %>%
-    select(-c(InterEffect, Precision, variance, Common, Imbalanced)) %>%
+    select(-c(InterEffect, Precision, variance, Common, Imbalanced, dims)) %>%
     arrange(Metric) %>%
     pivot_wider(names_from = Metric, values_from = c(`ppmx-common`, kmean, slr)) |>
     gt() |>
@@ -450,7 +453,7 @@ temp %>%
 ```{r}
 temp %>%
     filter(Alpha == 3.0, Beta == 3.0) %>%
-    select(-c(Alpha, Beta, Precision, variance, Common, Imbalanced)) %>%
+    select(-c(Alpha, Beta, Precision, variance, Common, Imbalanced, dims)) %>%
     arrange(Metric) %>%
     pivot_wider(names_from = Metric, values_from = c(`ppmx-common`, kmean, slr)) |>
     gt() |>
@@ -558,7 +561,7 @@ longDF %>%
 # covariate distributions
 ```{r}
 covs <- read_csv("covariates.csv", show_col_types = FALSE) %>%
-    pivot_longer(c(X1, X2), names_to = "covariate", values_to = "value")
+    pivot_longer(starts_with("X"), names_to = "covariate", values_to = "value")
 
 covs %>%
     ggplot(aes(x = value, fill = factor(group))) +
@@ -580,57 +583,86 @@ covs %>%
         axis.title.x = element_text(margin = margin(t = 8))
     ) +
     guides(fill = guide_legend(ncol = 1))
-ggsave("covariateDist.png", width = 10, height = 4, dpi = 300, units = "in")
+ggsave("covariateDist.png", width = 10, height = 8, dpi = 300, units = "in")
 ```
 
 # big sim
 ```{r}
 longDF %>%
-    filter(Imbalanced == FALSE, Metric == "common1", N== 1000) %>%
+    filter(Imbalanced == FALSE, Metric == "common1", N== 1000, dims == 5, Common == 1.0) %>%
     ggplot(aes(x = Statistic, fill = Model)) +
     geom_density(alpha = 0.2) +
     geom_vline(xintercept = 1.0) +
     geom_vline(xintercept = 0.0) +
     facet_grid(
-        rows = vars(InterEffect, xdiff), cols = vars(Beta), scales = "free",
+        rows = vars(xdiff), cols = vars(InterEffect), scales = "free",
         #labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
-    ggtitle("Common effects") +
+    ggtitle("Common effects, dims=5") +
     xlab("Common Estimate")
 ggsave("bigSimcommon1.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
-    filter(Imbalanced == FALSE, Metric == "common2", N== 1000) %>%
+    filter(Imbalanced == FALSE, Metric == "common2", N== 1000, dims == 5, Common == 1.0) %>%
     ggplot(aes(x = Statistic, fill = Model)) +
     geom_density(alpha = 0.2) +
     geom_vline(xintercept = 1.0) +
     geom_vline(xintercept = 0.0) +
     facet_grid(
-        rows = vars(InterEffect, xdiff), cols = vars(Beta), scales = "free",
+        rows = vars(xdiff), cols = vars(InterEffect), scales = "free",
         #labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
-    ggtitle("Common effects") +
+    ggtitle("Common effects, dims=5") +
     xlab("Common Estimate")
 ggsave("bigSimcommon2.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
-    filter(Metric == "rind", N == 1000) %>%
+    filter(Metric == "rind", N == 1000, dims == 5, Common == 1.0) %>%
     ggplot(aes(x = Statistic, fill = Model, y = ..density..)) +
     geom_histogram(alpha = 0.3, color = "black") +
-    facet_grid(rows = vars(InterEffect), cols = vars(xdiff)) + #, labeller = labeller(.rows = label_both, .cols = label_both))
-    ggtitle("Rand index, N = 1000")
+    facet_grid(rows = vars(xdiff)) + #, labeller = labeller(.rows = label_both, .cols = label_both))
+    ggtitle("Rand index, N = 1000, dims=5")
 ggsave("bigSimRI.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
-    filter(Metric %in% c("binder", "vi", "binderoos", "vioos"), N == 1000) %>%
+    filter(Metric %in% c("binder", "vi", "binderoos", "vioos"), N == 1000, dims == 5, Common == 1.0) %>%
     mutate(Split = ifelse(grepl("oos", Metric), "OOS", "in-sample"),
            Loss = ifelse(grepl("binder", Metric), "Binder", "VI")) %>%
     ggplot(aes(x = Statistic, fill = Model, y = ..density..)) +
     geom_histogram(alpha = 0.3, color = "black") +
     facet_grid(rows = vars(Loss, Split), cols = vars(xdiff)) +
     labs(x = "Adjusted Rand Index (SALSO point estimate)") +
-    ggtitle("SALSO ARI, N = 1000")
+    ggtitle("SALSO ARI, N = 1000, dims=5")
 ggsave("bigSimSalso.png", width = 8, dpi = 300, units = "in")
 
+```
+
+# OOS log predictive score (reviewer: replace Bayesian p-values with proper scoring rules)
+```{r}
+longDF %>%
+    filter(Metric == "lps", N == 1000, dims == 5, Common == 1.0, Imbalanced == FALSE) %>%
+    reframe(.by = c(xdiff, Model), Statistic = mean(Statistic, na.rm = TRUE)) %>%
+    pivot_wider(names_from = Model, values_from = Statistic) %>%
+    mutate(across(c(`ppmx-common`, ppmx), round, 3)) |>
+    gt()
+```
+
+```{r}
+longDF %>%
+    filter(Metric == "lps", N == 1000, dims == 5, Common == 1.0, Imbalanced == FALSE) %>%
+    ggplot(aes(x = Statistic, fill = Model, y = ..density..)) +
+    geom_histogram(alpha = 0.3, color = "black") +
+    facet_grid(rows = vars(xdiff)) +
+    ggtitle("OOS log predictive score, N = 1000, dims=5")
+ggsave("bigSimLPS.png", width = 6, dpi = 300, units = "in")
+```
+
+# common-effect CI coverage across all covariates
+```{r}
+df %>%
+    filter(N == 1000, dims == 5, Common == 1.0, Imbalanced == FALSE) %>%
+    reframe(.by = xdiff, `ppmx-common_ccov` = mean(`ppmx-common_ccov`, na.rm = TRUE)) %>%
+    mutate(across(`ppmx-common_ccov`, round, 3)) |>
+    gt()
 ```
 

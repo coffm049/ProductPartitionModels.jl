@@ -42,16 +42,21 @@ massb = parse(Float64, ARGS[14])
 runDPM = length(ARGS) >= 15 ? parse(Int, ARGS[15]) : 0
 DPMalpha = length(ARGS) >= 16 ? parse(Float64, ARGS[16]) : 1.0
 DPMiters = length(ARGS) >= 17 ? parse(Int, ARGS[17]) : 500
+# optional imbalanced-clusters flag (1 => exponential-decay cluster sizes, Imbal_ file prefix)
+imbalanced = length(ARGS) >= 18 ? parse(Int, ARGS[18]) : 0
 
 # construct a file name from the user inputs
 outputName = "results/N$(N)_c$(nc)_inter$(interEffect)_common$(common)_xd$(xdiff)_v$(variance)_dim$(dims)_prec$(prec)alph$(alph)bet$(bet)_mass$(massa)$(massb)"
+if imbalanced == 1
+    outputName = "Imbal_" * outputName
+end
 if runDPM == 1
     outputName = outputName * "_dpm$(DPMalpha)_$(DPMiters)"
 end
 
 # END user input
 #
-fractions = repeat([1 / nc], nc)
+fractions = imbalanced == 1 ? exp.(-collect(0:(nc-1)) .* 0.8) ./ sum(exp.(-collect(0:(nc-1)) .* 0.8)) : repeat([1 / nc], nc)
 
 # END other controls
 
