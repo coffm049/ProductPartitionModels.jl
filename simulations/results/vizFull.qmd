@@ -33,7 +33,7 @@ theme_update(
 )
 
 df <- data.frame("file" = dir()) %>%
-    filter(grepl(".csv$", file)) %>%
+    filter(grepl(".csv$", file), !grepl("^covariates", file)) %>%
     mutate(
         Imbalanced = grepl("^Imbal_", file),
         mass1 = str_extract(file, "mass[0-9].0"),
@@ -94,6 +94,15 @@ df <- data.frame("file" = dir()) %>%
         
         `ppmx-common_bayesP` = bayesPmix,
         `ppmx_bayesP` = bayesPDPM,
+
+        `ppmx-common_binder` = salsoBinderARI_Mix,
+        `ppmx-common_vi` = salsoVIARI_Mix,
+        ppmx_binder = salsoBinderARI_DPM,
+        ppmx_vi = salsoVIARI_DPM,
+        `ppmx-common_binderoos` = salsoBinderARI_Mixoos,
+        `ppmx-common_vioos` = salsoVIARI_Mixoos,
+        ppmx_binderoos = salsoBinderARI_DPMoos,
+        ppmx_vioos = salsoVIARI_DPMoos,
 
         contains("rind"),
         contains("bayes"),
@@ -611,6 +620,17 @@ longDF %>%
     facet_grid(rows = vars(InterEffect), cols = vars(xdiff)) + #, labeller = labeller(.rows = label_both, .cols = label_both))
     ggtitle("Rand index, N = 1000")
 ggsave("bigSimRI.png", width = 6, dpi = 300, units = "in")
+
+longDF %>%
+    filter(Metric %in% c("binder", "vi", "binderoos", "vioos"), N == 1000) %>%
+    mutate(Split = ifelse(grepl("oos", Metric), "OOS", "in-sample"),
+           Loss = ifelse(grepl("binder", Metric), "Binder", "VI")) %>%
+    ggplot(aes(x = Statistic, fill = Model, y = ..density..)) +
+    geom_histogram(alpha = 0.3, color = "black") +
+    facet_grid(rows = vars(Loss, Split), cols = vars(xdiff)) +
+    labs(x = "Adjusted Rand Index (SALSO point estimate)") +
+    ggtitle("SALSO ARI, N = 1000")
+ggsave("bigSimSalso.png", width = 8, dpi = 300, units = "in")
 
 ```
 

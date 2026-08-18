@@ -20,6 +20,7 @@ using ProductPartitionModels
 using DPMM
 
 include("simFunctions.jl")
+include("salsoUtils.jl")
 
 # read arguments from command line
 # N, nc, variance, interEffect, common, xdiff
@@ -56,18 +57,73 @@ fractions = repeat([1 / nc], nc)
 
 
 results = Vector{DataFrame}(undef, reps)
+CmixAll = Vector{Any}(undef, reps)
+CdpmAll = Vector{Any}(undef, reps)
+CmixoosAll = Vector{Any}(undef, reps)
+CdpmoosAll = Vector{Any}(undef, reps)
+truthAll = Vector{Any}(undef, reps)
+truthoosAll = Vector{Any}(undef, reps)
 seeds = MersenneTwister.(rand(1:10^8, Threads.nthreads()))  # or generate from original rng
 # n,  fractions, variance, interEffect, common
 Threads.@threads for i in 1:reps
     try
         println(i)
-        results[i] = simExperiment(seeds[Threads.threadid()]; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, niters=niters, plotSim=false, xdiff=xdiff, dims=dims, prec=prec, alph=alph, bet=bet, massParams = [massa, massb], runDPM=(runDPM == 1), DPMalpha=DPMalpha, DPMiters=DPMiters)
+        out = simExperiment(seeds[Threads.threadid()]; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, niters=niters, plotSim=false, xdiff=xdiff, dims=dims, prec=prec, alph=alph, bet=bet, massParams = [massa, massb], runDPM=(runDPM == 1), DPMalpha=DPMalpha, DPMiters=DPMiters, returnC=true)
+        results[i] = out.result
+        CmixAll[i] = out.Cmix
+        CdpmAll[i] = out.Cdpm
+        CmixoosAll[i] = out.Cmixoos
+        CdpmoosAll[i] = out.Cdpmoos
+        truthAll[i] = out.truth
+        truthoosAll[i] = out.truthoos
     catch err
         println("sim Failed")
     end
 end
 defined_results = [results[i] for i in 1:reps if isassigned(results, i)]
 df = vcat(defined_results...)
+definedIdx = findall(i -> isassigned(results, i), 1:reps)
+
+# SALSO point estimates (Binder + VI) - needs R on the main thread, so run
+# after the threaded loop. ARI reported for the PPMx (mixDPM) models only.
+salsoBinderARI_Mix = Vector{Union{Missing,Float64}}(undef, reps)
+salsoVIARI_Mix = Vector{Union{Missing,Float64}}(undef, reps)
+salsoBinderARI_Mixoos = Vector{Union{Missing,Float64}}(undef, reps)
+salsoVIARI_Mixoos = Vector{Union{Missing,Float64}}(undef, reps)
+salsoBinderARI_DPM = Vector{Union{Missing,Float64}}(undef, reps)
+salsoVIARI_DPM = Vector{Union{Missing,Float64}}(undef, reps)
+salsoBinderARI_DPMoos = Vector{Union{Missing,Float64}}(undef, reps)
+salsoVIARI_DPMoos = Vector{Union{Missing,Float64}}(undef, reps)
+salso_ok = salso_available()
+for i in 1:reps
+    if !isassigned(CmixAll, i) || !salso_ok
+        salsoBinderARI_Mix[i] = missing
+        salsoVIARI_Mix[i] = missing
+        salsoBinderARI_Mixoos[i] = missing
+        salsoVIARI_Mixoos[i] = missing
+        salsoBinderARI_DPM[i] = missing
+        salsoVIARI_DPM[i] = missing
+        salsoBinderARI_DPMoos[i] = missing
+        salsoVIARI_DPMoos[i] = missing
+        continue
+    end
+    salsoBinderARI_Mix[i] = salso_ari(CmixAll[i], truthAll[i]; loss=:binder).ari
+    salsoVIARI_Mix[i] = salso_ari(CmixAll[i], truthAll[i]; loss=:VI).ari
+    salsoBinderARI_Mixoos[i] = salso_ari(CmixoosAll[i], truthoosAll[i]; loss=:binder).ari
+    salsoVIARI_Mixoos[i] = salso_ari(CmixoosAll[i], truthoosAll[i]; loss=:VI).ari
+    salsoBinderARI_DPM[i] = salso_ari(CdpmAll[i], truthAll[i]; loss=:binder).ari
+    salsoVIARI_DPM[i] = salso_ari(CdpmAll[i], truthAll[i]; loss=:VI).ari
+    salsoBinderARI_DPMoos[i] = salso_ari(CdpmoosAll[i], truthoosAll[i]; loss=:binder).ari
+    salsoVIARI_DPMoos[i] = salso_ari(CdpmoosAll[i], truthoosAll[i]; loss=:VI).ari
+end
+df.salsoBinderARI_Mix = salsoBinderARI_Mix[definedIdx]
+df.salsoVIARI_Mix = salsoVIARI_Mix[definedIdx]
+df.salsoBinderARI_Mixoos = salsoBinderARI_Mixoos[definedIdx]
+df.salsoVIARI_Mixoos = salsoVIARI_Mixoos[definedIdx]
+df.salsoBinderARI_DPM = salsoBinderARI_DPM[definedIdx]
+df.salsoVIARI_DPM = salsoVIARI_DPM[definedIdx]
+df.salsoBinderARI_DPMoos = salsoBinderARI_DPMoos[definedIdx]
+df.salsoVIARI_DPMoos = salsoVIARI_DPMoos[definedIdx]
 
 if !isfile("$(outputName).csv")
     CSV.write("$(outputName).csv", df, writeheader=true, append=false)

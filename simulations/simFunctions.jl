@@ -135,7 +135,7 @@ end
 # common < interEffect : 
 # common > interEffect : somewhat promising
 
-function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25, 0.25, 0.25, 0.25], variance::Real=1.0, interEffect::Float64=1.0, common::Float64=1.0, plotFit::Bool=false, niters::Int=1000, prec::Real=10.0, alph::Real=10.0, bet::Real=20.0, plotSim::Bool=false, xdiff::Real=2.0, dims::Int=2, massParams::Vector{Float64}=[1.0, 1.0], runDPM::Bool=false, DPMalpha::Float64=1.0, DPMiters::Int=200)
+function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25, 0.25, 0.25, 0.25], variance::Real=1.0, interEffect::Float64=1.0, common::Float64=1.0, plotFit::Bool=false, niters::Int=1000, prec::Real=10.0, alph::Real=10.0, bet::Real=20.0, plotSim::Bool=false, xdiff::Real=2.0, dims::Int=2, massParams::Vector{Float64}=[1.0, 1.0], runDPM::Bool=false, DPMalpha::Float64=1.0, DPMiters::Int=200, returnC::Bool=false)
 
     # Simulate data
     df = simData(rng; N=N, fractions=fractions, variance=variance, interEffect=interEffect, common=common, plotSim=plotSim, xdiff=xdiff, dims=dims)
@@ -522,6 +522,17 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
         vline!([common], label="True", color="black", linewidth=3)
         vline!([0], label="Zero", color="black", linewidth=3, linestyle=:dot)
         display(current())
+    end
+
+    if returnC
+        # posterior cluster allocation matrices (S x N) for SALSO point estimates.
+        # In-sample use the fitted cluster allocations; OOS use postPred draws.
+        Cmix = permutedims(hcat([s[:C] for s in sim]...))
+        Cdpm = permutedims(hcat([s[:C] for s in sim2]...))
+        Cmixoos = Cpred1oos
+        Cdpmoos = Cpred2oos
+        return (result=result, Cmix=Cmix, Cdpm=Cdpm, Cmixoos=Cmixoos,
+                Cdpmoos=Cdpmoos, truth=copy(df.group), truthoos=copy(dfoos.group))
     end
 
     return result
