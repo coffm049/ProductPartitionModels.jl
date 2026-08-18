@@ -23,7 +23,9 @@ XDIFF=${XDIFFS[$SLURM_ARRAY_TASK_ID]}
 export PATH="$HOME/software/julia-1.11.7/bin:$PATH"
 
 # optional: needed only for SALSO metrics (R 'salso' package)
-module load R/4.4.0-openblas-rocky8 2>/dev/null || true
+source ~/conda/etc/profile.d/conda.sh
+conda activate r-salso
+export R_HOME="$CONDA_PREFIX/lib/R"
 
 cd ~/software/ProductPartitionModels.jl/simulations
 
