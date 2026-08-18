@@ -337,7 +337,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     # scoring rules). OOS expected log predictive density, evaluated at the
     # observed outcome.
     function logscore(lDens)
-        return mean(logsumexp(lDens, 1)[1, :] .- log(size(lDens, 1)))
+        return mean(ProductPartitionModels.logsumexp(lDens; dims=1)[1, :] .- log(size(lDens, 1)))
     end
     lpsMixoos = logscore(postPredLogdens(Xoos, dfoos.Y, model, sim; crossxy=false))
     lpsDPMoos = logscore(postPredLogdens(Xoos, dfoos.Y, model2, sim2; crossxy=false))
