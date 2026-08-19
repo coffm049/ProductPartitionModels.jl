@@ -3,10 +3,11 @@
 #SBATCH --output=../logs/dim5imbal.out
 #SBATCH --error=../logs/dim5imbal.err
 #SBATCH --cpus-per-task=2
-#SBATCH --time=12:30:00
+#SBATCH --time=24:00:00
 #SBATCH --mem-per-cpu=4G
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=coffm049@umn.edu
+# full grid 0-5: no Imbal results were written before (path bug), so all tasks rerun.
 #SBATCH --array=0-5
 
 

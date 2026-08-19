@@ -46,10 +46,11 @@ DPMiters = length(ARGS) >= 17 ? parse(Int, ARGS[17]) : 500
 imbalanced = length(ARGS) >= 18 ? parse(Int, ARGS[18]) : 0
 
 # construct a file name from the user inputs
-outputName = "results/N$(N)_c$(nc)_inter$(interEffect)_common$(common)_xd$(xdiff)_v$(variance)_dim$(dims)_prec$(prec)alph$(alph)bet$(bet)_mass$(massa)$(massb)"
+baseName = "N$(N)_c$(nc)_inter$(interEffect)_common$(common)_xd$(xdiff)_v$(variance)_dim$(dims)_prec$(prec)alph$(alph)bet$(bet)_mass$(massa)$(massb)"
 if imbalanced == 1
-    outputName = "Imbal_" * outputName
+    baseName = "Imbal_" * baseName
 end
+outputName = "results/" * baseName
 if runDPM == 1
     outputName = outputName * "_dpm$(DPMalpha)_$(DPMiters)"
 end
