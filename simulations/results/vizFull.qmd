@@ -23,9 +23,8 @@ knitr:
 ```{r}
 library(tidyverse)
 library(patchwork)
-library(kableExtra)
 library(ggsci)
-library(gt)
+dir.create("tables", showWarnings = FALSE, recursive = TRUE)
 theme_set(theme_bw())
 theme_update(
     scale_fill = scale_fill_npg(),
@@ -189,9 +188,8 @@ modLoc |>
     ) |>
     group_by(group_label) |>
     select(-c(InterEffect, Alpha, Beta, Precision)) |>
-    filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), dims == 5)
-    gt()
-
+    filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), dims == 5) |>
+    write_csv("tables/table_local_interp.csv")
 ```
 
 
@@ -266,93 +264,7 @@ longDF %>%
     reframe(.by = group_label, kmean1= mean(kmean1, na.rm = T),  ) |>
     # filter(grepl("common1", Metric)) %>%
     # pivot_wider(names_from = Metric, values_from = c(`ppmx-common`, kmean, slr)) |>
-    gt() |>
-    tab_options(row_group.as_column = TRUE) |>
-    
-    fmt_number(
-      n_sigfig = 2,
-      use_seps = FALSE
-    ) |>
-    fmt_number(
-      columns = c(Alpha, Beta),
-      n_sigfig = 2,
-      use_seps = FALSE
-    ) |>
-    tab_spanner(
-        label = "Priors",
-        columns = c(Alpha, Beta)
-    ) |>
-    tab_spanner(
-        id = "Beta1 T2 Error",
-        label = "T2 Error",
-        columns = c(`ppmx-common_T2`, kmean_T2, slr_T2)
-    ) |>
-    tab_spanner(
-        id = "Beta1 RMSE",
-        label = "RMSE",
-        columns = c(`ppmx-common_common1-RMSE`, `kmean_common1-RMSE`, `slr_common1-RMSE`)
-    ) |>
-    tab_spanner(
-        id = "Beta1 Bias",
-        label = "Bias",
-        columns = c(`ppmx-common_common1-bias`, `kmean_common1-bias`, `slr_common1-bias`)
-    ) |>
-    tab_spanner(
-        id = "Beta1 Coverage",
-        label = "Coverage",
-        columns = c(`ppmx-common_Cov`, kmean_Cov, slr_Cov)
-    ) |>
-    tab_spanner(
-        id = "Beta2 RMSE",
-        label = "RMSE",
-        columns = c(`ppmx-common_common2-RMSE`, `kmean_common2-RMSE`, `slr_common2-RMSE`)
-    ) |>
-    tab_spanner(
-        id = "Beta2 Bias",
-        label = "Bias",
-        columns = c(`ppmx-common_common2-bias`, `kmean_common2-bias`, `slr_common2-bias`)
-    ) |>
-    tab_spanner(
-        label = "Common β1",
-        columns = c(
-            `ppmx-common_T2`, kmean_T2, slr_T2, 
-            `ppmx-common_common1-RMSE`, `kmean_common1-RMSE`, `slr_common1-RMSE`,
-            `ppmx-common_common1-bias`, `kmean_common1-bias`, `slr_common1-bias`,
-            `ppmx-common_Cov`, kmean_Cov, slr_Cov,
-        )
-    ) |>
-    tab_spanner(
-        label = "Common β2",
-        columns = c(
-            `ppmx-common_common2-RMSE`, `kmean_common2-RMSE`, `slr_common2-RMSE`,
-            `ppmx-common_common2-bias`, `kmean_common2-bias`, `slr_common2-bias`,
-        )
-    ) |>
-    cols_label(
-        `ppmx-common_Cov` = "ppmx-common",
-        `ppmx-common_common1-bias` = "ppmx-common",
-        `ppmx-common_common1-RMSE` = "ppmx-common",
-        `ppmx-common_common2-bias` = "ppmx-common",
-        `ppmx-common_common2-RMSE` = "ppmx-common",
-        `ppmx-common_T2` = "ppmx-common",
-
-        kmean_T2 = "kmean",
-        kmean_Cov = "kmean",
-        `kmean_common1-RMSE` = "kmean",
-        `kmean_common1-bias` = "kmean",
-        `kmean_common2-RMSE` = "kmean",
-        `kmean_common2-bias` = "kmean",
-        
-        slr_T2 = "SLR",
-        slr_Cov = "SLR",
-        `slr_common1-RMSE` = "SLR",
-        `slr_common1-bias` = "SLR",
-        `slr_common2-RMSE` = "SLR",
-        `slr_common2-bias` = "SLR",
-        Alpha = "\alpha",
-        Beta = "\beta",
-    )
-
+    write_csv("tables/table_model_comparison.csv")
 ```
 
 ```{r}
@@ -361,91 +273,7 @@ temp %>%
     select(-c(InterEffect, Precision, variance, Common, Imbalanced, dims)) %>%
     arrange(Metric) %>%
     pivot_wider(names_from = Metric, values_from = c(`ppmx-common`, kmean, slr)) |>
-    gt() |>
-    fmt_number(
-      n_sigfig = 2,
-      use_seps = FALSE
-    ) |>
-    fmt_number(
-      columns = c(Alpha, Beta),
-      n_sigfig = 2,
-      use_seps = FALSE
-    ) |>
-    tab_spanner(
-        label = "Priors",
-        columns = c(Alpha, Beta)
-    ) |>
-    tab_spanner(
-        id = "Beta1 T2 Error",
-        label = "T2 Error",
-        columns = c(`ppmx-common_T2`, kmean_T2, slr_T2)
-    ) |>
-    tab_spanner(
-        id = "Beta1 RMSE",
-        label = "RMSE",
-        columns = c(`ppmx-common_common1-RMSE`, `kmean_common1-RMSE`, `slr_common1-RMSE`)
-    ) |>
-    tab_spanner(
-        id = "Beta1 Bias",
-        label = "Bias",
-        columns = c(`ppmx-common_common1-bias`, `kmean_common1-bias`, `slr_common1-bias`)
-    ) |>
-    tab_spanner(
-        id = "Beta1 Coverage",
-        label = "Coverage",
-        columns = c(`ppmx-common_Cov`, kmean_Cov, slr_Cov)
-    ) |>
-    tab_spanner(
-        id = "Beta2 RMSE",
-        label = "RMSE",
-        columns = c(`ppmx-common_common2-RMSE`, `kmean_common2-RMSE`, `slr_common2-RMSE`)
-    ) |>
-    tab_spanner(
-        id = "Beta2 Bias",
-        label = "Bias",
-        columns = c(`ppmx-common_common2-bias`, `kmean_common2-bias`, `slr_common2-bias`)
-    ) |>
-    tab_spanner(
-        label = "Common β1",
-        columns = c(
-            `ppmx-common_T2`, kmean_T2, slr_T2, 
-            `ppmx-common_common1-RMSE`, `kmean_common1-RMSE`, `slr_common1-RMSE`,
-            `ppmx-common_common1-bias`, `kmean_common1-bias`, `slr_common1-bias`,
-            `ppmx-common_Cov`, kmean_Cov, slr_Cov,
-        )
-    ) |>
-    tab_spanner(
-        label = "Common β2",
-        columns = c(
-            `ppmx-common_common2-RMSE`, `kmean_common2-RMSE`, `slr_common2-RMSE`,
-            `ppmx-common_common2-bias`, `kmean_common2-bias`, `slr_common2-bias`,
-        )
-    ) |>
-    cols_label(
-        `ppmx-common_Cov` = "ppmx-common",
-        `ppmx-common_common1-bias` = "ppmx-common",
-        `ppmx-common_common1-RMSE` = "ppmx-common",
-        `ppmx-common_common2-bias` = "ppmx-common",
-        `ppmx-common_common2-RMSE` = "ppmx-common",
-        `ppmx-common_T2` = "ppmx-common",
-
-        kmean_T2 = "kmean",
-        kmean_Cov = "kmean",
-        `kmean_common1-RMSE` = "kmean",
-        `kmean_common1-bias` = "kmean",
-        `kmean_common2-RMSE` = "kmean",
-        `kmean_common2-bias` = "kmean",
-        
-        slr_T2 = "SLR",
-        slr_Cov = "SLR",
-        `slr_common1-RMSE` = "SLR",
-        `slr_common1-bias` = "SLR",
-        `slr_common2-RMSE` = "SLR",
-        `slr_common2-bias` = "SLR",
-        Alpha = "a",
-        Beta = "b",
-    )
-
+    write_csv("tables/table_temp_metrics.csv")
 ```
 
 
@@ -456,85 +284,7 @@ temp %>%
     select(-c(Alpha, Beta, Precision, variance, Common, Imbalanced, dims)) %>%
     arrange(Metric) %>%
     pivot_wider(names_from = Metric, values_from = c(`ppmx-common`, kmean, slr)) |>
-    gt() |>
-    fmt_number(
-      n_sigfig = 2,
-      use_seps = FALSE
-    ) |>
-    tab_spanner(
-        label = "Simulation",
-        columns = c(InterEffect)
-    ) |>
-    tab_spanner(
-        id = "Beta1 T2 Error",
-        label = "T2 Error",
-        columns = c(`ppmx-common_T2`, kmean_T2, slr_T2)
-    ) |>
-    tab_spanner(
-        id = "Beta1 RMSE",
-        label = "RMSE",
-        columns = c(`ppmx-common_common1-RMSE`, `kmean_common1-RMSE`, `slr_common1-RMSE`)
-    ) |>
-    tab_spanner(
-        id = "Beta1 Bias",
-        label = "Bias",
-        columns = c(`ppmx-common_common1-bias`, `kmean_common1-bias`, `slr_common1-bias`)
-    ) |>
-    tab_spanner(
-        id = "Beta1 Coverage",
-        label = "Coverage",
-        columns = c(`ppmx-common_Cov`, kmean_Cov, slr_Cov)
-    ) |>
-    tab_spanner(
-        id = "Beta2 RMSE",
-        label = "RMSE",
-        columns = c(`ppmx-common_common2-RMSE`, `kmean_common2-RMSE`, `slr_common2-RMSE`)
-    ) |>
-    tab_spanner(
-        id = "Beta2 Bias",
-        label = "Bias",
-        columns = c(`ppmx-common_common2-bias`, `kmean_common2-bias`, `slr_common2-bias`)
-    ) |>
-    tab_spanner(
-        label = "Common β1",
-        columns = c(
-            `ppmx-common_T2`, kmean_T2, slr_T2, 
-            `ppmx-common_common1-RMSE`, `kmean_common1-RMSE`, `slr_common1-RMSE`,
-            `ppmx-common_common1-bias`, `kmean_common1-bias`, `slr_common1-bias`,
-            `ppmx-common_Cov`, kmean_Cov, slr_Cov,
-        )
-    ) |>
-    tab_spanner(
-        label = "Common β2",
-        columns = c(
-            `ppmx-common_common2-RMSE`, `kmean_common2-RMSE`, `slr_common2-RMSE`,
-            `ppmx-common_common2-bias`, `kmean_common2-bias`, `slr_common2-bias`,
-        )
-    ) |>
-    cols_label(
-        `ppmx-common_Cov` = "ppmx-common",
-        `ppmx-common_common1-bias` = "ppmx-common",
-        `ppmx-common_common1-RMSE` = "ppmx-common",
-        `ppmx-common_common2-bias` = "ppmx-common",
-        `ppmx-common_common2-RMSE` = "ppmx-common",
-        `ppmx-common_T2` = "ppmx-common",
-
-        kmean_T2 = "kmean",
-        kmean_Cov = "kmean",
-        `kmean_common1-RMSE` = "kmean",
-        `kmean_common1-bias` = "kmean",
-        `kmean_common2-RMSE` = "kmean",
-        `kmean_common2-bias` = "kmean",
-        
-        slr_T2 = "SLR",
-        slr_Cov = "SLR",
-        `slr_common1-RMSE` = "SLR",
-        `slr_common1-bias` = "SLR",
-        `slr_common2-RMSE` = "SLR",
-        `slr_common2-bias` = "SLR",
-        InterEffect= "σ(β)"
-    )
-
+    write_csv("tables/table_temp_vs_intereffects.csv")
 ```
 
 ## clustering and prediction vs inter effect
@@ -644,7 +394,7 @@ longDF %>%
     reframe(.by = c(xdiff, Model), Statistic = mean(Statistic, na.rm = TRUE)) %>%
     pivot_wider(names_from = Model, values_from = Statistic) %>%
     mutate(across(c(`ppmx-common`, ppmx), round, 3)) |>
-    gt()
+    write_csv("tables/table_lps_by_model.csv")
 ```
 
 ```{r}
@@ -663,6 +413,6 @@ df %>%
     filter(N == 1000, dims == 5, Common == 1.0, Imbalanced == FALSE) %>%
     reframe(.by = xdiff, `ppmx-common_ccov` = mean(`ppmx-common_ccov`, na.rm = TRUE)) %>%
     mutate(across(`ppmx-common_ccov`, round, 3)) |>
-    gt()
+    write_csv("tables/table_common_effect_cov.csv")
 ```
 
