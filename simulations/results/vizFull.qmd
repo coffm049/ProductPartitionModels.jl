@@ -276,7 +276,7 @@ longDF %>%
 ```
 
 ```{r}
-temp %>%
+modLoc %>%
     # filter(InterEffect == 0.25) %>%
     select(-c(InterEffect, Precision, variance, Common, Imbalanced, dims)) %>%
     arrange(Metric) %>%
@@ -287,7 +287,7 @@ temp %>%
 
 - vs InterEffects
 ```{r}
-temp %>%
+modLoc %>%
     filter(Alpha == 3.0, Beta == 3.0) %>%
     select(-c(Alpha, Beta, Precision, variance, Common, Imbalanced, dims)) %>%
     arrange(Metric) %>%
@@ -318,6 +318,7 @@ longDF %>%
 
 # covariate distributions
 ```{r}
+if (file.exists("covariates.csv")) {
 covs <- read_csv("covariates.csv", show_col_types = FALSE) %>%
     pivot_longer(starts_with("X"), names_to = "covariate", values_to = "value")
 
@@ -342,6 +343,9 @@ covs %>%
     ) +
     guides(fill = guide_legend(ncol = 1))
 ggsave("covariateDist.png", width = 10, height = 8, dpi = 300, units = "in")
+} else {
+  cat("covariates.csv not found; run: julia --project=. covDist.jl\n")
+}
 ```
 
 # big sim
