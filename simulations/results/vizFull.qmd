@@ -217,8 +217,8 @@ longDF %>%
         labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
     ggtitle("Common effects (common=1, Interaction=1), dims=5") +
-    xlab("Common Estimate")
-    xlim(-3, 3) +
+    xlab("Common Estimate") +
+    xlim(-3, 3)
 ggsave("beta1Tuning.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
@@ -232,8 +232,8 @@ longDF %>%
         labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
     ggtitle("Common effects (common=-1, Interaction=1), dims=5") +
-    xlab("Common Estimate")
-    xlim(-3, 3) +
+    xlab("Common Estimate") +
+    xlim(-3, 3)
 ggsave("beta2Tuning.png", width = 6, dpi = 300, units = "in")
 ```
 
@@ -249,8 +249,8 @@ longDF %>%
         labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
     ggtitle("Common effects (common=5, Interaction=5)") +
-    xlab("Common Estimate")
-    xlim(-3, 3) +
+    xlab("Common Estimate") +
+    xlim(-3, 3)
 ggsave("betaVinter.png", width = 6, dpi = 300, units = "in")
 ```
 
@@ -364,8 +364,8 @@ longDF %>%
         #labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
     ggtitle("Common effects, dims=5") +
-    xlab("Common Estimate")
-    xlim(-3, 3) +
+    xlab("Common Estimate") +
+    xlim(-3, 3)
 ggsave("bigSimcommon1.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
@@ -379,8 +379,8 @@ longDF %>%
         #labeller = labeller(.rows = label_both, .cols = label_both)
     ) +
     ggtitle("Common effects, dims=5") +
-    xlab("Common Estimate")
-    xlim(-3, 3) +
+    xlab("Common Estimate") +
+    xlim(-3, 3)
 ggsave("bigSimcommon2.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
