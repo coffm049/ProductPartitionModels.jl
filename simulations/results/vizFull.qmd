@@ -50,7 +50,7 @@ df <- data.frame("file" = dir()) %>%
         dpm_rind = dpmARI,
         kmean_rind = adjrind_K,
         `ppmx-common_arind` = adjrindMixoos,
-        ppmx_arind = adjrindDPMoos,
+        ppmx_arind = adjrind_DPMoos,
         dpm_arind = dpmARIoos,
         kmean_arind = adjrind_Koos,
 
