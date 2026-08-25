@@ -36,9 +36,9 @@ export PATH="$HOME/software/julia-1.11.7/bin:$PATH"
 
 # optional: needed only for SALSO metrics (R 'salso' package)
 module unload R 2>/dev/null || true
-source ~/miniconda3/etc/profile.d/conda.sh
-conda activate r-salso
-export R_HOME="$CONDA_PREFIX/lib/R"
+export R_HOME="/projects/standard/gdc/public/envs/r-salso/lib/R"
+export LD_LIBRARY_PATH="/projects/standard/gdc/public/envs/r-salso/lib:$R_HOME/lib:$LD_LIBRARY_PATH"
+export PATH="$R_HOME/bin:$PATH"
 
 cd ~/software/ProductPartitionModels.jl/simulations
 
