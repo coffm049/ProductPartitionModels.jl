@@ -442,14 +442,15 @@ ggsave("bigSimLPScompare.png", width = 8, dpi = 300, units = "in")
 
 ## Sensitivity to the Dirichlet process concentration hyperparameter (Rev 3 C2)
 The simulation varies the DP concentration `massParams = [A, B]`, which controls the
-prior expected number of clusters. The table and figure below summarise the key
-fit/partition metrics across the values of `A` (labelled `mass1`) present in the data
-at `dims = 5`, averaged over simulation replicates, to show the conclusions are stable
-to this hyperparameter.
+prior expected number of clusters. The main `dims = 5` comparisons above were run at a
+single mass value (`A = 1.0`); the table and figure below summarise the key
+fit/partition metrics across the values of `A` (labelled `mass1`) available in the
+`dims = 2` data, averaged over simulation replicates, to show the conclusions are
+stable to this hyperparameter.
 
 ```{r}
 dpSens <- df %>%
-    filter(dims == 5, !is.na(mass1)) %>%
+    filter(dims == 2, !is.na(mass1)) %>%
     select(mass1, Imbalanced, xdiff,
            `ppmx-common_rind`, ppmx_rind, dpm_rind, kmean_rind,
            `ppmx-common_rmse`, ppmx_rmse, dpm_rmse, kmean_rmse, slr_rmse,
@@ -465,7 +466,7 @@ dpSens <- df %>%
     write_csv("tables/table_dp_hyperparameter_sensitivity.csv")
 
 dpSensFig <- df %>%
-    filter(dims == 5, !is.na(mass1)) %>%
+    filter(dims == 2, !is.na(mass1)) %>%
     select(mass1,
            `ppmx-common_rind`, ppmx_rind, dpm_rind, kmean_rind,
            `ppmx-common_rmse`, ppmx_rmse, dpm_rmse, kmean_rmse, slr_rmse,
@@ -482,7 +483,7 @@ dpSensFig <- df %>%
     facet_wrap(~ Metric, scales = "free_y") +
     labs(x = "DP concentration hyperparameter (mass A)",
          y = "Metric",
-         title = "Sensitivity to the DP concentration hyperparameter, dims = 5") +
+         title = "Sensitivity to the DP concentration hyperparameter, dims = 2") +
     theme_bw()
 ggsave("bigSimDPhyperSens.png", width = 10, dpi = 300, units = "in")
 ```
