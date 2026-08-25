@@ -106,6 +106,14 @@ df <- data.frame("file" = dir("../results2")) %>%
         ppmx_binderoos = salsoBinderARI_DPMoos,
         ppmx_vioos = salsoVIARI_DPMoos,
 
+        # DPMM.jl baseline (`dpm`) has a single hard partition, so it has no
+        # MCMC SALSO point estimate; surface its single-partition ARI vs truth
+        # in the SALSO section for comparison.
+        dpm_binder = dpmARI,
+        dpm_vi = dpmARI,
+        dpm_binderoos = dpmARIoos,
+        dpm_vioos = dpmARIoos,
+
         contains("rind"),
         contains("bayes"),
 
@@ -399,6 +407,10 @@ ggsave("bigSimSalso.png", width = 8, dpi = 300, units = "in")
 ```
 
 # SALSO summary table (Binder's loss + VI error, in-sample and OOS)
+The PPMx models (`ppmx-common`, `ppmx`/DPM) report SALSO point estimates under Binder
+and VI loss. The DPMM.jl baseline (`dpm`) yields a single hard partition, so it
+contributes its single-partition ARI versus truth (shown under Binder/VI for
+comparison, not a SALSO point estimate).
 ```{r}
 longDF %>%
     filter(Metric %in% c("binder", "vi", "binderoos", "vioos"), N == 1000, dims == 5, Common == 1.0) %>%
