@@ -175,6 +175,12 @@ df |>
 modGlob |>
   filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), dims == 5)
 
+cat("\n=== DATA AVAILABILITY for new sections (SALSO / LPS) ===\n")
+longDF %>%
+  filter(Metric %in% c("binder", "vi", "binderoos", "vioos", "lps")) %>%
+  reframe(.by = c(Model, Metric), n_nonmiss = sum(!is.na(Statistic)), n_total = n()) %>%
+  print()
+
 ```
 
 # local interp
