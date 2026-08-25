@@ -457,11 +457,11 @@ The simulation varies the DP concentration `massParams = [A, B]`, which controls
 prior expected number of clusters. The main `dims = 5` comparisons above were run at a
 single mass value (`A = 1.0`); the table and figure below summarise the key
 fit/partition metrics across the values of `A` (labelled `mass1`) available in the
-`dims = 2` data, averaged over simulation replicates, to show the conclusions are
+`dims = 5` data, averaged over simulation replicates, to show the conclusions are
 stable to this hyperparameter.
 
 ```{r}
-dp2 <- df %>% filter(dims == 2, !is.na(mass1))
+dp2 <- df %>% filter(dims == 5, !is.na(mass1))
 if (nrow(dp2) > 0) {
   dpSens <- dp2 %>%
       select(mass1, Imbalanced, xdiff,
@@ -497,7 +497,7 @@ if (nrow(dp2) > 0) {
       facet_wrap(~ Metric, scales = "free_y") +
       labs(x = "DP concentration hyperparameter (mass A)",
            y = "Metric",
-           title = "Sensitivity to the DP concentration hyperparameter, dims = 2") +
+            title = "Sensitivity to the DP concentration hyperparameter, dims = 5") +
       theme_bw()
   ggsave("bigSimDPhyperSens.png", width = 10, dpi = 300, units = "in")
 } else {

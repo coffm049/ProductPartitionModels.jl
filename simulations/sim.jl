@@ -100,9 +100,8 @@ salsoBinderARI_DPM = Vector{Union{Missing,Float64}}(undef, reps)
 salsoVIARI_DPM = Vector{Union{Missing,Float64}}(undef, reps)
 salsoBinderARI_DPMoos = Vector{Union{Missing,Float64}}(undef, reps)
 salsoVIARI_DPMoos = Vector{Union{Missing,Float64}}(undef, reps)
-salso_ok = salso_available()
 for i in 1:reps
-    if !isassigned(CmixAll, i) || !salso_ok
+    if !isassigned(CmixAll, i)
         salsoBinderARI_Mix[i] = missing
         salsoVIARI_Mix[i] = missing
         salsoBinderARI_Mixoos[i] = missing

@@ -34,7 +34,11 @@ under Binder loss (`loss=:binder`) or variation of information (`loss=:VI`).
 Returns an `N`-vector of cluster labels, or `nothing` if R/salso is unavailable.
 """
 function     salso_partition(C_mat::AbstractMatrix{<:Integer}; loss::Symbol=:VI, nRuns::Int=1000)
-    salso_available() || return nothing
+    salso_available() ||
+        error("SALSO point estimate requested but RCall or the R 'salso' package is unavailable. ",
+              "Fix the environment: ensure RCall can find an R installation that has `salso` ",
+              "installed (in R: install.packages('salso')), then re-run the simulation. ",
+              "RCall.Rhome() shows which R is being used.")
 
     # RCall expects a 0-based? No - integer matrix; salso treats equal labels as same cluster.
     CmatR = Int.(C_mat)
