@@ -270,13 +270,6 @@ longDF %>%
     summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
     pivot_wider(names_from = Model, values_from = Statistic) %>%
     write_csv("tables/table_model_comparison.csv")
-
-longDF %>%
-    filter(dims == 5, Imbalanced == TRUE, xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)) %>%
-    group_by(Metric, Model) %>%
-    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
-    pivot_wider(names_from = Model, values_from = Statistic) %>%
-    write_csv("tables/table_model_comparison_imbalanced.csv")
 ```
 
 ```{r}
@@ -503,6 +496,43 @@ if (nrow(dp2) > 0) {
 } else {
   message("DP-hyperparameter sensitivity skipped: no dim2 CSVs with varying mass (mass A) found in the working directory.")
 }
+```
+
+## Imbalanced-cluster scenarios
+The simulation also includes scenarios with imbalanced cluster sizes (exponentially
+decaying cluster frequencies). The table and figure below summarise model performance
+on those scenarios using the same metrics as above: clustering (adjusted Rand index and
+SALSO Binder/VI point estimates) and prediction (OOS RMSE and OOS log predictive score).
+
+```{r}
+# Model comparison table, imbalanced scenarios (printed)
+longDF %>%
+    filter(dims == 5, Imbalanced == TRUE) %>%
+    group_by(Metric, Model) %>%
+    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = Model, values_from = Statistic) %>%
+    write_csv("tables/table_model_comparison_imbalanced.csv") ->
+    imbalTbl
+imbalTbl
+```
+
+```{r}
+# Key-metric densities for imbalanced scenarios
+longDF %>%
+    filter(dims == 5, Imbalanced == TRUE, N == 1000, Common == 1.0,
+           Metric %in% c("rind", "rmse", "binder", "lps")) %>%
+    mutate(Metric = recode(Metric,
+                           rind   = "Adjusted Rand Index",
+                           rmse   = "OOS RMSE",
+                           binder = "SALSO Binder ARI",
+                           lps    = "OOS log predictive score")) %>%
+    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
+    geom_histogram(alpha = 0.3, color = "black") +
+    facet_grid(rows = vars(Metric), cols = vars(xdiff), scales = "free") +
+    labs(x = "Statistic", y = "Density") +
+    ggtitle("Imbalanced-cluster scenarios, N = 1000, dims = 5") +
+    theme_bw()
+ggsave("bigSimImbalanced.png", width = 8, dpi = 300, units = "in")
 ```
 
 # common-effect CI coverage across all covariates
