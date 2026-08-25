@@ -258,43 +258,45 @@ ggsave("betaVinter.png", width = 6, dpi = 300, units = "in")
 ## Model comparison tables 
 - tuning InterEffect = 0.25, variance = 0.1, Common = 1.0
 ```{r}
-modLoc %>%
-    filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), dims == 5) |>
-    reframe(.by = c(Metric, Imbalanced),
-            across(c(`ppmx-common`, ppmx, dpm, kmean, slr), mean, na.rm = TRUE)) |>
+longDF %>%
+    filter(dims == 5, xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)) %>%
+    group_by(Metric, Model, Imbalanced) %>%
+    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = Model, values_from = Statistic) %>%
     write_csv("tables/table_model_comparison.csv")
 
-modLoc %>%
-    filter(Imbalanced == TRUE, xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), dims == 5) |>
-    reframe(.by = c(Metric),
-            across(c(`ppmx-common`, ppmx, dpm, kmean, slr), mean, na.rm = TRUE)) |>
+longDF %>%
+    filter(dims == 5, Imbalanced == TRUE, xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)) %>%
+    group_by(Metric, Model) %>%
+    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = Model, values_from = Statistic) %>%
     write_csv("tables/table_model_comparison_imbalanced.csv")
 ```
 
 ```{r}
-modLoc %>%
-    # filter(InterEffect == 0.25) %>%
-    select(-c(InterEffect, Precision, variance, Common, Imbalanced, dims)) %>%
-    arrange(Metric) %>%
-    pivot_wider(names_from = Metric, values_from = c(`ppmx-common`, ppmx, dpm, kmean, slr)) |>
+longDF %>%
+    filter(dims == 5) %>%
+    group_by(Model, Metric) %>%
+    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = Metric, values_from = Statistic) %>%
     write_csv("tables/table_temp_metrics.csv")
 ```
 
 
 - vs InterEffects
 ```{r}
-modLoc %>%
-    filter(Alpha == 3.0, Beta == 3.0) %>%
-    select(-c(Alpha, Beta, Precision, variance, Common, Imbalanced, dims)) %>%
-    arrange(Metric) %>%
-    pivot_wider(names_from = Metric, values_from = c(`ppmx-common`, ppmx, dpm, kmean, slr)) |>
+longDF %>%
+    filter(dims == 5, Alpha == 3.0, Beta == 3.0) %>%
+    group_by(Model, Metric, InterEffect) %>%
+    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = Metric, values_from = Statistic) %>%
     write_csv("tables/table_temp_vs_intereffects.csv")
 ```
 
 ## clustering and prediction vs inter effect
 ```{r}
 longDF %>%
-    filter(Alpha == 3.0, Beta == 3.0, grepl("rind", Metric) | grepl("bayes", Metric)) %>%
+    filter(dims == 5, Alpha == 3.0, Beta == 3.0, grepl("rind", Metric) | grepl("bayes", Metric)) %>%
     select(-c(Alpha, Beta, Precision, variance, Common, Imbalanced)) %>%
     arrange(InterEffect, Metric)
 ```
@@ -302,7 +304,7 @@ longDF %>%
 
 ```{r}
 longDF %>%
-    filter(Metric == "rind") %>%
+    filter(dims == 5, Metric == "rind") %>%
     ggplot(aes(x = Statistic, fill = Model, y = ..density..)) +
     geom_histogram(alpha = 0.3, color = "black") +
     facet_grid(cols = vars(Alpha), rows = vars(Beta), scales = "free",
