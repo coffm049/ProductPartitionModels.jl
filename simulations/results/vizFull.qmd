@@ -451,45 +451,48 @@ fit/partition metrics across the values of `A` (labelled `mass1`) available in t
 stable to this hyperparameter.
 
 ```{r}
-dpSens <- df %>%
-    filter(dims == 2, !is.na(mass1)) %>%
-    select(mass1, Imbalanced, xdiff,
-           `ppmx-common_rind`, ppmx_rind, dpm_rind, kmean_rind,
-           `ppmx-common_rmse`, ppmx_rmse, dpm_rmse, kmean_rmse, slr_rmse,
-           `ppmx-common_NC`, ppmx_NC, dpm_NC, kmean_NC,
-           `ppmx-common_binder`, ppmx_binder, `ppmx-common_vi`, ppmx_vi,
-           `ppmx-common_lps`, ppmx_lps) %>%
-    pivot_longer(-c(mass1, Imbalanced, xdiff),
-                 names_to = c("Model", "Metric"),
-                 values_to = "Statistic",
-                 names_pattern = "(.*)_(.*)") %>%
-    group_by(mass1, Model, Metric) %>%
-    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
-    pivot_wider(names_from = Metric, values_from = Statistic) %>%
-    write_csv("tables/table_dp_hyperparameter_sensitivity.csv")
+dp2 <- df %>% filter(dims == 2, !is.na(mass1))
+if (nrow(dp2) > 0) {
+  dpSens <- dp2 %>%
+      select(mass1, Imbalanced, xdiff,
+             `ppmx-common_rind`, ppmx_rind, dpm_rind, kmean_rind,
+             `ppmx-common_rmse`, ppmx_rmse, dpm_rmse, kmean_rmse, slr_rmse,
+             `ppmx-common_NC`, ppmx_NC, dpm_NC, kmean_NC,
+             `ppmx-common_binder`, ppmx_binder, `ppmx-common_vi`, ppmx_vi,
+             `ppmx-common_lps`, ppmx_lps) %>%
+      pivot_longer(-c(mass1, Imbalanced, xdiff),
+                   names_to = c("Model", "Metric"),
+                   values_to = "Statistic",
+                   names_pattern = "(.*)_(.*)") %>%
+      group_by(mass1, Model, Metric) %>%
+      summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
+      pivot_wider(names_from = Metric, values_from = Statistic) %>%
+      write_csv("tables/table_dp_hyperparameter_sensitivity.csv")
 
-dpSensFig <- df %>%
-    filter(dims == 2, !is.na(mass1)) %>%
-    select(mass1,
-           `ppmx-common_rind`, ppmx_rind, dpm_rind, kmean_rind,
-           `ppmx-common_rmse`, ppmx_rmse, dpm_rmse, kmean_rmse, slr_rmse,
-           `ppmx-common_NC`, ppmx_NC, dpm_NC, kmean_NC) %>%
-    pivot_longer(-mass1, names_to = c("Model", "Metric"),
-                 values_to = "Statistic",
-                 names_pattern = "(.*)_(.*)") %>%
-    filter(Metric %in% c("rind", "rmse", "NC")) %>%
-    mutate(Metric = recode(Metric,
-                           rind = "Adjusted Rand Index",
-                           rmse = "OOS RMSE",
-                           NC   = "Number of clusters")) %>%
-    ggplot(aes(x = mass1, y = Statistic, color = Model, group = Model)) +
-    geom_point(size = 2) + geom_line() +
-    facet_wrap(~ Metric, scales = "free_y") +
-    labs(x = "DP concentration hyperparameter (mass A)",
-         y = "Metric",
-         title = "Sensitivity to the DP concentration hyperparameter, dims = 2") +
-    theme_bw()
-ggsave("bigSimDPhyperSens.png", width = 10, dpi = 300, units = "in")
+  dpSensFig <- dp2 %>%
+      select(mass1,
+             `ppmx-common_rind`, ppmx_rind, dpm_rind, kmean_rind,
+             `ppmx-common_rmse`, ppmx_rmse, dpm_rmse, kmean_rmse, slr_rmse,
+             `ppmx-common_NC`, ppmx_NC, dpm_NC, kmean_NC) %>%
+      pivot_longer(-mass1, names_to = c("Model", "Metric"),
+                   values_to = "Statistic",
+                   names_pattern = "(.*)_(.*)") %>%
+      filter(Metric %in% c("rind", "rmse", "NC")) %>%
+      mutate(Metric = recode(Metric,
+                             rind = "Adjusted Rand Index",
+                             rmse = "OOS RMSE",
+                             NC   = "Number of clusters")) %>%
+      ggplot(aes(x = mass1, y = Statistic, color = Model, group = Model)) +
+      geom_point(size = 2) + geom_line() +
+      facet_wrap(~ Metric, scales = "free_y") +
+      labs(x = "DP concentration hyperparameter (mass A)",
+           y = "Metric",
+           title = "Sensitivity to the DP concentration hyperparameter, dims = 2") +
+      theme_bw()
+  ggsave("bigSimDPhyperSens.png", width = 10, dpi = 300, units = "in")
+} else {
+  message("DP-hyperparameter sensitivity skipped: no dim2 CSVs with varying mass (mass A) found in the working directory.")
+}
 ```
 
 # common-effect CI coverage across all covariates
