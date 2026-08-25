@@ -4,6 +4,9 @@
 simulations/logs/*
 psychometrika/*
 
+**/log/**
+**/logs/**
+
 *.js
 *.css
 *.woff
