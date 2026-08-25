@@ -258,23 +258,16 @@ ggsave("betaVinter.png", width = 6, dpi = 300, units = "in")
 ## Model comparison tables 
 - tuning InterEffect = 0.25, variance = 0.1, Common = 1.0
 ```{r}
-longDF %>%
-    # filter(InterEffect == 0.25) %>%
-#    filter(xdiff==0.4) |>
-    select(-c(xdiff, Precision, variance, Common)) |>
-    arrange(InterEffect, Alpha, Beta, Metric) |>
-    mutate(group_label = sprintf("InterEffect = %s, Alpha = %s, Beta = %s", InterEffect, Alpha,Beta)) |>
-    reframe(.by = c(group_label, Imbalanced), kmean1= mean(kmean1, na.rm = T),  ) |>
-    # filter(grepl("common1", Metric)) %>%
-    # pivot_wider(names_from = Metric, values_from = c(`ppmx-common`, kmean, slr)) |>
+modLoc %>%
+    filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), dims == 5) |>
+    reframe(.by = c(Metric, Imbalanced),
+            across(c(`ppmx-common`, ppmx, dpm, kmean, slr), mean, na.rm = TRUE)) |>
     write_csv("tables/table_model_comparison.csv")
 
-longDF %>%
-    filter(Imbalanced == TRUE) |>
-    select(-c(xdiff, Precision, variance, Common)) |>
-    arrange(InterEffect, Alpha, Beta, Metric) |>
-    mutate(group_label = sprintf("InterEffect = %s, Alpha = %s, Beta = %s", InterEffect, Alpha,Beta)) |>
-    reframe(.by = c(group_label, Imbalanced), kmean1= mean(kmean1, na.rm = T),  ) |>
+modLoc %>%
+    filter(Imbalanced == TRUE, xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), dims == 5) |>
+    reframe(.by = c(Metric),
+            across(c(`ppmx-common`, ppmx, dpm, kmean, slr), mean, na.rm = TRUE)) |>
     write_csv("tables/table_model_comparison_imbalanced.csv")
 ```
 
@@ -283,7 +276,7 @@ modLoc %>%
     # filter(InterEffect == 0.25) %>%
     select(-c(InterEffect, Precision, variance, Common, Imbalanced, dims)) %>%
     arrange(Metric) %>%
-    pivot_wider(names_from = Metric, values_from = c(`ppmx-common`, kmean, slr)) |>
+    pivot_wider(names_from = Metric, values_from = c(`ppmx-common`, ppmx, dpm, kmean, slr)) |>
     write_csv("tables/table_temp_metrics.csv")
 ```
 
@@ -294,7 +287,7 @@ modLoc %>%
     filter(Alpha == 3.0, Beta == 3.0) %>%
     select(-c(Alpha, Beta, Precision, variance, Common, Imbalanced, dims)) %>%
     arrange(Metric) %>%
-    pivot_wider(names_from = Metric, values_from = c(`ppmx-common`, kmean, slr)) |>
+    pivot_wider(names_from = Metric, values_from = c(`ppmx-common`, ppmx, dpm, kmean, slr)) |>
     write_csv("tables/table_temp_vs_intereffects.csv")
 ```
 
@@ -404,6 +397,18 @@ ggsave("bigSimSalso.png", width = 8, dpi = 300, units = "in")
 
 ```
 
+# SALSO summary table (Binder's loss + VI error, in-sample and OOS)
+```{r}
+longDF %>%
+    filter(Metric %in% c("binder", "vi", "binderoos", "vioos"), N == 1000, dims == 5, Common == 1.0) %>%
+    mutate(Split = ifelse(grepl("oos", Metric), "OOS", "in-sample"),
+           Loss  = ifelse(grepl("binder", Metric), "Binder", "VI")) %>%
+    reframe(.by = c(Model, Loss, Split, xdiff, Imbalanced),
+            ARI = mean(Statistic, na.rm = TRUE)) %>%
+    pivot_wider(names_from = c(Loss, Split), values_from = ARI) %>%
+    write_csv("tables/table_salso_by_model.csv")
+```
+
 # OOS log predictive score (reviewer: replace Bayesian p-values with proper scoring rules)
 ```{r}
 longDF %>%
@@ -422,6 +427,17 @@ longDF %>%
     facet_grid(rows = vars(xdiff), cols = vars(Imbalanced)) +
     ggtitle("OOS log predictive score, N = 1000, dims=5")
 ggsave("bigSimLPS.png", width = 6, dpi = 300, units = "in")
+
+# direct model comparison of OOS log predictive score (LPS)
+longDF %>%
+    filter(Metric == "lps", N == 1000, dims == 5, Common == 1.0) %>%
+    ggplot(aes(x = Model, y = Statistic, fill = Model)) +
+    geom_boxplot(alpha = 0.6) +
+    facet_grid(rows = vars(xdiff), cols = vars(Imbalanced)) +
+    labs(x = "Model", y = "OOS log predictive score (LPS)",
+         title = "Out-of-sample log predictive score by model, N = 1000, dims = 5") +
+    theme_bw()
+ggsave("bigSimLPScompare.png", width = 8, dpi = 300, units = "in")
 ```
 
 # common-effect CI coverage across all covariates
