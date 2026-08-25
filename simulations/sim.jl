@@ -50,7 +50,8 @@ baseName = "N$(N)_c$(nc)_inter$(interEffect)_common$(common)_xd$(xdiff)_v$(varia
 if imbalanced == 1
     baseName = "Imbal_" * baseName
 end
-outputName = "results/" * baseName
+outputName = "results2/" * baseName
+mkpath("results2")
 if runDPM == 1
     outputName = outputName * "_dpm$(DPMalpha)_$(DPMiters)"
 end
@@ -130,8 +131,4 @@ df.salsoVIARI_DPM = salsoVIARI_DPM[definedIdx]
 df.salsoBinderARI_DPMoos = salsoBinderARI_DPMoos[definedIdx]
 df.salsoVIARI_DPMoos = salsoVIARI_DPMoos[definedIdx]
 
-if !isfile("$(outputName).csv")
-    CSV.write("$(outputName).csv", df, writeheader=true, append=false)
-else
-    CSV.write("$(outputName).csv", df, writeheader=false, append=true)
-end
+CSV.write("$(outputName).csv", df, writeheader=true, append=false)

@@ -31,7 +31,7 @@ theme_update(
     scale_color = scale_color_npg(),
 )
 
-df <- data.frame("file" = dir()) %>%
+df <- data.frame("file" = dir("../results2")) %>%
     filter(grepl(".csv$", file), !grepl("^covariates", file)) %>%
     mutate(
         Imbalanced = grepl("^Imbal_", file),
@@ -41,7 +41,7 @@ df <- data.frame("file" = dir()) %>%
         mass2 = as.numeric(str_remove(mass1, ".csv$")),
     ) %>%
     # map read these csvs into nested dataframe
-    mutate(data = map(file, read_csv))  %>%
+    mutate(data = map(file, ~ read_csv(file.path("../results2", .x))))  %>%
     # unnest them
     unnest(data) %>%
     select(
