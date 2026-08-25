@@ -461,6 +461,7 @@ dpSens <- df %>%
            `ppmx-common_lps`, ppmx_lps) %>%
     pivot_longer(-c(mass1, Imbalanced, xdiff),
                  names_to = c("Model", "Metric"),
+                 values_to = "Statistic",
                  names_pattern = "(.*)_(.*)") %>%
     group_by(mass1, Model, Metric) %>%
     summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
@@ -474,6 +475,7 @@ dpSensFig <- df %>%
            `ppmx-common_rmse`, ppmx_rmse, dpm_rmse, kmean_rmse, slr_rmse,
            `ppmx-common_NC`, ppmx_NC, dpm_NC, kmean_NC) %>%
     pivot_longer(-mass1, names_to = c("Model", "Metric"),
+                 values_to = "Statistic",
                  names_pattern = "(.*)_(.*)") %>%
     filter(Metric %in% c("rind", "rmse", "NC")) %>%
     mutate(Metric = recode(Metric,
