@@ -30,6 +30,10 @@ export PATH="$HOME/software/julia-1.11.7/bin:$PATH"
 module unload R 2>/dev/null || true
 export R_HOME="/projects/standard/gdc/public/envs/r-salso/lib/R"
 export LD_LIBRARY_PATH="$R_HOME/lib:$LD_LIBRARY_PATH"
+# R (conda) needs a newer libstdc++ (CXXABI_1.3.15) than Julia bundles; preload it so
+# R's libicui18n resolves correctly, while keeping LD_LIBRARY_PATH limited to R_HOME/lib
+# so Julia's own Pango still loads (conda's older libpangoft2 must NOT be exposed).
+export LD_PRELOAD="/projects/standard/gdc/public/envs/r-salso/lib/libstdc++.so.6"
 export PATH="$R_HOME/bin:$PATH"
 
 cd ~/software/ProductPartitionModels.jl/simulations
