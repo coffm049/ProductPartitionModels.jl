@@ -21,6 +21,7 @@ knitr:
 
 
 ```{r}
+#| output: false
 library(tidyverse)
 library(patchwork)
 library(ggsci)
@@ -334,6 +335,7 @@ vsInterTbl |>
 
 ## clustering and prediction vs inter effect
 ```{r}
+#| output: false
 longDF %>%
     filter(dims == 5, Alpha == 3.0, Beta == 3.0, grepl("rind", Metric) | grepl("bayes", Metric)) %>%
     select(-c(Alpha, Beta, Precision, variance, Common, Imbalanced)) %>%
