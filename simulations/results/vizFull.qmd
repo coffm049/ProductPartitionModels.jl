@@ -24,7 +24,12 @@ knitr:
 library(tidyverse)
 library(patchwork)
 library(ggsci)
+library(gt)
 dir.create("tables", showWarnings = FALSE, recursive = TRUE)
+# helper: wrap gt in scrollable div (horizontal + vertical)
+gt_scroll <- function(gt_tbl, max_h = "500px") {
+  htmltools::div(style = sprintf("overflow-x:auto; overflow-y:auto; max-height:%s; border:1px solid #ddd; padding:4px;", max_h), gt_tbl)
+}
 theme_set(theme_bw())
 theme_update(
     scale_fill = scale_fill_npg(),
@@ -193,7 +198,8 @@ longDF %>%
 
 # local interp
 ```{r}
-modLoc |> 
+#| column: page
+locTbl <- modLoc |> 
     arrange(InterEffect, Alpha, Beta, Metric) |>
     mutate(
         group_label = sprintf("InterEffect = %s, Alpha = %s, Beta = %s, xdiff = %s", InterEffect, Alpha,Beta, xdiff ),
@@ -202,8 +208,13 @@ modLoc |>
     ) |>
     group_by(group_label) |>
     select(-c(InterEffect, Alpha, Beta, Precision)) |>
-    filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), dims == 5) |>
-    write_csv("tables/table_local_interp.csv")
+    filter(xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0), dims == 5)
+locTbl |> write_csv("tables/table_local_interp.csv")
+locTbl |>
+  gt() |>
+  tab_header(title = "Local interpretation: bias / RMSE by xdiff") |>
+  opt_interactive(use_compact_mode = TRUE) |>
+  gt_scroll()
 ```
 
 
@@ -272,32 +283,53 @@ ggsave("betaVinter.png", width = 6, dpi = 300, units = "in")
 ## Model comparison tables 
 - tuning InterEffect = 0.25, variance = 0.1, Common = 1.0
 ```{r}
-longDF %>%
+#| column: page
+modCompTbl <- longDF %>%
     filter(dims == 5, xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)) %>%
     group_by(Metric, Model, Imbalanced) %>%
     summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
-    pivot_wider(names_from = Model, values_from = Statistic) %>%
-    write_csv("tables/table_model_comparison.csv")
+    pivot_wider(names_from = Model, values_from = Statistic)
+modCompTbl |> write_csv("tables/table_model_comparison.csv")
+modCompTbl |>
+  gt() |>
+  tab_header(title = "Model comparison (dims=5, xdiff grid)") |>
+  fmt_number(decimals = 3, use_seps = FALSE) |>
+  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
+  gt_scroll()
 ```
 
 ```{r}
-longDF %>%
+#| column: page
+tempMetricsTbl <- longDF %>%
     filter(dims == 5) %>%
     group_by(Model, Metric) %>%
     summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
-    pivot_wider(names_from = Metric, values_from = Statistic) %>%
-    write_csv("tables/table_temp_metrics.csv")
+    pivot_wider(names_from = Metric, values_from = Statistic)
+tempMetricsTbl |> write_csv("tables/table_temp_metrics.csv")
+tempMetricsTbl |>
+  gt() |>
+  tab_header(title = "Metrics by model (dims=5)") |>
+  fmt_number(decimals = 3, use_seps = FALSE) |>
+  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
+  gt_scroll()
 ```
 
 
 - vs InterEffects
 ```{r}
-longDF %>%
+#| column: page
+vsInterTbl <- longDF %>%
     filter(dims == 5, Alpha == 3.0, Beta == 3.0) %>%
     group_by(Model, Metric, InterEffect) %>%
     summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
-    pivot_wider(names_from = Metric, values_from = Statistic) %>%
-    write_csv("tables/table_temp_vs_intereffects.csv")
+    pivot_wider(names_from = Metric, values_from = Statistic)
+vsInterTbl |> write_csv("tables/table_temp_vs_intereffects.csv")
+vsInterTbl |>
+  gt() |>
+  tab_header(title = "Metrics vs InterEffect (Alpha=3, Beta=3, dims=5)") |>
+  fmt_number(decimals = 3, use_seps = FALSE) |>
+  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
+  gt_scroll()
 ```
 
 ## clustering and prediction vs inter effect
@@ -412,28 +444,38 @@ and VI loss. The DPMM.jl baseline (`dpm`) yields a single hard partition, so it
 contributes its single-partition ARI versus truth (shown under Binder/VI for
 comparison, not a SALSO point estimate).
 ```{r}
-longDF %>%
+#| column: page
+salsoTbl <- longDF %>%
     filter(Metric %in% c("binder", "vi", "binderoos", "vioos"), N == 1000, dims == 5, Common == 1.0) %>%
     mutate(Split = ifelse(grepl("oos", Metric), "OOS", "in-sample"),
            Loss  = ifelse(grepl("binder", Metric), "Binder", "VI")) %>%
     reframe(.by = c(Model, Loss, Split, xdiff, Imbalanced),
             ARI = mean(Statistic, na.rm = TRUE)) %>%
-    pivot_wider(names_from = c(Loss, Split), values_from = ARI) %>%
-    write_csv("tables/table_salso_by_model.csv") ->
-    salsoTbl
-salsoTbl
+    pivot_wider(names_from = c(Loss, Split), values_from = ARI)
+salsoTbl |> write_csv("tables/table_salso_by_model.csv")
+salsoTbl |>
+  gt() |>
+  tab_header(title = "SALSO ARI by model (Binder / VI, in-sample & OOS)") |>
+  fmt_number(decimals = 3, use_seps = FALSE) |>
+  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
+  gt_scroll()
 ```
 
 # OOS log predictive score (reviewer: replace Bayesian p-values with proper scoring rules)
 ```{r}
-longDF %>%
+#| column: page
+lpsTbl <- longDF %>%
     filter(Metric == "lps", N == 1000, dims == 5, Common == 1.0) %>%
     reframe(.by = c(xdiff, Model, Imbalanced), Statistic = mean(Statistic, na.rm = TRUE)) %>%
     pivot_wider(names_from = Model, values_from = Statistic) %>%
-    mutate(across(c(`ppmx-common`, ppmx), round, 3)) |>
-    write_csv("tables/table_lps_by_model.csv") ->
-    lpsTbl
-lpsTbl
+    mutate(across(c(`ppmx-common`, ppmx), round, 3))
+lpsTbl |> write_csv("tables/table_lps_by_model.csv")
+lpsTbl |>
+  gt() |>
+  tab_header(title = "OOS log predictive score by model (N=1000, dims=5)") |>
+  fmt_number(decimals = 3, use_seps = FALSE) |>
+  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
+  gt_scroll()
 ```
 
 ```{r}
@@ -466,6 +508,7 @@ fit/partition metrics across the values of `A` (labelled `mass1`) available in t
 stable to this hyperparameter.
 
 ```{r}
+#| column: page
 dp2 <- df %>% filter(dims == 5, !is.na(mass1))
 if (nrow(dp2) > 0) {
   dpSens <- dp2 %>%
@@ -481,8 +524,14 @@ if (nrow(dp2) > 0) {
                    names_pattern = "(.*)_(.*)") %>%
       group_by(mass1, Model, Metric) %>%
       summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
-      pivot_wider(names_from = Metric, values_from = Statistic) %>%
-      write_csv("tables/table_dp_hyperparameter_sensitivity.csv")
+      pivot_wider(names_from = Metric, values_from = Statistic)
+  dpSens |> write_csv("tables/table_dp_hyperparameter_sensitivity.csv")
+  dpSens |>
+    gt() |>
+    tab_header(title = "Sensitivity to DP concentration (mass A), dims=5") |>
+    fmt_number(decimals = 3, use_seps = FALSE) |>
+    opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
+    gt_scroll() |> print()
 
   dpSensFig <- dp2 %>%
       select(mass1,
@@ -517,15 +566,20 @@ on those scenarios using the same metrics as above: clustering (adjusted Rand in
 SALSO Binder/VI point estimates) and prediction (OOS RMSE and OOS log predictive score).
 
 ```{r}
-# Model comparison table, imbalanced scenarios (printed)
-longDF %>%
+#| column: page
+# Model comparison table, imbalanced scenarios
+imbalTbl <- longDF %>%
     filter(dims == 5, Imbalanced == TRUE) %>%
     group_by(Metric, Model) %>%
     summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
-    pivot_wider(names_from = Model, values_from = Statistic) %>%
-    write_csv("tables/table_model_comparison_imbalanced.csv") ->
-    imbalTbl
-imbalTbl
+    pivot_wider(names_from = Model, values_from = Statistic)
+imbalTbl |> write_csv("tables/table_model_comparison_imbalanced.csv")
+imbalTbl |>
+  gt() |>
+  tab_header(title = "Imbalanced-cluster scenarios (dims=5)") |>
+  fmt_number(decimals = 3, use_seps = FALSE) |>
+  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
+  gt_scroll()
 ```
 
 ```{r}
@@ -549,10 +603,17 @@ ggsave("bigSimImbalanced.png", width = 8, dpi = 300, units = "in")
 
 # common-effect CI coverage across all covariates
 ```{r}
-df %>%
+#| column: page
+commonCovTbl <- df %>%
     filter(N == 1000, dims == 5, Common == 1.0) %>%
     reframe(.by = c(xdiff, Imbalanced), `ppmx-common_ccov` = mean(`ppmx-common_ccov`, na.rm = TRUE)) %>%
-    mutate(across(`ppmx-common_ccov`, round, 3)) |>
-    write_csv("tables/table_common_effect_cov.csv")
+    mutate(across(`ppmx-common_ccov`, round, 3))
+commonCovTbl |> write_csv("tables/table_common_effect_cov.csv")
+commonCovTbl |>
+  gt() |>
+  tab_header(title = "Common-effect joint coverage (ppmx-common, N=1000, dims=5)") |>
+  fmt_number(decimals = 3, use_seps = FALSE) |>
+  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
+  gt_scroll()
 ```
 
