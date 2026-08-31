@@ -619,3 +619,98 @@ commonCovTbl |>
   gt_scroll()
 ```
 
+## How to read the metrics
+
+The simulations average each metric over 80 replicates per `xdiff` × `mass` × `Imbalanced` cell (`N = 1000`, `dims = 5`, `Common = 1` unless noted). Higher is better for clustering and prediction where noted; for error/bias lower absolute value is better. `xdiff` is the covariate separation between clusters (0 = complete overlap, 1 = well separated).
+
+- **Clustering — `rind` / `arind` (Adjusted Rand Index).** Posterior mean Rand index vs true partition (in-sample `rind`, OOS `arind`); 0 = chance, 1 = perfect recovery. SALSO variants `binder` / `vi` and `binderoos`/`vioos` are the same ARI but evaluated at the SALSO point estimate under Binder loss or Variation of Information; `dpm` has no MCMC so its single hard partition ARI is shown under `binder`/`vi` for comparison. *Interpretation:* curves near 1 = reliable clustering; divergence between in-sample and OOS = overfitting.
+- **Bias / RMSE — `bias` / `RMSE` (common effects).** `bias = Common - posterior mean` for each common coefficient (sign matters); `RMSE = sqrt(mean((Common - estimate)^2))` averaged over covariates. *Interpretation:* bias near 0 = unbiased; RMSE near 0 = accurate and precise. Facets `common1` (`β=+1`) vs `common2` (`β=-1`) check symmetry.
+- **Log predictive score — `lps` (OOS LPS).** Mean out-of-sample log predictive density under the posterior; larger (less negative) = better calibrated probabilistic predictions. *Interpretation:* replaces Bayesian p-values as a proper scoring rule; gaps of 0.1–0.3 nats across `xdiff` are substantively meaningful.
+- **Coverage / Type II — `_Cov` / `_T2`.** Joint 95% CI coverage of the common effects and Type II error (zero inside CI when truth ≠ 0). Coverage ≈ 0.95 = nominal; elevated Type II = underpowered.
+
+## Clustering loss across xdiff, faceted by scenario
+
+ARI and SALSO ARI as a function of covariate separation. Each line is a model; facets are loss/split (rows) and balanced vs imbalanced cluster sizes (columns).
+
+```{r}
+#| column: page
+#| fig-width: 10
+#| fig-height: 7
+clustX <- longDF %>%
+  filter(N == 1000, dims == 5, Common == 1.0,
+         Metric %in% c("rind", "arind", "binder", "vi", "binderoos", "vioos"),
+         xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)) %>%
+  mutate(
+    Metric = recode(Metric,
+      rind = "ARI (in-sample)", arind = "ARI (OOS)",
+      binder = "SALSO Binder (in-sample)", binderoos = "SALSO Binder (OOS)",
+      vi = "SALSO VI (in-sample)", vioos = "SALSO VI (OOS)"
+    )
+  ) %>%
+  reframe(.by = c(xdiff, Metric, Model, Imbalanced),
+          Statistic = mean(Statistic, na.rm = TRUE))
+
+ggplot(clustX, aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
+  geom_point(size = 2) + geom_line(linewidth = 0.8) +
+  facet_grid(rows = vars(Metric), cols = vars(Imbalanced),
+             labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced")),
+             scales = "free_y") +
+  labs(x = "Covariate separation (xdiff)", y = "Adjusted Rand Index (higher = better)",
+       title = "Clustering accuracy across covariate overlap (dims=5, N=1000)") +
+  scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
+ggsave("xdiff_clustering_loss.png", width = 10, height = 7, dpi = 300, units = "in")
+```
+
+## Common-effect bias and RMSE across xdiff
+
+Bias and RMSE for the shared continuous covariates (`Common = 1` and `-1`). `bias ≈ 0` is unbiased; `RMSE` lower is better (precision + bias). Each point is the mean over replicates at that `xdiff`; x-axis is covariate separation, colour = model.
+
+```{r}
+#| column: page
+#| fig-width: 10
+#| fig-height: 5
+# modLoc stores bias/RMSE with Metric like "common1-bias"; normalize to bias/RMSE
+biasRmseX <- modLoc %>%
+  filter(dims == 5, xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)) %>%
+  mutate(Metric2 = ifelse(grepl("bias", Metric), "bias", ifelse(grepl("RMSE", Metric), "RMSE", Metric))) %>%
+  filter(Metric2 %in% c("bias", "RMSE")) %>%
+  select(xdiff, Imbalanced, Metric = Metric2, `ppmx-common`, dpm, kmean, slr) %>%
+  pivot_longer(c(`ppmx-common`, dpm, kmean, slr), names_to = "Model", values_to = "Statistic") %>%
+  reframe(.by = c(xdiff, Metric, Model, Imbalanced), Statistic = mean(Statistic, na.rm = TRUE))
+
+ggplot(biasRmseX, aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
+  geom_hline(data = filter(biasRmseX, Metric == "bias"), aes(yintercept = 0), linetype = "dashed", color = "grey40") +
+  geom_point(size = 2) + geom_line(linewidth = 0.8) +
+  facet_grid(rows = vars(Metric), cols = vars(Imbalanced),
+             labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced")),
+             scales = "free_y") +
+  labs(x = "Covariate separation (xdiff)",
+       y = "Bias (dashed 0) / RMSE (higher = worse)",
+       title = "Common-effect bias and RMSE across covariate overlap (dims=5, N=1000)") +
+  scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
+ggsave("xdiff_bias_rmse.png", width = 10, height = 5, dpi = 300, units = "in")
+```
+
+## Out-of-sample log predictive score across xdiff
+
+Mean OOS LPS vs `xdiff`; higher = better predictive calibration.
+
+```{r}
+#| column: page
+#| fig-width: 10
+#| fig-height: 4
+lpsX <- longDF %>%
+  filter(N == 1000, dims == 5, Common == 1.0, Metric == "lps",
+         xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)) %>%
+  reframe(.by = c(xdiff, Model, Imbalanced), Statistic = mean(Statistic, na.rm = TRUE))
+
+ggplot(lpsX, aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
+  geom_point(size = 2.5) + geom_line(linewidth = 0.9) +
+  facet_grid(cols = vars(Imbalanced),
+             labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
+  labs(x = "Covariate separation (xdiff)", y = "OOS log predictive score (higher = better)",
+       title = "Predictive calibration across covariate overlap (dims=5, N=1000)") +
+  scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
+ggsave("xdiff_lps.png", width = 10, height = 4, dpi = 300, units = "in")
+```
+
