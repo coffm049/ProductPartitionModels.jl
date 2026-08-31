@@ -13,7 +13,9 @@ psychometrika/*
 *.csv
 *.jld2
 *.png
+**/*.png
 *.html
+**/*.html
 **/archive/**
 ABCD-adhd/*
 **/old/**
