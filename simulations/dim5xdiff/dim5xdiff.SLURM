@@ -3,13 +3,16 @@
 #SBATCH --output=../logs/dim5xdiff.out
 #SBATCH --error=../logs/dim5xdiff.err
 #SBATCH --cpus-per-task=2
-#SBATCH --time=48:00:00
+#SBATCH --time=72:00:00
 #SBATCH --mem-per-cpu=4G
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=coffm049@umn.edu
 # array = xdiff index (0-5) x mass index (0-2) = 18 tasks.
 # task id -> xi = id / 3, mi = id % 3; see MASSES below.
-#SBATCH --array=0-17
+# 2026-08-29 resubmit: job 17210922_0 (COMPLETED), _4 (COMPLETED), _1/_2/_5 (TIMEOUT at 48h) — _3 not in SLURM mail (check sacct; add back if needed).
+# Full grid for reference: 0-17. Subset below is only failed/timeout tasks for 72h rerun.
+#SBATCH --array=1,2,5
+##SBATCH --array=0-17
 ##SBATCH --array=0-5
 
 
