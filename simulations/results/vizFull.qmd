@@ -232,6 +232,10 @@ locTbl |>
 #     ) +
 #     ggtitle("Common effects sampling distribution (alpha=2, beta=1,prec=0.01), Imbalanced") +
 #     xlab("Common Estimate")
+beta_common_q <- longDF %>%
+    filter(Metric %in% c("common1","common2"), dims == 5, Common == 1.0) %>%
+    reframe(q10 = quantile(Statistic, 0.10, na.rm = TRUE), q90 = quantile(Statistic, 0.90, na.rm = TRUE))
+beta_q10 <- beta_common_q$q10; beta_q90 <- beta_common_q$q90
 longDF %>%
     filter(Metric == "common1", dims == 5, Common == 1.0) %>%
     ggplot(aes(x = Statistic, fill = Model)) +
@@ -244,7 +248,7 @@ longDF %>%
     ) +
     ggtitle("Common effects (common=1, Interaction=1), dims=5") +
     xlab("Common Estimate") +
-    xlim(-3, 3)
+    coord_cartesian(xlim = c(beta_q10, beta_q90))
 ggsave("beta1Tuning.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
@@ -259,11 +263,17 @@ longDF %>%
     ) +
     ggtitle("Common effects (common=-1, Interaction=1), dims=5") +
     xlab("Common Estimate") +
-    xlim(-3, 3)
+    coord_cartesian(xlim = c(beta_q10, beta_q90))
 ggsave("beta2Tuning.png", width = 6, dpi = 300, units = "in")
 ```
 
 ```{r}
+# percentile limits computed above (beta_q10/beta_q90); recompute if chunk run standalone
+if (!exists("beta_q10")) {
+  beta_common_q <- longDF %>% filter(Metric %in% c("common1","common2"), dims == 5, Common == 1.0) %>%
+    reframe(q10 = quantile(Statistic, 0.10, na.rm = TRUE), q90 = quantile(Statistic, 0.90, na.rm = TRUE))
+  beta_q10 <- beta_common_q$q10; beta_q90 <- beta_common_q$q90
+}
 longDF %>%
     filter(grepl("^common", Metric)) %>%
     ggplot(aes(x = Statistic, fill = Model)) +
@@ -276,7 +286,7 @@ longDF %>%
     ) +
     ggtitle("Common effects (common=5, Interaction=5)") +
     xlab("Common Estimate") +
-    xlim(-3, 3)
+    coord_cartesian(xlim = c(beta_q10, beta_q90))
 ggsave("betaVinter.png", width = 6, dpi = 300, units = "in")
 ```
 
@@ -387,8 +397,13 @@ ggsave("covariateDist.png", width = 10, height = 8, dpi = 300, units = "in")
 }
 ```
 
-# big sim
+# big sim (common-effect densities clipped to 10th–90th percentile)
 ```{r}
+if (!exists("beta_q10")) {
+  beta_common_q <- longDF %>% filter(Metric %in% c("common1","common2"), N==1000, dims==5, Common==1.0) %>%
+    reframe(q10 = quantile(Statistic, 0.10, na.rm=TRUE), q90 = quantile(Statistic, 0.90, na.rm=TRUE))
+  beta_q10 <- beta_common_q$q10; beta_q90 <- beta_common_q$q90
+}
 longDF %>%
     filter(Metric == "common1", N== 1000, dims == 5, Common == 1.0) %>%
     ggplot(aes(x = Statistic, fill = Model)) +
@@ -401,7 +416,7 @@ longDF %>%
     ) +
     ggtitle("Common effects, dims=5") +
     xlab("Common Estimate") +
-    xlim(-3, 3)
+    coord_cartesian(xlim = c(beta_q10, beta_q90))
 ggsave("bigSimcommon1.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
@@ -416,7 +431,7 @@ longDF %>%
     ) +
     ggtitle("Common effects, dims=5") +
     xlab("Common Estimate") +
-    xlim(-3, 3)
+    coord_cartesian(xlim = c(beta_q10, beta_q90))
 ggsave("bigSimcommon2.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
@@ -585,19 +600,24 @@ imbalTbl |>
 ```
 
 ```{r}
-# Key-metric densities for imbalanced scenarios
+# Key-metric densities for imbalanced scenarios (rmse clipped to 90th percentile)
+rmse_q90_imbal <- longDF %>%
+  filter(dims == 5, Imbalanced == TRUE, N == 1000, Common == 1.0, Metric == "rmse") %>%
+  pull(Statistic) %>% quantile(0.90, na.rm = TRUE)
 longDF %>%
     filter(dims == 5, Imbalanced == TRUE, N == 1000, Common == 1.0,
            Metric %in% c("rind", "rmse", "binder", "lps")) %>%
+    filter(!(Metric == "rmse" & Statistic > rmse_q90_imbal)) %>%
     mutate(Metric = recode(Metric,
                            rind   = "Adjusted Rand Index",
-                           rmse   = "OOS RMSE",
+                           rmse   = "OOS RMSE (≤90th pct)",
                            binder = "SALSO Binder ARI",
                            lps    = "OOS log predictive score")) %>%
     ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
     geom_histogram(alpha = 0.3, color = "black") +
     facet_grid(rows = vars(Metric), cols = vars(xdiff), scales = "free") +
-    labs(x = "Statistic", y = "Density") +
+    labs(x = "Statistic", y = "Density",
+         caption = sprintf("RMSE truncated at 90th pct = %.2f", rmse_q90_imbal)) +
     ggtitle("Imbalanced-cluster scenarios, N = 1000, dims = 5") +
     theme_bw()
 ggsave("bigSimImbalanced.png", width = 8, dpi = 300, units = "in")
@@ -678,14 +698,17 @@ biasRmseX <- modLoc %>%
   pivot_longer(c(`ppmx-common`, dpm, kmean, slr), names_to = "Model", values_to = "Statistic") %>%
   reframe(.by = c(xdiff, Metric, Model, Imbalanced), Statistic = mean(Statistic, na.rm = TRUE))
 
-ggplot(biasRmseX, aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
-  geom_hline(data = filter(biasRmseX, Metric == "bias"), aes(yintercept = 0), linetype = "dashed", color = "grey40") +
+rmse_y90 <- quantile(biasRmseX$Statistic[biasRmseX$Metric == "RMSE"], 0.90, na.rm = TRUE)
+biasRmseX_plot <- biasRmseX %>% filter(!(Metric == "RMSE" & Statistic > rmse_y90))
+ggplot(biasRmseX_plot, aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
+  geom_hline(data = filter(biasRmseX_plot, Metric == "bias"), aes(yintercept = 0), linetype = "dashed", color = "grey40") +
   geom_point(size = 2) + geom_line(linewidth = 0.8) +
   facet_grid(rows = vars(Metric), cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced")),
              scales = "free_y") +
   labs(x = "Covariate separation (xdiff)",
        y = "Bias (dashed 0) / RMSE (higher = worse)",
+       caption = sprintf("RMSE y-axis truncated at 90th pct = %.2f", rmse_y90),
        title = "Common-effect bias and RMSE across covariate overlap (dims=5, N=1000)") +
   scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_bias_rmse.png", width = 10, height = 5, dpi = 300, units = "in")
@@ -694,6 +717,8 @@ ggsave("xdiff_bias_rmse.png", width = 10, height = 5, dpi = 300, units = "in")
 ## Out-of-sample log predictive score across xdiff
 
 Mean OOS LPS vs `xdiff`; higher = better predictive calibration.
+
+> **Why LPS is only `ppmx` / `ppmx-common`:** `sim.jl:86-113` computes `lpsMixoos` / `lpsDPMoos` from the PPMx posterior-predictive density. Baselines `dpm` (single hard partition via `DPMM.jl`), `kmeans`, and `slr` are point estimators with no posterior predictive distribution, so `lps` is `NA` for those models by design (see `salsoUtils.jl:67` `missing` handling and `simExperiment.qmd` LPS averaging with `na.rm`). For a directly comparable out-of-sample prediction metric across *all* models, use OOS RMSE below (`midMixoos` / `dpmRMSEoos` / `kmean_MSEoos` / `slrRMSEoos`).
 
 ```{r}
 #| column: page
@@ -704,13 +729,40 @@ lpsX <- longDF %>%
          xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)) %>%
   reframe(.by = c(xdiff, Model, Imbalanced), Statistic = mean(Statistic, na.rm = TRUE))
 
-ggplot(lpsX, aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
+# lps only exists for ppmx models; filter to those for cleaner legend
+lpsX_pp <- lpsX %>% filter(Model %in% c("ppmx","ppmx-common"))
+ggplot(lpsX_pp, aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
   geom_point(size = 2.5) + geom_line(linewidth = 0.9) +
   facet_grid(cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
   labs(x = "Covariate separation (xdiff)", y = "OOS log predictive score (higher = better)",
+       caption = "LPS only available for Bayesian PPMx models (posterior predictive); see OOS RMSE for all-model analogue",
        title = "Predictive calibration across covariate overlap (dims=5, N=1000)") +
   scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_lps.png", width = 10, height = 4, dpi = 300, units = "in")
+```
+
+**Analogous all-model metric: OOS RMSE.** Lower is better; available for every model (`ppmx-common_rmse` / `ppmx_rmse` / `dpm_rmse` / `kmean_rmse` / `slr_rmse`). Plotted on the same `xdiff` × scenario grid as LPS for direct comparison.
+
+```{r}
+#| column: page
+#| fig-width: 10
+#| fig-height: 4
+# y truncated to 90th percentile for readability (see RMSE note above)
+rmseX <- longDF %>%
+  filter(N == 1000, dims == 5, Common == 1.0, Metric == "rmse",
+         xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)) %>%
+  reframe(.by = c(xdiff, Model, Imbalanced), Statistic = mean(Statistic, na.rm = TRUE))
+rmseX_q90 <- quantile(rmseX$Statistic, 0.90, na.rm = TRUE)
+rmseX_plot <- rmseX %>% filter(Statistic <= rmseX_q90)
+ggplot(rmseX_plot, aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
+  geom_point(size = 2.5) + geom_line(linewidth = 0.9) +
+  facet_grid(cols = vars(Imbalanced),
+             labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
+  labs(x = "Covariate separation (xdiff)", y = "OOS RMSE (lower = better)",
+       caption = sprintf("OOS RMSE truncated at 90th pct = %.2f; all-model analogue of LPS", rmseX_q90),
+       title = "Out-of-sample RMSE across covariate overlap (all models, dims=5, N=1000)") +
+  scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
+ggsave("xdiff_rmse.png", width = 10, height = 4, dpi = 300, units = "in")
 ```
 
