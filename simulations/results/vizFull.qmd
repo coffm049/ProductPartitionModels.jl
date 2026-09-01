@@ -686,6 +686,38 @@ ggplot(clustX, aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
 ggsave("xdiff_clustering_loss.png", width = 10, height = 7, dpi = 300, units = "in")
 ```
 
+**Test-only (OOS) ARI + Binder — distribution across replicates.** Kept full mean plot above; this panel shows per-replicate spread (80 reps/cell). Called “Test” in figures. Box = IQR, line = median across `xdiff` (faceted `Metric` rows × `Imbalanced` cols, colour = method includes `dpm`).
+
+```{r}
+#| column: page
+#| fig-width: 10
+#| fig-height: 6
+clustTestDist <- longDF %>%
+  filter(N == 1000, dims == 5, Common == 1.0,
+         Metric %in% c("arind", "binderoos"),
+         xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)) %>%
+  mutate(Metric = recode(Metric,
+    arind = "ARI (Test)", binderoos = "Binder ARI (Test)"
+  ))
+
+ggplot(clustTestDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
+  geom_boxplot(alpha = 0.45, outlier.size = 0.6, linewidth = 0.4,
+               position = position_dodge(width = 0.85)) +
+  # median line through boxplots per model
+  stat_summary(aes(group = Model, color = Model), fun = median, geom = "line",
+               linewidth = 0.9, position = position_dodge(width = 0.85)) +
+  stat_summary(aes(group = Model, color = Model), fun = median, geom = "point",
+               size = 2.2, position = position_dodge(width = 0.85)) +
+  facet_grid(rows = vars(Metric), cols = vars(Imbalanced),
+             labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
+  labs(x = "Covariate separation (xdiff)", y = "ARI (higher = better)",
+       title = "Test clustering accuracy — distribution over replicates (dims=5, N=1000)",
+       caption = "Box = IQR per xdiff×model; line = median trend. Test = OOS (arind/binderoos).") +
+  scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) +
+  theme(legend.position = "bottom")
+ggsave("xdiff_clustering_test_box.png", width = 10, height = 6, dpi = 300, units = "in")
+```
+
 ## Common-effect bias and RMSE across xdiff — by coefficient
 
 Bias ≈ 0 is unbiased; RMSE lower is better. `xdiff` on x-axis, colour = method (includes `dpm` = DPMM cluster-then-regression via `DPMM.jl`+`GLM.lm(EffectsCoding)` at `simFunctions.jl:394-426`, which *does* provide `dpmBetaclust1/2` mapped to `dpm_common1/2`). Rows = coefficient (`common1` β=+1, `common2` β=-1), columns = Balanced vs Imbalanced. RMSE y-axis truncated at 90th percentile.

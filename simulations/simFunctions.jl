@@ -358,7 +358,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     slrRMSE = sqrt(mean(residuals(slr) .^ 2))
     slrRMSEoos = sqrt(mean(((predict(slr, dfoos)) .- dfoos.Y) .^ 2))
     zeroInSLR2 = (0.0 .>= betaCI2[1]) & (0.0 <= betaCI2[2])
-    commonInSLR2 = (common .>= betaCI2[1]) & (common <= betaCI2[2])
+    commonInSLR2 = (-common .>= betaCI2[1]) & (-common <= betaCI2[2])
 
 
     # Add in Kmeans with full interaction effect model
@@ -389,7 +389,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     commonInk = (common .>= kclustCI[1]) & (common <= kclustCI[2])
     kclustCI2 = confint(clustlm)[3, :]
     zeroInk2 = (0.0 .>= kclustCI2[1]) & (0.0 <= kclustCI2[2])
-    commonInk2 = (common .>= kclustCI2[1]) & (common <= kclustCI2[2])
+    commonInk2 = (-common .>= kclustCI2[1]) & (-common <= kclustCI2[2])
 
     # DP Gaussian mixture clustering baseline (DirichletProcessMixtures.jl / DPMM.jl).
     # Cluster on the covariate columns (drop the intercept), then fit a per-cluster
@@ -423,7 +423,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
             dpmcommonIn1 = (common .>= dpmclustCI[1]) & (common <= dpmclustCI[2])
             dpmclustCI2 = confint(dpmclustlm)[3, :]
             dpmzeroIn2 = (0.0 .>= dpmclustCI2[1]) & (0.0 <= dpmclustCI2[2])
-            dpmcommonIn2 = (common .>= dpmclustCI2[1]) & (common <= dpmclustCI2[2])
+            dpmcommonIn2 = (-common .>= dpmclustCI2[1]) & (-common <= dpmclustCI2[2])
         end
 
         dpmARI    = Clustering.randindex(dpm_labels, df.group)[1]
