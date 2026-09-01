@@ -9,11 +9,8 @@
 #SBATCH --mail-user=coffm049@umn.edu
 # array = xdiff index (0-5) x mass index (0-2) = 18 tasks.
 # task id -> xi = id / 3, mi = id % 3; see MASSES below.
-# 2026-08-29 resubmit: job 17210922_0 (COMPLETED), _4 (COMPLETED), _1/_2/_5 (TIMEOUT at 48h) — _3 not in SLURM mail (check sacct; add back if needed).
-# Full grid for reference: 0-17. Subset below is only failed/timeout tasks for 72h rerun.
-#SBATCH --array=1,2,5
-##SBATCH --array=0-17
-##SBATCH --array=0-5
+# Full grid 0-17 for rerun (overwrite results/); previous 2026-08-29 subset 1,2,5 completed.
+#SBATCH --array=0-17
 
 
 

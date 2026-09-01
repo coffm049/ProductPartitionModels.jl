@@ -50,8 +50,8 @@ baseName = "N$(N)_c$(nc)_inter$(interEffect)_common$(common)_xd$(xdiff)_v$(varia
 if imbalanced == 1
     baseName = "Imbal_" * baseName
 end
-outputName = "results2/" * baseName
-mkpath("results2")
+outputName = "results/" * baseName
+mkpath("results")
 if runDPM == 1
     outputName = outputName * "_dpm$(DPMalpha)_$(DPMiters)"
 end

@@ -3,15 +3,12 @@
 #SBATCH --output=../logs/dim5common0.out
 #SBATCH --error=../logs/dim5common0.err
 #SBATCH --cpus-per-task=2
-#SBATCH --time=48:00:00
+#SBATCH --time=72:00:00
 #SBATCH --mem-per-cpu=4G
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=coffm049@umn.edu
-# run only tasks 0-1 (xd 0.0, 0.2): tasks 2-5 (xd 0.4-1.0) already completed.
-# To rerun the full grid, comment out the array line above this block and
-# uncomment the "full grid" line below.
-#SBATCH --array=0-1
-##SBATCH --array=0-5
+# Full grid 0-5 for rerun (overwrite results/); previous subset 0-1 was for remaining shards.
+#SBATCH --array=0-5
 
 
 

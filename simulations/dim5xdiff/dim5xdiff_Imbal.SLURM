@@ -8,10 +8,8 @@
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=coffm049@umn.edu
 # array = xdiff index (0-5) x mass index (0-2) = 18 tasks.
-# 2026-08-29 resubmit: job 17210804_0/_1/_5 COMPLETED, _2 TIMEOUT at 48h; _3/_4 not in mail (check sacct; add if needed).
-# Full grid for reference: 0-17. Subset below is only failed/timeout tasks for 72h rerun.
-#SBATCH --array=2
-##SBATCH --array=0-17
+# Full grid 0-17 for rerun (overwrite results/); previous 2026-08-29 subset 2 completed.
+#SBATCH --array=0-17
 
 
 
