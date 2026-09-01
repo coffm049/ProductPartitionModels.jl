@@ -92,12 +92,12 @@ function simData(
         df[!, "X$d"] .+= xdiffs[df.group, d]
     end
 
-    # Step 5: Center and scale X columns
-    # for d in 1:dims
-    #     xname = "X$d"
-    #     x = df[!, xname]
-    #     df[!, xname] = (x .- mean(x)) ./ std(x)
-    # end
+    # Step 5: Center and scale X columns (standardize before fitting; matches PPMx median-robust handling)
+    for d in 1:dims
+        xname = "X$d"
+        x = df[!, xname]
+        df[!, xname] = (x .- mean(x)) ./ std(x)
+    end
 
     # Step 6: Compute linear predictors
     X = Matrix(df[:, ["X$d" for d in 1:dims]])

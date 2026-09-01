@@ -135,9 +135,9 @@ modLoc <- df %>%
         across(ends_with("T2"), function(x) mean(x, na.rm = T)),
         # coverage
         across(ends_with("_Cov"), function(x) mean(x, na.rm = T)),
-        # bias
-        across(ends_with("_common1"), function(x) mean(Common - x, na.rm = T), .names= "{.col}-bias"),
-        across(ends_with("_common2"), function(x) mean(-Common - x, na.rm = T), .names= "{.col}-bias"),
+        # bias — robust median (matching PPMx median) instead of mean
+        across(ends_with("_common1"), function(x) median(Common - x, na.rm = TRUE), .names= "{.col}-bias"),
+        across(ends_with("_common2"), function(x) median(-Common - x, na.rm = TRUE), .names= "{.col}-bias"),
         # MSE
         across(ends_with("_common1"), function(x) sqrt(mean((Common - x)^2, na.rm = T)), .names= "{.col}-RMSE"),
         across(ends_with("_common2"), function(x) sqrt(mean((-Common - x)^2, na.rm = T)), .names= "{.col}-RMSE"),
@@ -727,6 +727,7 @@ Bias ≈ 0 is unbiased; RMSE lower is better. `xdiff` on x-axis, colour = method
 #| fig-width: 10
 #| fig-height: 5
 # modLoc stores Metric like "common1-bias"; extract Coef and Metric2
+# Robust: use median (matching PPMx median) and censor bias to [-3,3]
 biasRmseCoef <- modLoc %>%
   filter(dims == 5, xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)) %>%
   mutate(
@@ -736,16 +737,19 @@ biasRmseCoef <- modLoc %>%
   filter(Metric2 %in% c("bias", "RMSE"), !is.na(Coef)) %>%
   select(xdiff, Imbalanced, Coef, Metric = Metric2, `ppmx-common`, dpm, kmean, slr) %>%
   pivot_longer(c(`ppmx-common`, dpm, kmean, slr), names_to = "Model", values_to = "Statistic") %>%
-  reframe(.by = c(xdiff, Coef, Metric, Model, Imbalanced), Statistic = mean(Statistic, na.rm = TRUE))
+  reframe(.by = c(xdiff, Coef, Metric, Model, Imbalanced), Statistic = median(Statistic, na.rm = TRUE)) %>%
+  mutate(Statistic = ifelse(Metric == "bias", pmin(pmax(Statistic, -3), 3), Statistic))
 
-# — Bias panel —
+# — Bias panel (censored to [-3,3]) —
 ggplot(filter(biasRmseCoef, Metric == "bias"),
        aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey40") +
   geom_point(size = 2) + geom_line(linewidth = 0.8) +
   facet_grid(rows = vars(Coef), cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
-  labs(x = "Covariate separation (xdiff)", y = "Bias (dashed 0)",
+  coord_cartesian(ylim = c(-3, 3)) +
+  labs(x = "Covariate separation (xdiff)", y = "Bias (dashed 0, censored [-3,3])",
+       caption = "Bias censored to [-3,3] (values beyond clipped); median across replicates",
        title = "Common-effect bias across covariate overlap (dims=5, N=1000)") +
   scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_bias_by_coef.png", width = 10, height = 5, dpi = 300, units = "in")
