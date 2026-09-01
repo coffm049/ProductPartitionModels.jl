@@ -526,6 +526,9 @@ stable to this hyperparameter.
 
 ```{r}
 #| column: page
+#| echo: false
+#| message: false
+#| warning: false
 dp2 <- df %>% filter(dims == 5, !is.na(mass1))
 if (nrow(dp2) > 0) {
   dpSens <- dp2 %>%
@@ -543,12 +546,14 @@ if (nrow(dp2) > 0) {
       summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
       pivot_wider(names_from = Metric, values_from = Statistic)
   dpSens |> write_csv("tables/table_dp_hyperparameter_sensitivity.csv")
-  dpSens |>
-    gt() |>
-    tab_header(title = "Sensitivity to DP concentration (mass A), dims=5") |>
-    fmt_number(decimals = 3, use_seps = FALSE) |>
-    opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
-    gt_scroll() |> print()
+  # render gt natively (quarto handles scrolling via column: page)
+  print(
+    dpSens |>
+      gt() |>
+      tab_header(title = "Sensitivity to DP concentration (mass A), dims=5") |>
+      fmt_number(decimals = 3, use_seps = FALSE) |>
+      opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE)
+  )
 
   dpSensFig <- dp2 %>%
       select(mass1,
@@ -681,36 +686,51 @@ ggplot(clustX, aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
 ggsave("xdiff_clustering_loss.png", width = 10, height = 7, dpi = 300, units = "in")
 ```
 
-## Common-effect bias and RMSE across xdiff
+## Common-effect bias and RMSE across xdiff — by coefficient
 
-Bias and RMSE for the shared continuous covariates (`Common = 1` and `-1`). `bias ≈ 0` is unbiased; `RMSE` lower is better (precision + bias). Each point is the mean over replicates at that `xdiff`; x-axis is covariate separation, colour = model.
+Bias ≈ 0 is unbiased; RMSE lower is better. `xdiff` on x-axis, colour = method (includes `dpm` = DPMM cluster-then-regression via `DPMM.jl`+`GLM.lm(EffectsCoding)` at `simFunctions.jl:394-426`, which *does* provide `dpmBetaclust1/2` mapped to `dpm_common1/2`). Rows = coefficient (`common1` β=+1, `common2` β=-1), columns = Balanced vs Imbalanced. RMSE y-axis truncated at 90th percentile.
 
 ```{r}
 #| column: page
 #| fig-width: 10
 #| fig-height: 5
-# modLoc stores bias/RMSE with Metric like "common1-bias"; normalize to bias/RMSE
-biasRmseX <- modLoc %>%
+# modLoc stores Metric like "common1-bias"; extract Coef and Metric2
+biasRmseCoef <- modLoc %>%
   filter(dims == 5, xdiff %in% c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)) %>%
-  mutate(Metric2 = ifelse(grepl("bias", Metric), "bias", ifelse(grepl("RMSE", Metric), "RMSE", Metric))) %>%
-  filter(Metric2 %in% c("bias", "RMSE")) %>%
-  select(xdiff, Imbalanced, Metric = Metric2, `ppmx-common`, dpm, kmean, slr) %>%
+  mutate(
+    Metric2 = ifelse(grepl("bias", Metric), "bias", ifelse(grepl("RMSE", Metric), "RMSE", Metric)),
+    Coef = ifelse(grepl("common1", Metric), "common1 (β=+1)", ifelse(grepl("common2", Metric), "common2 (β=-1)", NA_character_))
+  ) %>%
+  filter(Metric2 %in% c("bias", "RMSE"), !is.na(Coef)) %>%
+  select(xdiff, Imbalanced, Coef, Metric = Metric2, `ppmx-common`, dpm, kmean, slr) %>%
   pivot_longer(c(`ppmx-common`, dpm, kmean, slr), names_to = "Model", values_to = "Statistic") %>%
-  reframe(.by = c(xdiff, Metric, Model, Imbalanced), Statistic = mean(Statistic, na.rm = TRUE))
+  reframe(.by = c(xdiff, Coef, Metric, Model, Imbalanced), Statistic = mean(Statistic, na.rm = TRUE))
 
-rmse_y90 <- quantile(biasRmseX$Statistic[biasRmseX$Metric == "RMSE"], 0.90, na.rm = TRUE)
-biasRmseX_plot <- biasRmseX %>% filter(!(Metric == "RMSE" & Statistic > rmse_y90))
-ggplot(biasRmseX_plot, aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
-  geom_hline(data = filter(biasRmseX_plot, Metric == "bias"), aes(yintercept = 0), linetype = "dashed", color = "grey40") +
+# — Bias panel —
+ggplot(filter(biasRmseCoef, Metric == "bias"),
+       aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey40") +
   geom_point(size = 2) + geom_line(linewidth = 0.8) +
-  facet_grid(rows = vars(Metric), cols = vars(Imbalanced),
-             labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced")),
-             scales = "free_y") +
-  labs(x = "Covariate separation (xdiff)",
-       y = "Bias (dashed 0) / RMSE (higher = worse)",
-       caption = sprintf("RMSE y-axis truncated at 90th pct = %.2f", rmse_y90),
-       title = "Common-effect bias and RMSE across covariate overlap (dims=5, N=1000)") +
+  facet_grid(rows = vars(Coef), cols = vars(Imbalanced),
+             labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
+  labs(x = "Covariate separation (xdiff)", y = "Bias (dashed 0)",
+       title = "Common-effect bias across covariate overlap (dims=5, N=1000)") +
   scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
+ggsave("xdiff_bias_by_coef.png", width = 10, height = 5, dpi = 300, units = "in")
+
+# — RMSE panel (y truncated at 90th pct) —
+rmse_y90 <- quantile(biasRmseCoef$Statistic[biasRmseCoef$Metric == "RMSE"], 0.90, na.rm = TRUE)
+biasRmseRM <- biasRmseCoef %>% filter(Metric == "RMSE", Statistic <= rmse_y90)
+ggplot(biasRmseRM, aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
+  geom_point(size = 2) + geom_line(linewidth = 0.8) +
+  facet_grid(rows = vars(Coef), cols = vars(Imbalanced),
+             labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
+  labs(x = "Covariate separation (xdiff)", y = "RMSE (higher = worse)",
+       caption = sprintf("RMSE truncated at 90th pct = %.2f", rmse_y90),
+       title = "Common-effect RMSE across covariate overlap (dims=5, N=1000)") +
+  scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
+ggsave("xdiff_rmse_by_coef.png", width = 10, height = 5, dpi = 300, units = "in")
+# keep legacy filename for backwards compat
 ggsave("xdiff_bias_rmse.png", width = 10, height = 5, dpi = 300, units = "in")
 ```
 
