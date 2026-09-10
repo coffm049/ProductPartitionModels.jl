@@ -1,5 +1,5 @@
 ---
-title: "Comparisons simulated interaction effect size for 3D sim"
+title: "PPMx-common simulations"
 date: today
 format:
   revealjs:
@@ -207,143 +207,6 @@ longDF %>%
 
 
 
-
-
-
-
-
-
-
-## clustering and prediction vs inter effect
-```{r}
-#| output: false
-longDF %>%
-    filter(dims == 5, Alpha == 3.0, Beta == 3.0, grepl("rind", Metric) | grepl("bayes", Metric)) %>%
-    select(-c(Alpha, Beta, Precision, variance, Common, Imbalanced)) %>%
-    arrange(InterEffect, Metric)
-```
-
-
-```{r}
-longDF %>%
-    filter(dims == 5, Metric == "rind") %>%
-    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
-    geom_histogram(alpha = 0.3, color = "black") +
-    facet_grid(cols = vars(Alpha), rows = vars(Beta), scales = "free",
-        labeller = labeller(.rows = label_both, .cols = label_both)
-    ) +
-    xlim(0.8, 1.0) +
-    ggtitle("Rand index (common=1, Interaction=0.25), Balanced")
-```
-
-
-
-# big sim — common-effect densities hidden (rely on bias/RMSE tables; dims=5)
-```{r}
-#| eval: false
-if (!exists("beta_q10")) {
-  beta_common_q <- longDF %>% filter(Metric %in% c("common1","common2"), N==1000, dims==5, Common==1.0) %>%
-    reframe(q10 = quantile(Statistic, 0.10, na.rm=TRUE), q90 = quantile(Statistic, 0.90, na.rm=TRUE))
-  beta_q10 <- beta_common_q$q10; beta_q90 <- beta_common_q$q90
-}
-longDF %>%
-    filter(Metric == "common1", N== 1000, dims == 5, Common == 1.0) %>%
-    ggplot(aes(x = Statistic, fill = Model)) +
-    geom_density(alpha = 0.2) +
-    geom_vline(xintercept = 1.0) +
-    geom_vline(xintercept = 0.0) +
-    facet_grid(
-        rows = vars(xdiff, Imbalanced), cols = vars(InterEffect), scales = "free",
-        #labeller = labeller(.rows = label_both, .cols = label_both)
-    ) +
-    ggtitle("Common effects, dims=5") +
-    xlab("Common Estimate") +
-    coord_cartesian(xlim = c(beta_q10, beta_q90))
-ggsave("bigSimcommon1.png", width = 6, dpi = 300, units = "in")
-
-longDF %>%
-    filter(Metric == "common2", N== 1000, dims == 5, Common == 1.0) %>%
-    ggplot(aes(x = Statistic, fill = Model)) +
-    geom_density(alpha = 0.2) +
-    geom_vline(xintercept = 1.0) +
-    geom_vline(xintercept = 0.0) +
-    facet_grid(
-        rows = vars(xdiff, Imbalanced), cols = vars(InterEffect), scales = "free",
-        #labeller = labeller(.rows = label_both, .cols = label_both)
-    ) +
-    ggtitle("Common effects, dims=5") +
-    xlab("Common Estimate") +
-    coord_cartesian(xlim = c(beta_q10, beta_q90))
-ggsave("bigSimcommon2.png", width = 6, dpi = 300, units = "in")
-
-longDF %>%
-    filter(Metric == "rind", N == 1000, dims == 5, Common == 1.0) %>%
-    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
-    geom_histogram(alpha = 0.3, color = "black") +
-    facet_grid(rows = vars(xdiff), cols = vars(Imbalanced)) + #, labeller = labeller(.rows = label_both, .cols = label_both))
-    ggtitle("Rand index, N = 1000, dims=5")
-ggsave("bigSimRI.png", width = 6, dpi = 300, units = "in")
-
-longDF %>%
-    filter(Metric %in% c("binder", "vi", "binderoos", "vioos"), N == 1000, dims == 5, Common == 1.0) %>%
-    mutate(Split = ifelse(grepl("oos", Metric), "OOS", "in-sample"),
-           Loss = ifelse(grepl("binder", Metric), "Binder", "VI")) %>%
-    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
-    geom_histogram(alpha = 0.3, color = "black") +
-    facet_grid(rows = vars(Loss, Split), cols = vars(xdiff, Imbalanced)) +
-    labs(x = "Adjusted Rand Index (SALSO point estimate)") +
-    ggtitle("SALSO ARI, N = 1000, dims=5")
-ggsave("bigSimSalso.png", width = 8, dpi = 300, units = "in")
-
-```
-
-
-
-
-
-
-
-## Imbalanced-cluster scenarios {.scrollable}
-The simulation also includes scenarios with imbalanced cluster sizes (exponentially
-decaying cluster frequencies). The figure below summarises model performance on those scenarios; table in Appendix.
-
-
-
-```{r}
-# Key-metric densities for imbalanced scenarios (rmse clipped to 90th percentile)
-rmse_q90_imbal <- longDF %>%
-  filter(dims == 5, Imbalanced == TRUE, N == 1000, Common == 1.0, Metric == "rmse") %>%
-  pull(Statistic) %>% quantile(0.90, na.rm = TRUE)
-longDF %>%
-    filter(dims == 5, Imbalanced == TRUE, N == 1000, Common == 1.0,
-           Metric %in% c("rind", "rmse", "binder", "lps")) %>%
-    filter(!(Metric == "rmse" & Statistic > rmse_q90_imbal)) %>%
-    mutate(Metric = recode(Metric,
-                           rind   = "Adjusted Rand Index",
-                           rmse   = "OOS RMSE (≤90th pct)",
-                           binder = "SALSO Binder ARI",
-                           lps    = "OOS log predictive score")) %>%
-    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
-    geom_histogram(alpha = 0.3, color = "black") +
-    facet_grid(rows = vars(Metric), cols = vars(xdiff), scales = "free") +
-    labs(x = "Statistic", y = "Density",
-         caption = sprintf("RMSE truncated at 90th pct = %.2f", rmse_q90_imbal)) +
-    ggtitle("Imbalanced-cluster scenarios, N = 1000, dims = 5") +
-    theme_bw()
-ggsave("bigSimImbalanced.png", width = 8, dpi = 300, units = "in")
-```
-
-
-
-## Guide {.scrollable}
-
-80 reps/cell, `xdiff` separation (0 overlap →1 well-separated). Higher = better for ARI/LPS; bias/RMSE lower = better.
-
-- **Clustering — `rind` / `arind` (Adjusted Rand Index).** Posterior mean Rand index vs true partition (in-sample `rind`, OOS `arind`); 0 = chance, 1 = perfect recovery. SALSO variants `binder` / `vi` and `binderoos`/`vioos` are the same ARI but evaluated at the SALSO point estimate under Binder loss or Variation of Information; `dpm` has no MCMC so its single hard partition ARI is shown under `binder`/`vi` for comparison. *Interpretation:* curves near 1 = reliable clustering; divergence between in-sample and OOS = overfitting.
-- **Bias / RMSE — `bias` / `RMSE` (common effects).** `bias = Common - posterior mean` for each common coefficient (sign matters); `RMSE = sqrt(mean((Common - estimate)^2))` averaged over covariates. *Interpretation:* bias near 0 = unbiased; RMSE near 0 = accurate and precise. Facets `common1` (`β=+1`) vs `common2` (`β=-1`) check symmetry.
-- **Log predictive score — `lps` (OOS LPS).** Mean out-of-sample log predictive density under the posterior; larger (less negative) = better calibrated probabilistic predictions. *Interpretation:* replaces Bayesian p-values as a proper scoring rule; gaps of 0.1–0.3 nats across `xdiff` are substantively meaningful.
-- **Coverage / Type II — `_Cov` / `_T2`.** Joint 95% CI coverage of the common effects and Type II error (zero inside CI when truth ≠ 0). Coverage ≈ 0.95 = nominal; elevated Type II = underpowered.
-
 ## Clustering {.scrollable}
 
 ```{r}
@@ -451,6 +314,8 @@ ggplot(lpsDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
 ggsave("xdiff_lps.png", width = 10, height = 4, dpi = 300, units = "in")
 ```
 
+<!--
+
 **Analogous all-model metric: OOS RMSE.** Lower is better; available for every model (`ppmx-common_rmse` / `ppmx_rmse` / `dpm_rmse` / `kmean_rmse` / `slr_rmse`). Plotted on the same `xdiff` × scenario grid as LPS for direct comparison.
 
 ```{r}
@@ -475,6 +340,56 @@ ggplot(rmseDistPlot, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
   scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_rmse.png", width = 10, height = 4, dpi = 300, units = "in")
 ```
+
+
+
+
+
+
+
+
+
+## Imbalanced-cluster scenarios {.scrollable}
+The simulation also includes scenarios with imbalanced cluster sizes (exponentially
+decaying cluster frequencies). The figure below summarises model performance on those scenarios; table in Appendix.
+
+
+
+```{r}
+# Key-metric densities for imbalanced scenarios (rmse clipped to 90th percentile)
+rmse_q90_imbal <- longDF %>%
+  filter(dims == 5, Imbalanced == TRUE, N == 1000, Common == 1.0, Metric == "rmse") %>%
+  pull(Statistic) %>% quantile(0.90, na.rm = TRUE)
+longDF %>%
+    filter(dims == 5, Imbalanced == TRUE, N == 1000, Common == 1.0,
+           Metric %in% c("rind", "rmse", "binder", "lps")) %>%
+    filter(!(Metric == "rmse" & Statistic > rmse_q90_imbal)) %>%
+    mutate(Metric = recode(Metric,
+                           rind   = "Adjusted Rand Index",
+                           rmse   = "OOS RMSE (≤90th pct)",
+                           binder = "SALSO Binder ARI",
+                           lps    = "OOS log predictive score")) %>%
+    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
+    geom_histogram(alpha = 0.3, color = "black") +
+    facet_grid(rows = vars(Metric), cols = vars(xdiff), scales = "free") +
+    labs(x = "Statistic", y = "Density",
+         caption = sprintf("RMSE truncated at 90th pct = %.2f", rmse_q90_imbal)) +
+    ggtitle("Imbalanced-cluster scenarios, N = 1000, dims = 5") +
+    theme_bw()
+ggsave("bigSimImbalanced.png", width = 8, dpi = 300, units = "in")
+```
+
+
+
+## Guide {.scrollable}
+
+80 reps/cell, `xdiff` separation (0 overlap →1 well-separated). Higher = better for ARI/LPS; bias/RMSE lower = better.
+
+- **Clustering — `rind` / `arind` (Adjusted Rand Index).** Posterior mean Rand index vs true partition (in-sample `rind`, OOS `arind`); 0 = chance, 1 = perfect recovery. SALSO variants `binder` / `vi` and `binderoos`/`vioos` are the same ARI but evaluated at the SALSO point estimate under Binder loss or Variation of Information; `dpm` has no MCMC so its single hard partition ARI is shown under `binder`/`vi` for comparison. *Interpretation:* curves near 1 = reliable clustering; divergence between in-sample and OOS = overfitting.
+- **Bias / RMSE — `bias` / `RMSE` (common effects).** `bias = Common - posterior mean` for each common coefficient (sign matters); `RMSE = sqrt(mean((Common - estimate)^2))` averaged over covariates. *Interpretation:* bias near 0 = unbiased; RMSE near 0 = accurate and precise. Facets `common1` (`β=+1`) vs `common2` (`β=-1`) check symmetry.
+- **Log predictive score — `lps` (OOS LPS).** Mean out-of-sample log predictive density under the posterior; larger (less negative) = better calibrated probabilistic predictions. *Interpretation:* replaces Bayesian p-values as a proper scoring rule; gaps of 0.1–0.3 nats across `xdiff` are substantively meaningful.
+- **Coverage / Type II — `_Cov` / `_T2`.** Joint 95% CI coverage of the common effects and Type II error (zero inside CI when truth ≠ 0). Coverage ≈ 0.95 = nominal; elevated Type II = underpowered.
+
 
 ## More {.scrollable}
 
@@ -750,3 +665,87 @@ commonCovTbl |>
 ```
 ```
 
+## clustering and prediction vs inter effect
+```{r}
+#| output: false
+longDF %>%
+    filter(dims == 5, Alpha == 3.0, Beta == 3.0, grepl("rind", Metric) | grepl("bayes", Metric)) %>%
+    select(-c(Alpha, Beta, Precision, variance, Common, Imbalanced)) %>%
+    arrange(InterEffect, Metric)
+```
+
+
+```{r}
+longDF %>%
+    filter(dims == 5, Metric == "rind") %>%
+    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
+    geom_histogram(alpha = 0.3, color = "black") +
+    facet_grid(cols = vars(Alpha), rows = vars(Beta), scales = "free",
+        labeller = labeller(.rows = label_both, .cols = label_both)
+    ) +
+    xlim(0.8, 1.0) +
+    ggtitle("Rand index (common=1, Interaction=0.25), Balanced")
+```
+
+
+
+# big sim — common-effect densities hidden (rely on bias/RMSE tables; dims=5)
+```{r}
+#| eval: false
+if (!exists("beta_q10")) {
+  beta_common_q <- longDF %>% filter(Metric %in% c("common1","common2"), N==1000, dims==5, Common==1.0) %>%
+    reframe(q10 = quantile(Statistic, 0.10, na.rm=TRUE), q90 = quantile(Statistic, 0.90, na.rm=TRUE))
+  beta_q10 <- beta_common_q$q10; beta_q90 <- beta_common_q$q90
+}
+longDF %>%
+    filter(Metric == "common1", N== 1000, dims == 5, Common == 1.0) %>%
+    ggplot(aes(x = Statistic, fill = Model)) +
+    geom_density(alpha = 0.2) +
+    geom_vline(xintercept = 1.0) +
+    geom_vline(xintercept = 0.0) +
+    facet_grid(
+        rows = vars(xdiff, Imbalanced), cols = vars(InterEffect), scales = "free",
+        #labeller = labeller(.rows = label_both, .cols = label_both)
+    ) +
+    ggtitle("Common effects, dims=5") +
+    xlab("Common Estimate") +
+    coord_cartesian(xlim = c(beta_q10, beta_q90))
+ggsave("bigSimcommon1.png", width = 6, dpi = 300, units = "in")
+
+longDF %>%
+    filter(Metric == "common2", N== 1000, dims == 5, Common == 1.0) %>%
+    ggplot(aes(x = Statistic, fill = Model)) +
+    geom_density(alpha = 0.2) +
+    geom_vline(xintercept = 1.0) +
+    geom_vline(xintercept = 0.0) +
+    facet_grid(
+        rows = vars(xdiff, Imbalanced), cols = vars(InterEffect), scales = "free",
+        #labeller = labeller(.rows = label_both, .cols = label_both)
+    ) +
+    ggtitle("Common effects, dims=5") +
+    xlab("Common Estimate") +
+    coord_cartesian(xlim = c(beta_q10, beta_q90))
+ggsave("bigSimcommon2.png", width = 6, dpi = 300, units = "in")
+
+longDF %>%
+    filter(Metric == "rind", N == 1000, dims == 5, Common == 1.0) %>%
+    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
+    geom_histogram(alpha = 0.3, color = "black") +
+    facet_grid(rows = vars(xdiff), cols = vars(Imbalanced)) + #, labeller = labeller(.rows = label_both, .cols = label_both))
+    ggtitle("Rand index, N = 1000, dims=5")
+ggsave("bigSimRI.png", width = 6, dpi = 300, units = "in")
+
+longDF %>%
+    filter(Metric %in% c("binder", "vi", "binderoos", "vioos"), N == 1000, dims == 5, Common == 1.0) %>%
+    mutate(Split = ifelse(grepl("oos", Metric), "OOS", "in-sample"),
+           Loss = ifelse(grepl("binder", Metric), "Binder", "VI")) %>%
+    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
+    geom_histogram(alpha = 0.3, color = "black") +
+    facet_grid(rows = vars(Loss, Split), cols = vars(xdiff, Imbalanced)) +
+    labs(x = "Adjusted Rand Index (SALSO point estimate)") +
+    ggtitle("SALSO ARI, N = 1000, dims=5")
+ggsave("bigSimSalso.png", width = 8, dpi = 300, units = "in")
+
+```
+
+-->
