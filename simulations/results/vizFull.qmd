@@ -247,7 +247,8 @@ estDist <- longDF %>%
     Coef = ifelse(Metric == "common1", "common1 (β=+1)", "common2 (β=-1)"),
     Truth = ifelse(Metric == "common1", 1, -1)
   ) %>%
-  filter(!(Model == "ppmx-common" & abs(Statistic - Truth) > 2))
+  filter(!(Model == "ppmx-common" & abs(Statistic - Truth) > 2)) %>%
+  filter(Statistic >= -4 & Statistic <= 4)
 
 ggplot(estDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
   geom_violin(alpha = 0.45, linewidth = 0.4, position = position_dodge(width = 0.85), scale = "width") +
@@ -257,7 +258,7 @@ ggplot(estDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
   facet_grid(rows = vars(Coef), cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
   labs(x = "xdiff", y = "Estimate (dashed = truth)",
-       caption = "ppmx-common filtered to |estimate - truth| ≤ 2; others unfiltered",
+       caption = "ppmx-common |error|≤2; all models clipped to [-4,4]",
        title = "Common-effect estimates") +
   scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_common_est.png", width = 10, height = 5, dpi = 300, units = "in")
