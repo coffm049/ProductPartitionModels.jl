@@ -204,92 +204,15 @@ longDF %>%
 
 ```
 
-# local interp — table moved to Appendix
-<!-- locTbl moved to Appendix: Tables -->
 
 
-# Common Effect — geom_density hidden (rely on bias/RMSE tables, 5 dims)
-```{r}
-#| eval: false
-# longDF %>%
-#     filter(Metric == "common", Imbalanced == TRUE) %>%
-#     ggplot(aes(x = Statistic, fill = Model)) +
-#     geom_density(alpha = 0.3) +
-#     geom_vline(xintercept = 1.0) +
-#     facet_grid(
-#         rows = vars(InterEffect), cols = vars(Common, variance), scales = "free",
-#         labeller = labeller(.rows = label_both, .cols = label_both)
-#     ) +
-#     ggtitle("Common effects sampling distribution (alpha=2, beta=1,prec=0.01), Imbalanced") +
-#     xlab("Common Estimate")
-beta_common_q <- longDF %>%
-    filter(Metric %in% c("common1","common2"), dims == 5, Common == 1.0) %>%
-    reframe(q10 = quantile(Statistic, 0.10, na.rm = TRUE), q90 = quantile(Statistic, 0.90, na.rm = TRUE))
-beta_q10 <- beta_common_q$q10; beta_q90 <- beta_common_q$q90
-longDF %>%
-    filter(Metric == "common1", dims == 5, Common == 1.0) %>%
-    ggplot(aes(x = Statistic, fill = Model)) +
-    geom_density(alpha = 0.35) +
-    geom_vline(aes(xintercept = unique(Common))) +
-    geom_vline(xintercept = 0.0) +
-    facet_grid(
-        rows = vars(xdiff, Imbalanced), cols = vars(Alpha, Beta), scales = "free",
-        labeller = labeller(.rows = label_both, .cols = label_both)
-    ) +
-    ggtitle("Common effects (common=1, Interaction=1), dims=5") +
-    xlab("Common Estimate") +
-    coord_cartesian(xlim = c(beta_q10, beta_q90))
-ggsave("beta1Tuning.png", width = 6, dpi = 300, units = "in")
-
-longDF %>%
-    filter(Metric == "common2", dims == 5, Common == 1.0) %>%
-    ggplot(aes(x = Statistic, fill = Model)) +
-    geom_density(alpha = 0.35) +
-    geom_vline(aes(xintercept = -unique(Common))) +
-    geom_vline(xintercept = 0.0) +
-    facet_grid(
-        rows = vars(xdiff, Imbalanced), cols = vars(Alpha, Beta), scales = "free",
-        labeller = labeller(.rows = label_both, .cols = label_both)
-    ) +
-    ggtitle("Common effects (common=-1, Interaction=1), dims=5") +
-    xlab("Common Estimate") +
-    coord_cartesian(xlim = c(beta_q10, beta_q90))
-ggsave("beta2Tuning.png", width = 6, dpi = 300, units = "in")
-```
-
-```{r}
-#| eval: false
-# percentile limits computed above (beta_q10/beta_q90); recompute if chunk run standalone
-if (!exists("beta_q10")) {
-  beta_common_q <- longDF %>% filter(Metric %in% c("common1","common2"), dims == 5, Common == 1.0) %>%
-    reframe(q10 = quantile(Statistic, 0.10, na.rm = TRUE), q90 = quantile(Statistic, 0.90, na.rm = TRUE))
-  beta_q10 <- beta_common_q$q10; beta_q90 <- beta_common_q$q90
-}
-longDF %>%
-    filter(grepl("^common", Metric)) %>%
-    ggplot(aes(x = Statistic, fill = Model)) +
-    geom_density(alpha = 0.35) +
-    geom_vline(xintercept = 0.0) +
-    # geom_vline(aes(xintercept = unique(Common))) +
-    facet_grid(
-        rows = vars(xdiff, Alpha, Beta, Imbalanced), cols = vars(Metric), scales = "free",
-        labeller = labeller(.rows = label_both, .cols = label_both)
-    ) +
-    ggtitle("Common effects (common=5, Interaction=5)") +
-    xlab("Common Estimate") +
-    coord_cartesian(xlim = c(beta_q10, beta_q90))
-ggsave("betaVinter.png", width = 6, dpi = 300, units = "in")
-```
 
 
-## Model comparison — graphs kept above; tables in Appendix
-- tuning InterEffect = 0.25, variance = 0.1, Common = 1.0 — tables moved to Appendix
-<!-- modCompTbl moved to Appendix -->
 
-<!-- tempMetricsTbl moved to Appendix -->
 
-- vs InterEffects — table moved to Appendix
-<!-- vsInterTbl moved to Appendix -->
+
+
+
 
 ## clustering and prediction vs inter effect
 ```{r}
@@ -313,7 +236,7 @@ longDF %>%
     ggtitle("Rand index (common=1, Interaction=0.25), Balanced")
 ```
 
-# covariate distributions
+# covariate distributions {.scrollable}
 ```{r}
 #| message: false
 #| warning: false
@@ -407,15 +330,7 @@ ggsave("bigSimSalso.png", width = 8, dpi = 300, units = "in")
 
 ```
 
-# SALSO summary — table moved to Appendix (graph kept above)
-The PPMx models (`ppmx-common`, `ppmx`/DPM) report SALSO point estimates under Binder
-and VI loss. The DPMM.jl baseline (`dpm`) yields a single hard partition, so it
-contributes its single-partition ARI versus truth (shown under Binder/VI for
-comparison, not a SALSO point estimate).
-<!-- salsoTbl moved to Appendix -->
 
-# OOS log predictive score (reviewer: replace Bayesian p-values) — table moved to Appendix (graphs kept)
-<!-- lpsTbl moved to Appendix -->
 
 ```{r}
 longDF %>%
@@ -438,13 +353,10 @@ longDF %>%
 ggsave("bigSimLPScompare.png", width = 8, dpi = 300, units = "in")
 ```
 
-## Sensitivity to the Dirichlet process concentration hyperparameter (Rev 3 C2)
+## Sensitivity to the Dirichlet process concentration hyperparameter (Rev 3 C2) {.scrollable}
 The simulation varies the DP concentration `massParams = [A, B]`, which controls the
 prior expected number of clusters. The main `dims = 5` comparisons above were run at a
-single mass value (`A = 1.0`); the table and figure below summarise the key
-fit/partition metrics across the values of `A` (labelled `mass1`) available in the
-`dims = 5` data, averaged over simulation replicates, to show the conclusions are
-stable to this hyperparameter.
+single mass value (`A = 1.0`); the figure summarises the key fit/partition metrics across the values of `A` (labelled `mass1`) available in the `dims = 5` data, averaged over simulation replicates, to show the conclusions are stable to this hyperparameter. Table in Appendix.
 
 ```{r}
 #| column: page
@@ -480,16 +392,11 @@ if (nrow(dp2) > 0) {
 }
 ```
 
-## Imbalanced-cluster scenarios
+## Imbalanced-cluster scenarios {.scrollable}
 The simulation also includes scenarios with imbalanced cluster sizes (exponentially
-decaying cluster frequencies). The table and figure below summarise model performance
-on those scenarios using the same metrics as above: clustering (adjusted Rand index and
-SALSO Binder/VI point estimates) and prediction (OOS RMSE and OOS log predictive score).
+decaying cluster frequencies). The figure below summarises model performance on those scenarios; table in Appendix.
 
-```{r}
-#| echo: false
-cat("Imbalanced table moved to Appendix\n")
-```
+
 
 ```{r}
 # Key-metric densities for imbalanced scenarios (rmse clipped to 90th percentile)
@@ -515,10 +422,9 @@ longDF %>%
 ggsave("bigSimImbalanced.png", width = 8, dpi = 300, units = "in")
 ```
 
-# common-effect CI coverage — table moved to Appendix
-<!-- commonCovTbl moved to Appendix -->
 
-## How to read the metrics
+
+## How to read the metrics {.scrollable}
 
 The simulations average each metric over 80 replicates per `xdiff` × `mass` × `Imbalanced` cell (`N = 1000`, `dims = 5`, `Common = 1` unless noted). Higher is better for clustering and prediction where noted; for error/bias lower absolute value is better. `xdiff` is the covariate separation between clusters (0 = complete overlap, 1 = well separated).
 
@@ -527,9 +433,9 @@ The simulations average each metric over 80 replicates per `xdiff` × `mass` × 
 - **Log predictive score — `lps` (OOS LPS).** Mean out-of-sample log predictive density under the posterior; larger (less negative) = better calibrated probabilistic predictions. *Interpretation:* replaces Bayesian p-values as a proper scoring rule; gaps of 0.1–0.3 nats across `xdiff` are substantively meaningful.
 - **Coverage / Type II — `_Cov` / `_T2`.** Joint 95% CI coverage of the common effects and Type II error (zero inside CI when truth ≠ 0). Coverage ≈ 0.95 = nominal; elevated Type II = underpowered.
 
-## Clustering loss across xdiff, faceted by scenario
+## Clustering loss across xdiff, faceted by scenario {.scrollable}
 
-ARI and SALSO ARI as a function of covariate separation. Each line is a model; facets are loss/split (rows) and balanced vs imbalanced cluster sizes (columns).
+ARI and SALSO ARI as a function of covariate separation. Each distribution is over 80 replicates per cell (facets loss/split × Balanced/Imbalanced).
 
 ```{r}
 #| column: page
@@ -590,9 +496,9 @@ ggplot(clustTestDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
 ggsave("xdiff_clustering_test_box.png", width = 10, height = 6, dpi = 300, units = "in")
 ```
 
-## Common-effect bias and RMSE across xdiff — by coefficient
+## Common-effect bias and RMSE across xdiff — by coefficient {.scrollable}
 
-Bias ≈ 0 is unbiased; RMSE lower is better. `xdiff` on x-axis, colour = method (includes `dpm` = DPMM cluster-then-regression via `DPMM.jl`+`GLM.lm(EffectsCoding)` at `simFunctions.jl:394-426`, which *does* provide `dpmBetaclust1/2` mapped to `dpm_common1/2`). Rows = coefficient (`common1` β=+1, `common2` β=-1), columns = Balanced vs Imbalanced. RMSE y-axis truncated at 90th percentile.
+Bias ≈ 0 is unbiased; RMSE lower is better. `xdiff` on x-axis, colour = method (includes `dpm`). Rows = coefficient (`common1` β=+1, `common2` β=-1), columns = Balanced vs Imbalanced. Per-replicate boxplots (80 reps/cell).
 
 ```{r}
 #| column: page
@@ -644,9 +550,9 @@ ggsave("xdiff_rmse_by_coef.png", width = 10, height = 5, dpi = 300, units = "in"
 file.copy("xdiff_bias_by_coef.png", "xdiff_bias_rmse.png", overwrite = TRUE)
 ```
 
-## Out-of-sample log predictive score across xdiff
+## Out-of-sample log predictive score across xdiff {.scrollable}
 
-Mean OOS LPS vs `xdiff`; higher = better predictive calibration.
+Per-replicate OOS LPS vs `xdiff`; higher = better predictive calibration.
 
 > **Why LPS is only `ppmx` / `ppmx-common`:** `sim.jl:86-113` computes `lpsMixoos` / `lpsDPMoos` from the PPMx posterior-predictive density. Baselines `dpm` (single hard partition via `DPMM.jl`), `kmeans`, and `slr` are point estimators with no posterior predictive distribution, so `lps` is `NA` for those models by design (see `salsoUtils.jl:67` `missing` handling and `simExperiment.qmd` LPS averaging with `na.rm`). For a directly comparable out-of-sample prediction metric across *all* models, use OOS RMSE below (`midMixoos` / `dpmRMSEoos` / `kmean_MSEoos` / `slrRMSEoos`).
 
