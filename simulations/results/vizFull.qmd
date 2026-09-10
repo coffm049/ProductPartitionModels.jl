@@ -2,16 +2,22 @@
 title: "Comparisons simulated interaction effect size for 3D sim"
 date: today
 format:
-  html:
-    embed-resources: true
+  revealjs:
+    theme: default
+    slide-number: true
+    chalkboard: false
+    scrollable: true
     code-fold: true
-    toc: true
-    toc-location: left
+    toc: false
+    embed-resources: true
+    smaller: true
 execute: 
   cache: false
   warning: false
   error: false
   fig-format: png
+  fig-width: 10
+  fig-height: 6
 knitr:
   opts_chunk:
     dev: png
