@@ -254,7 +254,6 @@ ggplot(estDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
   facet_grid(rows = vars(Coef), cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
   labs(x = "xdiff", y = "Estimate (dashed = truth)",
-       caption = "Filtered to [-3,3]",
        title = "Common-effect estimates") +
   scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_common_est.png", width = 10, height = 5, dpi = 300, units = "in")
