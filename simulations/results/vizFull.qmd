@@ -204,26 +204,8 @@ longDF %>%
 
 ```
 
-# local interp
-```{r}
-#| column: page
-locTbl <- modLoc |> 
-    arrange(InterEffect, Alpha, Beta, Metric) |>
-    mutate(
-        group_label = sprintf("InterEffect = %s, Alpha = %s, Beta = %s, xdiff = %s", InterEffect, Alpha,Beta, xdiff ),
-        parameter= ifelse(grepl("1", Metric), "1", "2"),
-        Metric = ifelse(grepl("bias", Metric), "bias", "RMSE"),
-    ) |>
-    group_by(group_label) |>
-    select(-c(InterEffect, Alpha, Beta, Precision)) |>
-    filter(xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0), dims == 5)
-locTbl |> write_csv("tables/table_local_interp.csv")
-locTbl |>
-  gt() |>
-  tab_header(title = "Local interpretation: bias / RMSE by xdiff") |>
-  opt_interactive(use_compact_mode = TRUE) |>
-  gt_scroll()
-```
+# local interp — table moved to Appendix
+<!-- locTbl moved to Appendix: Tables -->
 
 
 # Common Effect — geom_density hidden (rely on bias/RMSE tables, 5 dims)
@@ -300,57 +282,14 @@ ggsave("betaVinter.png", width = 6, dpi = 300, units = "in")
 ```
 
 
-## Model comparison tables 
-- tuning InterEffect = 0.25, variance = 0.1, Common = 1.0
-```{r}
-#| column: page
-modCompTbl <- longDF %>%
-    filter(dims == 5, xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0)) %>%
-    group_by(Metric, Model, Imbalanced) %>%
-    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
-    pivot_wider(names_from = Model, values_from = Statistic)
-modCompTbl |> write_csv("tables/table_model_comparison.csv")
-modCompTbl |>
-  gt() |>
-  tab_header(title = "Model comparison (dims=5, xdiff grid)") |>
-  fmt_number(decimals = 3, use_seps = FALSE) |>
-  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
-  gt_scroll()
-```
+## Model comparison — graphs kept above; tables in Appendix
+- tuning InterEffect = 0.25, variance = 0.1, Common = 1.0 — tables moved to Appendix
+<!-- modCompTbl moved to Appendix -->
 
-```{r}
-#| column: page
-tempMetricsTbl <- longDF %>%
-    filter(dims == 5) %>%
-    group_by(Model, Metric) %>%
-    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
-    pivot_wider(names_from = Metric, values_from = Statistic)
-tempMetricsTbl |> write_csv("tables/table_temp_metrics.csv")
-tempMetricsTbl |>
-  gt() |>
-  tab_header(title = "Metrics by model (dims=5)") |>
-  fmt_number(decimals = 3, use_seps = FALSE) |>
-  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
-  gt_scroll()
-```
+<!-- tempMetricsTbl moved to Appendix -->
 
-
-- vs InterEffects
-```{r}
-#| column: page
-vsInterTbl <- longDF %>%
-    filter(dims == 5, Alpha == 3.0, Beta == 3.0) %>%
-    group_by(Model, Metric, InterEffect) %>%
-    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
-    pivot_wider(names_from = Metric, values_from = Statistic)
-vsInterTbl |> write_csv("tables/table_temp_vs_intereffects.csv")
-vsInterTbl |>
-  gt() |>
-  tab_header(title = "Metrics vs InterEffect (Alpha=3, Beta=3, dims=5)") |>
-  fmt_number(decimals = 3, use_seps = FALSE) |>
-  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
-  gt_scroll()
-```
+- vs InterEffects — table moved to Appendix
+<!-- vsInterTbl moved to Appendix -->
 
 ## clustering and prediction vs inter effect
 ```{r}
@@ -468,45 +407,15 @@ ggsave("bigSimSalso.png", width = 8, dpi = 300, units = "in")
 
 ```
 
-# SALSO summary table (Binder's loss + VI error, in-sample and OOS)
+# SALSO summary — table moved to Appendix (graph kept above)
 The PPMx models (`ppmx-common`, `ppmx`/DPM) report SALSO point estimates under Binder
 and VI loss. The DPMM.jl baseline (`dpm`) yields a single hard partition, so it
 contributes its single-partition ARI versus truth (shown under Binder/VI for
 comparison, not a SALSO point estimate).
-```{r}
-#| column: page
-salsoTbl <- longDF %>%
-    filter(Metric %in% c("binder", "vi", "binderoos", "vioos"), N == 1000, dims == 5, Common == 1.0) %>%
-    mutate(Split = ifelse(grepl("oos", Metric), "OOS", "in-sample"),
-           Loss  = ifelse(grepl("binder", Metric), "Binder", "VI")) %>%
-    reframe(.by = c(Model, Loss, Split, xdiff, Imbalanced),
-            ARI = mean(Statistic, na.rm = TRUE)) %>%
-    pivot_wider(names_from = c(Loss, Split), values_from = ARI)
-salsoTbl |> write_csv("tables/table_salso_by_model.csv")
-salsoTbl |>
-  gt() |>
-  tab_header(title = "SALSO ARI by model (Binder / VI, in-sample & OOS)") |>
-  fmt_number(decimals = 3, use_seps = FALSE) |>
-  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
-  gt_scroll()
-```
+<!-- salsoTbl moved to Appendix -->
 
-# OOS log predictive score (reviewer: replace Bayesian p-values with proper scoring rules)
-```{r}
-#| column: page
-lpsTbl <- longDF %>%
-    filter(Metric == "lps", N == 1000, dims == 5, Common == 1.0) %>%
-    reframe(.by = c(xdiff, Model, Imbalanced), Statistic = mean(Statistic, na.rm = TRUE)) %>%
-    pivot_wider(names_from = Model, values_from = Statistic) %>%
-    mutate(across(c(`ppmx-common`, ppmx), round, 3))
-lpsTbl |> write_csv("tables/table_lps_by_model.csv")
-lpsTbl |>
-  gt() |>
-  tab_header(title = "OOS log predictive score by model (N=1000, dims=5)") |>
-  fmt_number(decimals = 3, use_seps = FALSE) |>
-  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
-  gt_scroll()
-```
+# OOS log predictive score (reviewer: replace Bayesian p-values) — table moved to Appendix (graphs kept)
+<!-- lpsTbl moved to Appendix -->
 
 ```{r}
 longDF %>%
@@ -544,30 +453,7 @@ stable to this hyperparameter.
 #| warning: false
 dp2 <- df %>% filter(dims == 5, !is.na(mass1))
 if (nrow(dp2) > 0) {
-  dpSens <- dp2 %>%
-      select(mass1, Imbalanced, xdiff,
-             `ppmx-common_rind`, ppmx_rind, dpm_rind, kmean_rind,
-             `ppmx-common_rmse`, ppmx_rmse, dpm_rmse, kmean_rmse, slr_rmse,
-             `ppmx-common_NC`, ppmx_NC, dpm_NC, kmean_NC,
-             `ppmx-common_binder`, ppmx_binder, `ppmx-common_vi`, ppmx_vi,
-             `ppmx-common_lps`, ppmx_lps) %>%
-      pivot_longer(-c(mass1, Imbalanced, xdiff),
-                   names_to = c("Model", "Metric"),
-                   values_to = "Statistic",
-                   names_pattern = "(.*)_(.*)") %>%
-      group_by(mass1, Model, Metric) %>%
-      summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
-      pivot_wider(names_from = Metric, values_from = Statistic)
-  dpSens |> write_csv("tables/table_dp_hyperparameter_sensitivity.csv")
-  # render gt natively (quarto handles scrolling via column: page)
-  print(
-    dpSens |>
-      gt() |>
-      tab_header(title = "Sensitivity to DP concentration (mass A), dims=5") |>
-      fmt_number(decimals = 3, use_seps = FALSE) |>
-      opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE)
-  )
-
+  # table moved to Appendix — keep figure here
   dpSensFig <- dp2 %>%
       select(mass1,
              `ppmx-common_rind`, ppmx_rind, dpm_rind, kmean_rind,
@@ -601,20 +487,8 @@ on those scenarios using the same metrics as above: clustering (adjusted Rand in
 SALSO Binder/VI point estimates) and prediction (OOS RMSE and OOS log predictive score).
 
 ```{r}
-#| column: page
-# Model comparison table, imbalanced scenarios
-imbalTbl <- longDF %>%
-    filter(dims == 5, Imbalanced == TRUE) %>%
-    group_by(Metric, Model) %>%
-    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
-    pivot_wider(names_from = Model, values_from = Statistic)
-imbalTbl |> write_csv("tables/table_model_comparison_imbalanced.csv")
-imbalTbl |>
-  gt() |>
-  tab_header(title = "Imbalanced-cluster scenarios (dims=5)") |>
-  fmt_number(decimals = 3, use_seps = FALSE) |>
-  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
-  gt_scroll()
+#| echo: false
+cat("Imbalanced table moved to Appendix\n")
 ```
 
 ```{r}
@@ -641,21 +515,8 @@ longDF %>%
 ggsave("bigSimImbalanced.png", width = 8, dpi = 300, units = "in")
 ```
 
-# common-effect CI coverage across all covariates
-```{r}
-#| column: page
-commonCovTbl <- df %>%
-    filter(N == 1000, dims == 5, Common == 1.0) %>%
-    reframe(.by = c(xdiff, Imbalanced), `ppmx-common_ccov` = mean(`ppmx-common_ccov`, na.rm = TRUE)) %>%
-    mutate(across(`ppmx-common_ccov`, round, 3))
-commonCovTbl |> write_csv("tables/table_common_effect_cov.csv")
-commonCovTbl |>
-  gt() |>
-  tab_header(title = "Common-effect joint coverage (ppmx-common, N=1000, dims=5)") |>
-  fmt_number(decimals = 3, use_seps = FALSE) |>
-  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
-  gt_scroll()
-```
+# common-effect CI coverage — table moved to Appendix
+<!-- commonCovTbl moved to Appendix -->
 
 ## How to read the metrics
 
@@ -674,28 +535,26 @@ ARI and SALSO ARI as a function of covariate separation. Each line is a model; f
 #| column: page
 #| fig-width: 10
 #| fig-height: 7
-clustX <- longDF %>%
+clustDist <- longDF %>%
   filter(N == 1000, dims == 5, Common == 1.0,
          Metric %in% c("rind", "arind", "binder", "vi", "binderoos", "vioos"),
          xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0)) %>%
-  mutate(
-    Metric = recode(Metric,
+  mutate(Metric = recode(Metric,
       rind = "ARI (in-sample)", arind = "ARI (OOS)",
       binder = "SALSO Binder (in-sample)", binderoos = "SALSO Binder (OOS)",
-      vi = "SALSO VI (in-sample)", vioos = "SALSO VI (OOS)"
-    )
-  ) %>%
-  reframe(.by = c(xdiff, Metric, Model, Imbalanced),
-          Statistic = mean(Statistic, na.rm = TRUE))
+      vi = "SALSO VI (in-sample)", vioos = "SALSO VI (OOS)"))
 
-ggplot(clustX, aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
-  geom_point(size = 2) + geom_line(linewidth = 0.8) +
+ggplot(clustDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
+  geom_boxplot(alpha = 0.45, outlier.size = 0.6, linewidth = 0.4, position = position_dodge(width = 0.85)) +
+  stat_summary(aes(group = Model, color = Model), fun = median, geom = "line", linewidth = 0.9, position = position_dodge(width = 0.85)) +
+  stat_summary(aes(group = Model, color = Model), fun = median, geom = "point", size = 2.2, position = position_dodge(width = 0.85)) +
   facet_grid(rows = vars(Metric), cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced")),
              scales = "free_y") +
   labs(x = "Covariate separation (xdiff)", y = "Adjusted Rand Index (higher = better)",
-       title = "Clustering accuracy across covariate overlap (dims=5, N=1000)") +
-  scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
+       title = "Clustering accuracy across covariate overlap — distribution over 80 reps/cell (dims=5, N=1000)",
+       caption = "Box = IQR per xdiff×model; line = median trend") +
+  scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_clustering_loss.png", width = 10, height = 7, dpi = 300, units = "in")
 ```
 
@@ -739,48 +598,50 @@ Bias ≈ 0 is unbiased; RMSE lower is better. `xdiff` on x-axis, colour = method
 #| column: page
 #| fig-width: 10
 #| fig-height: 5
-# modLoc stores Metric like "common1-bias"; extract Coef and Metric2
-# Robust: use median (matching PPMx median) and censor bias to [-3,3]
-biasRmseCoef <- modLoc %>%
-  filter(dims == 5, xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0)) %>%
+# Distribution across replicates: per-replicate bias censored [-3,3] and RMSE via per-replicate absolute error
+biasDist <- longDF %>%
+  filter(N == 1000, dims == 5, Common == 1.0, Metric %in% c("common1","common2"), xdiff %in% c(0.2,0.4,0.6,0.8,1.0)) %>%
   mutate(
-    Metric2 = ifelse(grepl("bias", Metric), "bias", ifelse(grepl("RMSE", Metric), "RMSE", Metric)),
-    Coef = ifelse(grepl("common1", Metric), "common1 (β=+1)", ifelse(grepl("common2", Metric), "common2 (β=-1)", NA_character_))
-  ) %>%
-  filter(Metric2 %in% c("bias", "RMSE"), !is.na(Coef)) %>%
-  select(xdiff, Imbalanced, Coef, Metric = Metric2, `ppmx-common`, dpm, kmean, slr) %>%
-  pivot_longer(c(`ppmx-common`, dpm, kmean, slr), names_to = "Model", values_to = "Statistic") %>%
-  reframe(.by = c(xdiff, Coef, Metric, Model, Imbalanced), Statistic = median(Statistic, na.rm = TRUE)) %>%
-  mutate(Statistic = ifelse(Metric == "bias", pmin(pmax(Statistic, -3), 3), Statistic))
+    Bias = ifelse(Metric == "common1", Common - Statistic, -Common - Statistic),
+    Bias = pmin(pmax(Bias, -3), 3),
+    Coef = ifelse(Metric == "common1", "common1 (β=+1)", "common2 (β=-1)")
+  )
 
-# — Bias panel (censored to [-3,3]) —
-ggplot(filter(biasRmseCoef, Metric == "bias"),
-       aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
+ggplot(biasDist, aes(x = factor(xdiff), y = Bias, fill = Model)) +
+  geom_boxplot(alpha = 0.45, outlier.size = 0.6, linewidth = 0.4, position = position_dodge(width = 0.85)) +
+  stat_summary(aes(group = Model, color = Model), fun = median, geom = "line", linewidth = 0.9, position = position_dodge(width = 0.85)) +
+  stat_summary(aes(group = Model, color = Model), fun = median, geom = "point", size = 2.2, position = position_dodge(width = 0.85)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey40") +
-  geom_point(size = 2) + geom_line(linewidth = 0.8) +
   facet_grid(rows = vars(Coef), cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
-  coord_cartesian(ylim = c(-3, 3)) +
-  labs(x = "Covariate separation (xdiff)", y = "Bias (dashed 0, censored [-3,3])",
-       caption = "Bias censored to [-3,3] (values beyond clipped); median across replicates",
-       title = "Common-effect bias across covariate overlap (dims=5, N=1000)") +
-  scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
+  labs(x = "Covariate separation (xdiff)", y = "Bias (censored [-3,3], dashed 0)",
+       caption = "Per-replicate bias; line = median trend",
+       title = "Common-effect bias — distribution over 80 reps/cell (dims=5, N=1000)") +
+  scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_bias_by_coef.png", width = 10, height = 5, dpi = 300, units = "in")
 
-# — RMSE panel (y truncated at 90th pct) —
-rmse_y90 <- quantile(biasRmseCoef$Statistic[biasRmseCoef$Metric == "RMSE"], 0.90, na.rm = TRUE)
-biasRmseRM <- biasRmseCoef %>% filter(Metric == "RMSE", Statistic <= rmse_y90)
-ggplot(biasRmseRM, aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
-  geom_point(size = 2) + geom_line(linewidth = 0.8) +
+# RMSE distribution: per-replicate absolute error |Common - estimate|
+rmseDist <- longDF %>%
+  filter(N == 1000, dims == 5, Common == 1.0, Metric %in% c("common1","common2"), xdiff %in% c(0.2,0.4,0.6,0.8,1.0)) %>%
+  mutate(
+    AbsErr = ifelse(Metric == "common1", abs(Common - Statistic), abs(-Common - Statistic)),
+    Coef = ifelse(Metric == "common1", "common1 (β=+1)", "common2 (β=-1)")
+  )
+rmse_y90 <- quantile(rmseDist$AbsErr, 0.90, na.rm = TRUE)
+rmseDistPlot <- rmseDist %>% filter(AbsErr <= rmse_y90)
+ggplot(rmseDistPlot, aes(x = factor(xdiff), y = AbsErr, fill = Model)) +
+  geom_boxplot(alpha = 0.45, outlier.size = 0.6, linewidth = 0.4, position = position_dodge(width = 0.85)) +
+  stat_summary(aes(group = Model, color = Model), fun = median, geom = "line", linewidth = 0.9, position = position_dodge(width = 0.85)) +
+  stat_summary(aes(group = Model, color = Model), fun = median, geom = "point", size = 2.2, position = position_dodge(width = 0.85)) +
   facet_grid(rows = vars(Coef), cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
-  labs(x = "Covariate separation (xdiff)", y = "RMSE (higher = worse)",
-       caption = sprintf("RMSE truncated at 90th pct = %.2f", rmse_y90),
-       title = "Common-effect RMSE across covariate overlap (dims=5, N=1000)") +
-  scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
+  labs(x = "Covariate separation (xdiff)", y = "Absolute error |Common - estimate| (RMSE analogue, 90th pct)",
+       caption = sprintf("Truncated at 90th pct = %.2f; distribution over replicates", rmse_y90),
+       title = "Common-effect absolute error — distribution over replicates (dims=5, N=1000)") +
+  scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_rmse_by_coef.png", width = 10, height = 5, dpi = 300, units = "in")
-# keep legacy filename for backwards compat
-ggsave("xdiff_bias_rmse.png", width = 10, height = 5, dpi = 300, units = "in")
+# legacy filename kept for backwards compat (now bias distribution)
+file.copy("xdiff_bias_by_coef.png", "xdiff_bias_rmse.png", overwrite = TRUE)
 ```
 
 ## Out-of-sample log predictive score across xdiff
@@ -793,21 +654,21 @@ Mean OOS LPS vs `xdiff`; higher = better predictive calibration.
 #| column: page
 #| fig-width: 10
 #| fig-height: 4
-lpsX <- longDF %>%
+lpsDist <- longDF %>%
   filter(N == 1000, dims == 5, Common == 1.0, Metric == "lps",
          xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0)) %>%
-  reframe(.by = c(xdiff, Model, Imbalanced), Statistic = mean(Statistic, na.rm = TRUE))
+  filter(Model %in% c("ppmx","ppmx-common"))
 
-# lps only exists for ppmx models; filter to those for cleaner legend
-lpsX_pp <- lpsX %>% filter(Model %in% c("ppmx","ppmx-common"))
-ggplot(lpsX_pp, aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
-  geom_point(size = 2.5) + geom_line(linewidth = 0.9) +
+ggplot(lpsDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
+  geom_boxplot(alpha = 0.45, outlier.size = 0.6, linewidth = 0.4, position = position_dodge(width = 0.85)) +
+  stat_summary(aes(group = Model, color = Model), fun = median, geom = "line", linewidth = 0.9, position = position_dodge(width = 0.85)) +
+  stat_summary(aes(group = Model, color = Model), fun = median, geom = "point", size = 2.2, position = position_dodge(width = 0.85)) +
   facet_grid(cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
   labs(x = "Covariate separation (xdiff)", y = "OOS log predictive score (higher = better)",
-       caption = "LPS only available for Bayesian PPMx models (posterior predictive); see OOS RMSE for all-model analogue",
-       title = "Predictive calibration across covariate overlap (dims=5, N=1000)") +
-  scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
+       caption = "Per-replicate LPS; line = median trend. Only PPMx has posterior predictive.",
+       title = "Predictive calibration (LPS) — distribution over 80 reps/cell (dims=5, N=1000)") +
+  scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_lps.png", width = 10, height = 4, dpi = 300, units = "in")
 ```
 
@@ -817,21 +678,205 @@ ggsave("xdiff_lps.png", width = 10, height = 4, dpi = 300, units = "in")
 #| column: page
 #| fig-width: 10
 #| fig-height: 4
-# y truncated to 90th percentile for readability (see RMSE note above)
-rmseX <- longDF %>%
+# distribution across replicates; y truncated to 90th pct
+rmseDistAll <- longDF %>%
   filter(N == 1000, dims == 5, Common == 1.0, Metric == "rmse",
-         xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0)) %>%
-  reframe(.by = c(xdiff, Model, Imbalanced), Statistic = mean(Statistic, na.rm = TRUE))
-rmseX_q90 <- quantile(rmseX$Statistic, 0.90, na.rm = TRUE)
-rmseX_plot <- rmseX %>% filter(Statistic <= rmseX_q90)
-ggplot(rmseX_plot, aes(x = xdiff, y = Statistic, color = Model, group = Model)) +
-  geom_point(size = 2.5) + geom_line(linewidth = 0.9) +
+         xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0))
+rmseDist_q90 <- quantile(rmseDistAll$Statistic, 0.90, na.rm = TRUE)
+rmseDistPlot <- rmseDistAll %>% filter(Statistic <= rmseDist_q90)
+ggplot(rmseDistPlot, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
+  geom_boxplot(alpha = 0.45, outlier.size = 0.6, linewidth = 0.4, position = position_dodge(width = 0.85)) +
+  stat_summary(aes(group = Model, color = Model), fun = median, geom = "line", linewidth = 0.9, position = position_dodge(width = 0.85)) +
+  stat_summary(aes(group = Model, color = Model), fun = median, geom = "point", size = 2.2, position = position_dodge(width = 0.85)) +
   facet_grid(cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
   labs(x = "Covariate separation (xdiff)", y = "OOS RMSE (lower = better)",
-       caption = sprintf("OOS RMSE truncated at 90th pct = %.2f; all-model analogue of LPS", rmseX_q90),
-       title = "Out-of-sample RMSE across covariate overlap (all models, dims=5, N=1000)") +
-  scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
+       caption = sprintf("Per-replicate RMSE truncated at 90th pct = %.2f; line = median", rmseDist_q90),
+       title = "Out-of-sample RMSE — distribution over 80 reps/cell (all models, dims=5, N=1000)") +
+  scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_rmse.png", width = 10, height = 4, dpi = 300, units = "in")
+```
+
+## Appendix: Tables (scrollable, correspond to figures)
+
+Tables are placed at end for slide-deck readability; each `gt` table corresponds to a figure above (scroll via `gt_scroll`, full-page width).
+
+```{r}
+#| echo: false
+cat("Appendix: all tables below correspond to figures above; rendered scrollable via gt.\n")
+```
+
+### Local interpretation (Appendix)
+
+```{r}
+#| column: page
+locTbl <- modLoc |> 
+    arrange(InterEffect, Alpha, Beta, Metric) |>
+    mutate(
+        group_label = sprintf("InterEffect = %s, Alpha = %s, Beta = %s, xdiff = %s", InterEffect, Alpha,Beta, xdiff ),
+        parameter= ifelse(grepl("1", Metric), "1", "2"),
+        Metric = ifelse(grepl("bias", Metric), "bias", "RMSE"),
+    ) |>
+    group_by(group_label) |>
+    select(-c(InterEffect, Alpha, Beta, Precision)) |>
+    filter(xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0), dims == 5)
+locTbl |> write_csv("tables/table_local_interp.csv")
+locTbl |>
+  gt() |>
+  tab_header(title = "Local interpretation: bias / RMSE by xdiff") |>
+  opt_interactive(use_compact_mode = TRUE) |>
+  gt_scroll()
+```
+
+### Model comparison (Appendix)
+
+```{r}
+#| column: page
+modCompTbl <- longDF %>%
+    filter(dims == 5, xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0)) %>%
+    group_by(Metric, Model, Imbalanced) %>%
+    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = Model, values_from = Statistic)
+modCompTbl |> write_csv("tables/table_model_comparison.csv")
+modCompTbl |>
+  gt() |>
+  tab_header(title = "Model comparison (dims=5, xdiff grid)") |>
+  fmt_number(decimals = 3, use_seps = FALSE) |>
+  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
+  gt_scroll()
+```
+
+```{r}
+#| column: page
+tempMetricsTbl <- longDF %>%
+    filter(dims == 5) %>%
+    group_by(Model, Metric) %>%
+    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = Metric, values_from = Statistic)
+tempMetricsTbl |> write_csv("tables/table_temp_metrics.csv")
+tempMetricsTbl |>
+  gt() |>
+  tab_header(title = "Metrics by model (dims=5)") |>
+  fmt_number(decimals = 3, use_seps = FALSE) |>
+  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
+  gt_scroll()
+```
+
+```{r}
+#| column: page
+vsInterTbl <- longDF %>%
+    filter(dims == 5, Alpha == 3.0, Beta == 3.0) %>%
+    group_by(Model, Metric, InterEffect) %>%
+    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = Metric, values_from = Statistic)
+vsInterTbl |> write_csv("tables/table_temp_vs_intereffects.csv")
+vsInterTbl |>
+  gt() |>
+  tab_header(title = "Metrics vs InterEffect (Alpha=3, Beta=3, dims=5)") |>
+  fmt_number(decimals = 3, use_seps = FALSE) |>
+  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
+  gt_scroll()
+```
+
+### SALSO summary (Appendix)
+
+```{r}
+#| column: page
+salsoTbl <- longDF %>%
+    filter(Metric %in% c("binder", "vi", "binderoos", "vioos"), N == 1000, dims == 5, Common == 1.0) %>%
+    mutate(Split = ifelse(grepl("oos", Metric), "OOS", "in-sample"),
+           Loss  = ifelse(grepl("binder", Metric), "Binder", "VI")) %>%
+    reframe(.by = c(Model, Loss, Split, xdiff, Imbalanced),
+            ARI = mean(Statistic, na.rm = TRUE)) %>%
+    pivot_wider(names_from = c(Loss, Split), values_from = ARI)
+salsoTbl |> write_csv("tables/table_salso_by_model.csv")
+salsoTbl |>
+  gt() |>
+  tab_header(title = "SALSO ARI by model (Binder / VI, in-sample & OOS)") |>
+  fmt_number(decimals = 3, use_seps = FALSE) |>
+  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
+  gt_scroll()
+```
+
+```{r}
+#| column: page
+lpsTbl <- longDF %>%
+    filter(Metric == "lps", N == 1000, dims == 5, Common == 1.0) %>%
+    reframe(.by = c(xdiff, Model, Imbalanced), Statistic = mean(Statistic, na.rm = TRUE)) %>%
+    pivot_wider(names_from = Model, values_from = Statistic) %>%
+    mutate(across(c(`ppmx-common`, ppmx), round, 3))
+lpsTbl |> write_csv("tables/table_lps_by_model.csv")
+lpsTbl |>
+  gt() |>
+  tab_header(title = "OOS log predictive score by model (N=1000, dims=5)") |>
+  fmt_number(decimals = 3, use_seps = FALSE) |>
+  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
+  gt_scroll()
+```
+
+### DP concentration sensitivity (Appendix)
+
+```{r}
+#| column: page
+#| echo: false
+dp2 <- df %>% filter(dims == 5, !is.na(mass1))
+if (nrow(dp2) > 0) {
+  dpSens <- dp2 %>%
+      select(mass1, Imbalanced, xdiff,
+             `ppmx-common_rind`, ppmx_rind, dpm_rind, kmean_rind,
+             `ppmx-common_rmse`, ppmx_rmse, dpm_rmse, kmean_rmse, slr_rmse,
+             `ppmx-common_NC`, ppmx_NC, dpm_NC, kmean_NC,
+             `ppmx-common_binder`, ppmx_binder, `ppmx-common_vi`, ppmx_vi,
+             `ppmx-common_lps`, ppmx_lps) %>%
+      pivot_longer(-c(mass1, Imbalanced, xdiff),
+                   names_to = c("Model", "Metric"),
+                   values_to = "Statistic",
+                   names_pattern = "(.*)_(.*)") %>%
+      group_by(mass1, Model, Metric) %>%
+      summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
+      pivot_wider(names_from = Metric, values_from = Statistic)
+  dpSens |> write_csv("tables/table_dp_hyperparameter_sensitivity.csv")
+  print(
+    dpSens |>
+      gt() |>
+      tab_header(title = "Sensitivity to DP concentration (mass A), dims=5") |>
+      fmt_number(decimals = 3, use_seps = FALSE) |>
+      opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE)
+  )
+}
+```
+
+### Imbalanced scenarios (Appendix)
+
+```{r}
+#| column: page
+imbalTbl <- longDF %>%
+    filter(dims == 5, Imbalanced == TRUE) %>%
+    group_by(Metric, Model) %>%
+    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
+    pivot_wider(names_from = Model, values_from = Statistic)
+imbalTbl |> write_csv("tables/table_model_comparison_imbalanced.csv")
+imbalTbl |>
+  gt() |>
+  tab_header(title = "Imbalanced-cluster scenarios (dims=5)") |>
+  fmt_number(decimals = 3, use_seps = FALSE) |>
+  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
+  gt_scroll()
+```
+
+```{r}
+#| column: page
+commonCovTbl <- df %>%
+    filter(N == 1000, dims == 5, Common == 1.0) %>%
+    reframe(.by = c(xdiff, Imbalanced), `ppmx-common_ccov` = mean(`ppmx-common_ccov`, na.rm = TRUE)) %>%
+    mutate(across(`ppmx-common_ccov`, round, 3))
+commonCovTbl |> write_csv("tables/table_common_effect_cov.csv")
+commonCovTbl |>
+  gt() |>
+  tab_header(title = "Common-effect joint coverage (ppmx-common, N=1000, dims=5)") |>
+  fmt_number(decimals = 3, use_seps = FALSE) |>
+  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
+  gt_scroll()
+```
 ```
 
