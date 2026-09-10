@@ -377,9 +377,8 @@ if (file.exists("covariates.csv")) {
     cat("covariates.csv missing xdiff or empty; regenerate via julia --project=. ../covDist.jl\n")
   } else {
     covs <- covs_raw %>%
-      pivot_longer(starts_with("X"), names_to = "covariate", values_to = "value")
-    # ensure xdiff is factor for faceting and not dropped
-    covs$xdiff <- factor(covs$xdiff, levels=sort(unique(covs$xdiff)))
+      pivot_longer(starts_with("X"), names_to = "covariate", values_to = "value") %>%
+      mutate(xdiff = factor(xdiff))
     p_cov <- ggplot(covs, aes(x = value, fill = factor(group))) +
       geom_density(alpha = 0.35, linewidth = 0.4) +
       facet_grid(
