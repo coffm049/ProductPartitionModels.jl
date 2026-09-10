@@ -243,8 +243,11 @@ ggsave("xdiff_clustering_loss.png", width = 10, height = 5, dpi = 300, units = "
 #| fig-height: 5
 estDist <- longDF %>%
   filter(N == 1000, dims == 5, Common == 1.0, Metric %in% c("common1","common2"), xdiff %in% c(0.2,0.4,0.6,0.8,1.0)) %>%
-  mutate(Coef = ifelse(Metric == "common1", "common1 (β=-1)", "common2 (β=+1)")) %>%
-  filter(Statistic >= -3 & Statistic <= 3)
+  mutate(
+    Coef = ifelse(Metric == "common1", "common1 (β=-1)", "common2 (β=+1)"),
+    Truth = ifelse(Metric == "common1", -1, 1)
+  ) %>%
+  filter(abs(Statistic - Truth) <= 2)
 
 ggplot(estDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
   geom_violin(alpha = 0.45, linewidth = 0.4, position = position_dodge(width = 0.85), scale = "width") +
@@ -254,7 +257,7 @@ ggplot(estDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
   facet_grid(rows = vars(Coef), cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
   labs(x = "xdiff", y = "Estimate (dashed = truth)",
-       caption = "Filtered to [-3,3]",
+       caption = "Filtered to |estimate - truth| ≤ 2",
        title = "Common-effect estimates") +
   scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_common_est.png", width = 10, height = 5, dpi = 300, units = "in")
