@@ -236,40 +236,7 @@ longDF %>%
     ggtitle("Rand index (common=1, Interaction=0.25), Balanced")
 ```
 
-# covariate distributions {.scrollable}
-```{r}
-#| message: false
-#| warning: false
-if (file.exists("covariates.csv")) {
-  covs_raw <- read_csv("covariates.csv", show_col_types = FALSE)
-  # guard: file may be empty or from old run without xdiff; regenerate if needed
-  if (!"xdiff" %in% names(covs_raw) || nrow(covs_raw)==0) {
-    cat("covariates.csv missing xdiff or empty; regenerate via julia --project=. ../covDist.jl\n")
-  } else {
-    covs <- covs_raw %>%
-      ungroup() %>%
-      pivot_longer(cols = matches("^X\\d+$"), names_to = "covariate", values_to = "value") %>%
-      mutate(xdiff = factor(.data$xdiff, levels = sort(unique(.data$xdiff)))) %>%
-      filter(xdiff != 0 & xdiff != "0" & xdiff != "0.0")
-    p_cov <- ggplot(covs, aes(x = value, fill = factor(group))) +
-      geom_density(alpha = 0.35, linewidth = 0.4) +
-      facet_grid(
-        rows = vars(covariate), cols = vars(xdiff),
-        labeller = labeller(xdiff = function(l) sprintf("xdiff = %s", l))
-      ) +
-      scale_fill_npg() +
-      labs(x = "Covariate value", y = "Density", fill = "Group") +
-      theme_minimal(base_size = 11) +
-      theme(legend.position = "right", strip.text = element_text(size = 9),
-            axis.title.x = element_text(margin = margin(t = 8))) +
-      guides(fill = guide_legend(ncol = 1))
-    print(p_cov)
-    ggsave("covariateDist.png", plot=p_cov, width = 10, height = 8, dpi = 300, units = "in")
-  }
-} else {
-  cat("covariates.csv not found; run: julia --project=. ../covDist.jl from simulations/\n")
-}
-```
+
 
 # big sim — common-effect densities hidden (rely on bias/RMSE tables; dims=5)
 ```{r}
@@ -332,65 +299,9 @@ ggsave("bigSimSalso.png", width = 8, dpi = 300, units = "in")
 
 
 
-```{r}
-longDF %>%
-    filter(Metric == "lps", N == 1000, dims == 5, Common == 1.0) %>%
-    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
-    geom_histogram(alpha = 0.3, color = "black") +
-    facet_grid(rows = vars(xdiff), cols = vars(Imbalanced)) +
-    ggtitle("OOS log predictive score, N = 1000, dims=5")
-ggsave("bigSimLPS.png", width = 6, dpi = 300, units = "in")
 
-# direct model comparison of OOS log predictive score (LPS)
-longDF %>%
-    filter(Metric == "lps", N == 1000, dims == 5, Common == 1.0) %>%
-    ggplot(aes(x = Model, y = Statistic, fill = Model)) +
-    geom_boxplot(alpha = 0.6) +
-    facet_grid(rows = vars(xdiff), cols = vars(Imbalanced)) +
-    labs(x = "Model", y = "OOS log predictive score (LPS)",
-         title = "Out-of-sample log predictive score by model, N = 1000, dims = 5") +
-    theme_bw()
-ggsave("bigSimLPScompare.png", width = 8, dpi = 300, units = "in")
-```
 
-## Sensitivity to the Dirichlet process concentration hyperparameter (Rev 3 C2) {.scrollable}
-The simulation varies the DP concentration `massParams = [A, B]`, which controls the
-prior expected number of clusters. The main `dims = 5` comparisons above were run at a
-single mass value (`A = 1.0`); the figure summarises the key fit/partition metrics across the values of `A` (labelled `mass1`) available in the `dims = 5` data, averaged over simulation replicates, to show the conclusions are stable to this hyperparameter. Table in Appendix.
 
-```{r}
-#| column: page
-#| echo: false
-#| message: false
-#| warning: false
-dp2 <- df %>% filter(dims == 5, !is.na(mass1))
-if (nrow(dp2) > 0) {
-  # table moved to Appendix — keep figure here
-  dpSensFig <- dp2 %>%
-      select(mass1,
-             `ppmx-common_rind`, ppmx_rind, dpm_rind, kmean_rind,
-             `ppmx-common_rmse`, ppmx_rmse, dpm_rmse, kmean_rmse, slr_rmse,
-             `ppmx-common_NC`, ppmx_NC, dpm_NC, kmean_NC) %>%
-      pivot_longer(-mass1, names_to = c("Model", "Metric"),
-                   values_to = "Statistic",
-                   names_pattern = "(.*)_(.*)") %>%
-      filter(Metric %in% c("rind", "rmse", "NC")) %>%
-      mutate(Metric = recode(Metric,
-                             rind = "Adjusted Rand Index",
-                             rmse = "OOS RMSE",
-                             NC   = "Number of clusters")) %>%
-      ggplot(aes(x = mass1, y = Statistic, color = Model, group = Model)) +
-      geom_point(size = 2) + geom_line() +
-      facet_wrap(~ Metric, scales = "free_y") +
-      labs(x = "DP concentration hyperparameter (mass A)",
-           y = "Metric",
-            title = "Sensitivity to the DP concentration hyperparameter, dims = 5") +
-      theme_bw()
-  ggsave("bigSimDPhyperSens.png", width = 10, dpi = 300, units = "in")
-} else {
-  message("DP-hyperparameter sensitivity skipped: no dim2 CSVs with varying mass (mass A) found in the working directory.")
-}
-```
 
 ## Imbalanced-cluster scenarios {.scrollable}
 The simulation also includes scenarios with imbalanced cluster sizes (exponentially
@@ -424,81 +335,45 @@ ggsave("bigSimImbalanced.png", width = 8, dpi = 300, units = "in")
 
 
 
-## How to read the metrics {.scrollable}
+## Guide {.scrollable}
 
-The simulations average each metric over 80 replicates per `xdiff` × `mass` × `Imbalanced` cell (`N = 1000`, `dims = 5`, `Common = 1` unless noted). Higher is better for clustering and prediction where noted; for error/bias lower absolute value is better. `xdiff` is the covariate separation between clusters (0 = complete overlap, 1 = well separated).
+80 reps/cell, `xdiff` separation (0 overlap →1 well-separated). Higher = better for ARI/LPS; bias/RMSE lower = better.
 
 - **Clustering — `rind` / `arind` (Adjusted Rand Index).** Posterior mean Rand index vs true partition (in-sample `rind`, OOS `arind`); 0 = chance, 1 = perfect recovery. SALSO variants `binder` / `vi` and `binderoos`/`vioos` are the same ARI but evaluated at the SALSO point estimate under Binder loss or Variation of Information; `dpm` has no MCMC so its single hard partition ARI is shown under `binder`/`vi` for comparison. *Interpretation:* curves near 1 = reliable clustering; divergence between in-sample and OOS = overfitting.
 - **Bias / RMSE — `bias` / `RMSE` (common effects).** `bias = Common - posterior mean` for each common coefficient (sign matters); `RMSE = sqrt(mean((Common - estimate)^2))` averaged over covariates. *Interpretation:* bias near 0 = unbiased; RMSE near 0 = accurate and precise. Facets `common1` (`β=+1`) vs `common2` (`β=-1`) check symmetry.
 - **Log predictive score — `lps` (OOS LPS).** Mean out-of-sample log predictive density under the posterior; larger (less negative) = better calibrated probabilistic predictions. *Interpretation:* replaces Bayesian p-values as a proper scoring rule; gaps of 0.1–0.3 nats across `xdiff` are substantively meaningful.
 - **Coverage / Type II — `_Cov` / `_T2`.** Joint 95% CI coverage of the common effects and Type II error (zero inside CI when truth ≠ 0). Coverage ≈ 0.95 = nominal; elevated Type II = underpowered.
 
-## Clustering loss across xdiff, faceted by scenario {.scrollable}
-
-ARI and SALSO ARI as a function of covariate separation. Each distribution is over 80 replicates per cell (facets loss/split × Balanced/Imbalanced).
+## Clustering {.scrollable}
 
 ```{r}
 #| column: page
 #| fig-width: 10
-#| fig-height: 7
+#| fig-height: 5
 clustDist <- longDF %>%
   filter(N == 1000, dims == 5, Common == 1.0,
-         Metric %in% c("rind", "arind", "binder", "vi", "binderoos", "vioos"),
+         Metric %in% c("arind", "binderoos", "vioos"),
          xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0)) %>%
   mutate(Metric = recode(Metric,
-      rind = "ARI (in-sample)", arind = "ARI (OOS)",
-      binder = "SALSO Binder (in-sample)", binderoos = "SALSO Binder (OOS)",
-      vi = "SALSO VI (in-sample)", vioos = "SALSO VI (OOS)"))
+      arind = "ARI (testing)",
+      binderoos = "Binder (testing)",
+      vioos = "VI (testing)"))
 
 ggplot(clustDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
   geom_boxplot(alpha = 0.45, outlier.size = 0.6, linewidth = 0.4, position = position_dodge(width = 0.85)) +
   stat_summary(aes(group = Model, color = Model), fun = median, geom = "line", linewidth = 0.9, position = position_dodge(width = 0.85)) +
   stat_summary(aes(group = Model, color = Model), fun = median, geom = "point", size = 2.2, position = position_dodge(width = 0.85)) +
   facet_grid(rows = vars(Metric), cols = vars(Imbalanced),
-             labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced")),
-             scales = "free_y") +
-  labs(x = "Covariate separation (xdiff)", y = "Adjusted Rand Index (higher = better)",
-       title = "Clustering accuracy across covariate overlap — distribution over 80 reps/cell (dims=5, N=1000)",
-       caption = "Box = IQR per xdiff×model; line = median trend") +
-  scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
-ggsave("xdiff_clustering_loss.png", width = 10, height = 7, dpi = 300, units = "in")
-```
-
-**Test-only (OOS) ARI + Binder — distribution across replicates.** Kept full mean plot above; this panel shows per-replicate spread (80 reps/cell). Called “Test” in figures. Box = IQR, line = median across `xdiff` (faceted `Metric` rows × `Imbalanced` cols, colour = method includes `dpm`).
-
-```{r}
-#| column: page
-#| fig-width: 10
-#| fig-height: 6
-clustTestDist <- longDF %>%
-  filter(N == 1000, dims == 5, Common == 1.0,
-         Metric %in% c("arind", "binderoos"),
-         xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0)) %>%
-  mutate(Metric = recode(Metric,
-    arind = "ARI (Test)", binderoos = "Binder ARI (Test)"
-  ))
-
-ggplot(clustTestDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
-  geom_boxplot(alpha = 0.45, outlier.size = 0.6, linewidth = 0.4,
-               position = position_dodge(width = 0.85)) +
-  # median line through boxplots per model
-  stat_summary(aes(group = Model, color = Model), fun = median, geom = "line",
-               linewidth = 0.9, position = position_dodge(width = 0.85)) +
-  stat_summary(aes(group = Model, color = Model), fun = median, geom = "point",
-               size = 2.2, position = position_dodge(width = 0.85)) +
-  facet_grid(rows = vars(Metric), cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
-  labs(x = "Covariate separation (xdiff)", y = "ARI (higher = better)",
-       title = "Test clustering accuracy — distribution over replicates (dims=5, N=1000)",
-       caption = "Box = IQR per xdiff×model; line = median trend. Test = OOS (arind/binderoos).") +
-  scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) +
-  theme(legend.position = "bottom")
-ggsave("xdiff_clustering_test_box.png", width = 10, height = 6, dpi = 300, units = "in")
+  labs(x = "xdiff", y = "ARI (higher = better)",
+       title = "Clustering (testing)") +
+  scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
+ggsave("xdiff_clustering_loss.png", width = 10, height = 5, dpi = 300, units = "in")
 ```
 
-## Common-effect bias and RMSE across xdiff — by coefficient {.scrollable}
 
-Bias ≈ 0 is unbiased; RMSE lower is better. `xdiff` on x-axis, colour = method (includes `dpm`). Rows = coefficient (`common1` β=+1, `common2` β=-1), columns = Balanced vs Imbalanced. Per-replicate boxplots (80 reps/cell).
+
+## Effects {.scrollable}
 
 ```{r}
 #| column: page
@@ -550,9 +425,7 @@ ggsave("xdiff_rmse_by_coef.png", width = 10, height = 5, dpi = 300, units = "in"
 file.copy("xdiff_bias_by_coef.png", "xdiff_bias_rmse.png", overwrite = TRUE)
 ```
 
-## Out-of-sample log predictive score across xdiff {.scrollable}
-
-Per-replicate OOS LPS vs `xdiff`; higher = better predictive calibration.
+## Prediction {.scrollable}
 
 > **Why LPS is only `ppmx` / `ppmx-common`:** `sim.jl:86-113` computes `lpsMixoos` / `lpsDPMoos` from the PPMx posterior-predictive density. Baselines `dpm` (single hard partition via `DPMM.jl`), `kmeans`, and `slr` are point estimators with no posterior predictive distribution, so `lps` is `NA` for those models by design (see `salsoUtils.jl:67` `missing` handling and `simExperiment.qmd` LPS averaging with `na.rm`). For a directly comparable out-of-sample prediction metric across *all* models, use OOS RMSE below (`midMixoos` / `dpmRMSEoos` / `kmean_MSEoos` / `slrRMSEoos`).
 
@@ -603,9 +476,100 @@ ggplot(rmseDistPlot, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
 ggsave("xdiff_rmse.png", width = 10, height = 4, dpi = 300, units = "in")
 ```
 
-## Appendix: Tables (scrollable, correspond to figures)
+## More {.scrollable}
 
-Tables are placed at end for slide-deck readability; each `gt` table corresponds to a figure above (scroll via `gt_scroll`, full-page width).
+### Covariates
+
+```{r}
+#| message: false
+#| warning: false
+if (file.exists("covariates.csv")) {
+  covs_raw <- read_csv("covariates.csv", show_col_types = FALSE)
+  if (!"xdiff" %in% names(covs_raw) || nrow(covs_raw)==0) {
+    cat("covariates.csv missing xdiff or empty; regenerate via julia --project=. ../covDist.jl\n")
+  } else {
+    covs <- covs_raw %>%
+      ungroup() %>%
+      pivot_longer(cols = matches("^X\\d+$"), names_to = "covariate", values_to = "value") %>%
+      mutate(xdiff = factor(.data$xdiff, levels = sort(unique(.data$xdiff)))) %>%
+      filter(xdiff != 0 & xdiff != "0" & xdiff != "0.0")
+    p_cov <- ggplot(covs, aes(x = value, fill = factor(group))) +
+      geom_density(alpha = 0.35, linewidth = 0.4) +
+      facet_grid(rows = vars(covariate), cols = vars(xdiff),
+        labeller = labeller(xdiff = function(l) sprintf("xdiff = %s", l))) +
+      scale_fill_npg() + labs(x = "Covariate value", y = "Density", fill = "Group") +
+      theme_minimal(base_size = 11) +
+      theme(legend.position = "right", strip.text = element_text(size = 9),
+            axis.title.x = element_text(margin = margin(t = 8))) +
+      guides(fill = guide_legend(ncol = 1))
+    print(p_cov)
+    ggsave("covariateDist.png", plot=p_cov, width = 10, height = 8, dpi = 300, units = "in")
+  }
+} else {
+  cat("covariates.csv not found; run: julia --project=. ../covDist.jl from simulations/\n")
+}
+```
+
+### Clustering (extra)
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+longDF %>%
+    filter(Metric == "rind", N == 1000, dims == 5, Common == 1.0, xdiff %in% c(0.2,0.4,0.6,0.8,1.0)) %>%
+    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
+    geom_histogram(alpha = 0.3, color = "black") +
+    facet_grid(rows = vars(xdiff), cols = vars(Imbalanced)) +
+    ggtitle("Rand index") +
+    scale_fill_npg() + theme_bw()
+ggsave("bigSimRI.png", width = 6, dpi = 300, units = "in")
+
+longDF %>%
+    filter(Metric %in% c("binder", "vi", "binderoos", "vioos"), N == 1000, dims == 5, Common == 1.0, xdiff %in% c(0.2,0.4,0.6,0.8,1.0)) %>%
+    mutate(Split = ifelse(grepl("oos", Metric), "Test", "In-sample"),
+           Loss = ifelse(grepl("binder", Metric), "Binder", "VI")) %>%
+    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
+    geom_histogram(alpha = 0.3, color = "black") +
+    facet_grid(rows = vars(Loss, Split), cols = vars(xdiff, Imbalanced)) +
+    labs(x = "ARI (SALSO)") + ggtitle("SALSO ARI") +
+    scale_fill_npg() + theme_bw()
+ggsave("bigSimSalso.png", width = 8, dpi = 300, units = "in")
+```
+
+### Sensitivity & Imbalanced
+
+```{r}
+#| message: false
+#| warning: false
+dp2 <- df %>% filter(dims == 5, !is.na(mass1))
+if (nrow(dp2) > 0) {
+  dpSensFig <- dp2 %>%
+      select(mass1, `ppmx-common_rind`, ppmx_rind, dpm_rind, kmean_rind,
+             `ppmx-common_rmse`, ppmx_rmse, dpm_rmse, kmean_rmse, slr_rmse,
+             `ppmx-common_NC`, ppmx_NC, dpm_NC, kmean_NC) %>%
+      pivot_longer(-mass1, names_to = c("Model", "Metric"), values_to = "Statistic", names_pattern = "(.*)_(.*)") %>%
+      filter(Metric %in% c("rind", "rmse", "NC")) %>%
+      mutate(Metric = recode(Metric, rind = "ARI", rmse = "OOS RMSE", NC = "N clusters")) %>%
+      ggplot(aes(x = mass1, y = Statistic, color = Model, group = Model)) +
+      geom_point(size = 2) + geom_line() + facet_wrap(~ Metric, scales = "free_y") +
+      labs(x = "mass A", y = "Metric", title = "DP mass sensitivity") + theme_bw()
+  ggsave("bigSimDPhyperSens.png", width = 10, dpi = 300, units = "in")
+  print(dpSensFig)
+}
+rmse_q90_imbal <- longDF %>% filter(dims == 5, Imbalanced == TRUE, N == 1000, Common == 1.0, Metric == "rmse") %>% pull(Statistic) %>% quantile(0.90, na.rm = TRUE)
+longDF %>% filter(dims == 5, Imbalanced == TRUE, N == 1000, Common == 1.0, Metric %in% c("rind", "rmse", "binder", "lps")) %>%
+    filter(!(Metric == "rmse" & Statistic > rmse_q90_imbal)) %>%
+    mutate(Metric = recode(Metric, rind = "ARI", rmse = "OOS RMSE (≤90th)", binder = "Binder ARI", lps = "LPS")) %>%
+    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
+    geom_histogram(alpha = 0.3, color = "black") +
+    facet_grid(rows = vars(Metric), cols = vars(xdiff), scales = "free") +
+    labs(x = "Statistic", y = "Density") + ggtitle("Imbalanced") + theme_bw()
+ggsave("bigSimImbalanced.png", width = 8, dpi = 300, units = "in")
+```
+
+## Appendix: Tables {.scrollable}
+
+Tables correspond to figures above (scroll via `gt`).
 
 ```{r}
 #| echo: false
