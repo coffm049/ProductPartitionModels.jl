@@ -215,21 +215,20 @@ longDF %>%
 #| fig-height: 5
 clustDist <- longDF %>%
   filter(N == 1000, dims == 5, Common == 1.0,
-         Metric %in% c("arind", "binderoos", "vioos"),
+         Metric %in% c("arind", "binderoos"),
          xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0)) %>%
   mutate(Metric = recode(Metric,
-      arind = "ARI (testing)",
-      binderoos = "Binder (testing)",
-      vioos = "VI (testing)"))
+      arind = "ARI",
+      binderoos = "Binder"))
 
 ggplot(clustDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
-  geom_boxplot(alpha = 0.45, outlier.size = 0.6, linewidth = 0.4, position = position_dodge(width = 0.85)) +
+  geom_violin(alpha = 0.45, linewidth = 0.4, position = position_dodge(width = 0.85), scale = "width") +
   stat_summary(aes(group = Model, color = Model), fun = median, geom = "line", linewidth = 0.9, position = position_dodge(width = 0.85)) +
   stat_summary(aes(group = Model, color = Model), fun = median, geom = "point", size = 2.2, position = position_dodge(width = 0.85)) +
   facet_grid(rows = vars(Metric), cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
   labs(x = "xdiff", y = "ARI (higher = better)",
-       title = "Clustering (testing)") +
+       title = "Clustering") +
   scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_clustering_loss.png", width = 10, height = 5, dpi = 300, units = "in")
 ```
@@ -252,15 +251,15 @@ biasDist <- longDF %>%
   )
 
 ggplot(biasDist, aes(x = factor(xdiff), y = Bias, fill = Model)) +
-  geom_boxplot(alpha = 0.45, outlier.size = 0.6, linewidth = 0.4, position = position_dodge(width = 0.85)) +
+  geom_violin(alpha = 0.45, linewidth = 0.4, position = position_dodge(width = 0.85), scale = "width") +
   stat_summary(aes(group = Model, color = Model), fun = median, geom = "line", linewidth = 0.9, position = position_dodge(width = 0.85)) +
   stat_summary(aes(group = Model, color = Model), fun = median, geom = "point", size = 2.2, position = position_dodge(width = 0.85)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey40") +
   facet_grid(rows = vars(Coef), cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
-  labs(x = "Covariate separation (xdiff)", y = "Bias (censored [-3,3], dashed 0)",
-       caption = "Per-replicate bias; line = median trend",
-       title = "Common-effect bias — distribution over 80 reps/cell (dims=5, N=1000)") +
+  labs(x = "xdiff", y = "Bias",
+       caption = "Per-replicate bias censored [-3,3]; line = median",
+       title = "Bias") +
   scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_bias_by_coef.png", width = 10, height = 5, dpi = 300, units = "in")
 
@@ -274,14 +273,14 @@ rmseDist <- longDF %>%
 rmse_y90 <- quantile(rmseDist$AbsErr, 0.90, na.rm = TRUE)
 rmseDistPlot <- rmseDist %>% filter(AbsErr <= rmse_y90)
 ggplot(rmseDistPlot, aes(x = factor(xdiff), y = AbsErr, fill = Model)) +
-  geom_boxplot(alpha = 0.45, outlier.size = 0.6, linewidth = 0.4, position = position_dodge(width = 0.85)) +
+  geom_violin(alpha = 0.45, linewidth = 0.4, position = position_dodge(width = 0.85), scale = "width") +
   stat_summary(aes(group = Model, color = Model), fun = median, geom = "line", linewidth = 0.9, position = position_dodge(width = 0.85)) +
   stat_summary(aes(group = Model, color = Model), fun = median, geom = "point", size = 2.2, position = position_dodge(width = 0.85)) +
   facet_grid(rows = vars(Coef), cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
-  labs(x = "Covariate separation (xdiff)", y = "Absolute error |Common - estimate| (RMSE analogue, 90th pct)",
-       caption = sprintf("Truncated at 90th pct = %.2f; distribution over replicates", rmse_y90),
-       title = "Common-effect absolute error — distribution over replicates (dims=5, N=1000)") +
+  labs(x = "xdiff", y = "Absolute error",
+       caption = sprintf("Truncated at 90th pct = %.2f", rmse_y90),
+       title = "Absolute error") +
   scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_rmse_by_coef.png", width = 10, height = 5, dpi = 300, units = "in")
 # legacy filename kept for backwards compat (now bias distribution)
@@ -302,14 +301,14 @@ lpsDist <- longDF %>%
   filter(Model %in% c("ppmx","ppmx-common"))
 
 ggplot(lpsDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
-  geom_boxplot(alpha = 0.45, outlier.size = 0.6, linewidth = 0.4, position = position_dodge(width = 0.85)) +
+  geom_violin(alpha = 0.45, linewidth = 0.4, position = position_dodge(width = 0.85), scale = "width") +
   stat_summary(aes(group = Model, color = Model), fun = median, geom = "line", linewidth = 0.9, position = position_dodge(width = 0.85)) +
   stat_summary(aes(group = Model, color = Model), fun = median, geom = "point", size = 2.2, position = position_dodge(width = 0.85)) +
   facet_grid(cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
-  labs(x = "Covariate separation (xdiff)", y = "OOS log predictive score (higher = better)",
-       caption = "Per-replicate LPS; line = median trend. Only PPMx has posterior predictive.",
-       title = "Predictive calibration (LPS) — distribution over 80 reps/cell (dims=5, N=1000)") +
+  labs(x = "xdiff", y = "LPS (higher = better)",
+       caption = "Per-replicate; line = median",
+       title = "Prediction") +
   scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_lps.png", width = 10, height = 4, dpi = 300, units = "in")
 ```
@@ -329,14 +328,14 @@ rmseDistAll <- longDF %>%
 rmseDist_q90 <- quantile(rmseDistAll$Statistic, 0.90, na.rm = TRUE)
 rmseDistPlot <- rmseDistAll %>% filter(Statistic <= rmseDist_q90)
 ggplot(rmseDistPlot, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
-  geom_boxplot(alpha = 0.45, outlier.size = 0.6, linewidth = 0.4, position = position_dodge(width = 0.85)) +
+  geom_violin(alpha = 0.45, linewidth = 0.4, position = position_dodge(width = 0.85), scale = "width") +
   stat_summary(aes(group = Model, color = Model), fun = median, geom = "line", linewidth = 0.9, position = position_dodge(width = 0.85)) +
   stat_summary(aes(group = Model, color = Model), fun = median, geom = "point", size = 2.2, position = position_dodge(width = 0.85)) +
   facet_grid(cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
-  labs(x = "Covariate separation (xdiff)", y = "OOS RMSE (lower = better)",
-       caption = sprintf("Per-replicate RMSE truncated at 90th pct = %.2f; line = median", rmseDist_q90),
-       title = "Out-of-sample RMSE — distribution over 80 reps/cell (all models, dims=5, N=1000)") +
+  labs(x = "xdiff", y = "RMSE (lower = better)",
+       caption = sprintf("90th pct = %.2f", rmseDist_q90),
+       title = "RMSE") +
   scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_rmse.png", width = 10, height = 4, dpi = 300, units = "in")
 ```
