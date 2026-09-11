@@ -263,7 +263,7 @@ if (length(legacy_found) == 0) {
   cat("Legacy dim2 ppmx-common not found in ", legacy_dir, "; plotting dim5 models only (no ppmx-common).\n")
   estDist <- estDist_other
 } else {
-  leg_ppmx <- data.frame(file = legacy_found) %>%
+  leg_base <- data.frame(file = legacy_found) %>%
     mutate(data = map(file, ~ suppressMessages(read_csv(file.path(legacy_dir, .x))))) %>%
     unnest(data) %>%
     select(`ppmx-common_common1` = meanBeta1, `ppmx-common_common2` = meanBeta2,
@@ -274,11 +274,19 @@ if (length(legacy_found) == 0) {
     mutate(
       Coef = ifelse(Metric == "common1", "common1 (β=+1)", "common2 (β=-1)"),
       Truth = ifelse(Metric == "common1", 1, -1)
-    ) %>%
+    )
+  # as-stored estimates (previous series)
+  leg_est <- leg_base %>%
     filter(abs(Statistic - Truth) <= 2, Statistic >= -4 & Statistic <= 4) %>%
-    # legacy runs are balanced-only; duplicate into both facets for combined display
+    mutate(Model = "ppmx-common (dim2 est)") %>%
     cross_join(data.frame(Imbalanced = c(FALSE, TRUE)))
-  estDist <- bind_rows(estDist_other, leg_ppmx)
+  # what was labeled bias, replotted on the estimate scale (mislabelling check, no |error| filter)
+  leg_bias_as_est <- leg_base %>%
+    mutate(BiasAsEst = ifelse(Metric == "common1", Common - Statistic, -Common - Statistic)) %>%
+    filter(BiasAsEst >= -4 & BiasAsEst <= 4) %>%
+    transmute(Coef, Truth, xdiff, Statistic = BiasAsEst, Model = "ppmx-common (dim2 bias as est)") %>%
+    cross_join(data.frame(Imbalanced = c(FALSE, TRUE)))
+  estDist <- bind_rows(estDist_other, leg_est, leg_bias_as_est)
 }
 ggplot(estDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
   geom_violin(alpha = 0.45, linewidth = 0.4, position = position_dodge(width = 0.85), scale = "width") +
@@ -288,62 +296,10 @@ ggplot(estDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
   facet_grid(rows = vars(Coef), cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
   labs(x = "xdiff", y = "Estimate (dashed = truth)",
-       caption = "ppmx-common from dim2 legacy (|error|≤2); others dim5, all clipped [-4,4]",
+       caption = "ppmx-common dim2 est (|error|≤2) + dim2 bias-as-est (unfiltered); others dim5, all clipped [-4,4]",
        title = "Common-effect estimates") +
   scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_common_est.png", width = 10, height = 5, dpi = 300, units = "in")
-```
-
-## Effects {.scrollable}
-
-```{r}
-#| column: page
-#| fig-width: 10
-#| fig-height: 5
-# Distribution across replicates: per-replicate bias censored [-3,3] and RMSE via per-replicate absolute error
-biasDist <- longDF %>%
-  filter(N == 1000, dims == 5, Common == 1.0, Metric %in% c("common1","common2"), xdiff %in% c(0.2,0.4,0.6,0.8,1.0)) %>%
-  mutate(
-    Bias = ifelse(Metric == "common1", Common - Statistic, -Common - Statistic),
-    Bias = pmin(pmax(Bias, -3), 3),
-    Coef = ifelse(Metric == "common1", "common1 (β=+1)", "common2 (β=-1)")
-  )
-
-ggplot(biasDist, aes(x = factor(xdiff), y = Bias, fill = Model)) +
-  geom_violin(alpha = 0.45, linewidth = 0.4, position = position_dodge(width = 0.85), scale = "width") +
-  stat_summary(aes(group = Model, color = Model), fun = median, geom = "line", linewidth = 0.9, position = position_dodge(width = 0.85)) +
-  stat_summary(aes(group = Model, color = Model), fun = median, geom = "point", size = 2.2, position = position_dodge(width = 0.85)) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey40") +
-  facet_grid(rows = vars(Coef), cols = vars(Imbalanced),
-             labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
-  labs(x = "xdiff", y = "Bias",
-       caption = "Per-replicate bias censored [-3,3]; line = median",
-       title = "Bias") +
-  scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
-ggsave("xdiff_bias_by_coef.png", width = 10, height = 5, dpi = 300, units = "in")
-
-# RMSE distribution: per-replicate absolute error |Common - estimate|
-rmseDist <- longDF %>%
-  filter(N == 1000, dims == 5, Common == 1.0, Metric %in% c("common1","common2"), xdiff %in% c(0.2,0.4,0.6,0.8,1.0)) %>%
-  mutate(
-    AbsErr = ifelse(Metric == "common1", abs(Common - Statistic), abs(-Common - Statistic)),
-    Coef = ifelse(Metric == "common1", "common1 (β=+1)", "common2 (β=-1)")
-  )
-rmse_y90 <- quantile(rmseDist$AbsErr, 0.90, na.rm = TRUE)
-rmseDistPlot <- rmseDist %>% filter(AbsErr <= rmse_y90)
-ggplot(rmseDistPlot, aes(x = factor(xdiff), y = AbsErr, fill = Model)) +
-  geom_violin(alpha = 0.45, linewidth = 0.4, position = position_dodge(width = 0.85), scale = "width") +
-  stat_summary(aes(group = Model, color = Model), fun = median, geom = "line", linewidth = 0.9, position = position_dodge(width = 0.85)) +
-  stat_summary(aes(group = Model, color = Model), fun = median, geom = "point", size = 2.2, position = position_dodge(width = 0.85)) +
-  facet_grid(rows = vars(Coef), cols = vars(Imbalanced),
-             labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
-  labs(x = "xdiff", y = "Absolute error",
-       caption = sprintf("Truncated at 90th pct = %.2f", rmse_y90),
-       title = "Absolute error") +
-  scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
-ggsave("xdiff_rmse_by_coef.png", width = 10, height = 5, dpi = 300, units = "in")
-# legacy filename kept for backwards compat (now bias distribution)
-file.copy("xdiff_bias_by_coef.png", "xdiff_bias_rmse.png", overwrite = TRUE)
 ```
 
 ## Prediction {.scrollable}
