@@ -282,10 +282,10 @@ if (length(legacy_found) == 0) {
   legacy_found <- legacy_xdiff_files[file.exists(file.path(legacy_dir, legacy_xdiff_files))]
 }
 if (length(legacy_found) == 0) {
-  cat("Legacy dim2 ppmx-common not found (tried ", legacy_dir, "); plotting dim5 ppmx-common.\n")
+  #cat("Legacy dim2 ppmx-common not found (tried ", legacy_dir, "); plotting dim5 ppmx-common.\n")
   estDist <- bind_rows(estDist_other, estDist_dim5_ppmx)
 } else {
-  cat("Legacy dim2 files used for ppmx-common:", paste(legacy_found, collapse = ", "), "\n")
+  #cat("Legacy dim2 files used for ppmx-common:", paste(legacy_found, collapse = ", "), "\n")
   leg_base <- data.frame(file = legacy_found) %>%
     mutate(data = map(file, ~ suppressMessages(read_csv(file.path(legacy_dir, .x))))) %>%
     unnest(data) %>%
@@ -301,15 +301,15 @@ if (length(legacy_found) == 0) {
   # as-stored estimates (previous series)
   leg_est <- leg_base %>%
     filter(abs(Statistic - Truth) <= 2, Statistic >= -4 & Statistic <= 4) %>%
-    mutate(Model = "ppmx-common (dim2 est)") %>%
+    mutate(Model = "PPMx-common") %>%
     cross_join(data.frame(Imbalanced = c(FALSE, TRUE)))
   # what was labeled bias, replotted on the estimate scale (mislabelling check, no |error| filter)
-  leg_bias_as_est <- leg_base %>%
-    mutate(BiasAsEst = ifelse(Metric == "common1", Common - Statistic, -Common - Statistic)) %>%
-    filter(BiasAsEst >= -4 & BiasAsEst <= 4) %>%
-    transmute(Coef, Truth, xdiff, Statistic = BiasAsEst, Model = "ppmx-common (dim2 bias as est)") %>%
-    cross_join(data.frame(Imbalanced = c(FALSE, TRUE)))
-  estDist <- bind_rows(estDist_other, estDist_dim5_ppmx, leg_est, leg_bias_as_est)
+  #leg_bias_as_est <- leg_base %>%
+  #  mutate(BiasAsEst = ifelse(Metric == "common1", Common - Statistic, -Common - Statistic)) %>%
+  #  filter(BiasAsEst >= -4 & BiasAsEst <= 4) %>%
+  #  transmute(Coef, Truth, xdiff, Statistic = BiasAsEst, Model = "ppmx-common (dim2 bias as est)") %>%
+  #  cross_join(data.frame(Imbalanced = c(FALSE, TRUE)))
+  estDist <- bind_rows(estDist_other, leg_est) # estDist_dim5_ppmx, leg_bias_as_est
 }
 ggplot(estDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
   geom_violin(alpha = 0.45, linewidth = 0.4, position = position_dodge(width = 0.85), scale = "width") +
@@ -319,7 +319,6 @@ ggplot(estDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
   facet_grid(rows = vars(Coef), cols = vars(Imbalanced),
              labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
   labs(x = "xdiff", y = "Estimate (dashed = truth)",
-       caption = "ppmx-common dim5 + dim2 est (|error|≤2) + dim2 bias-as-est; others dim5, all clipped [-4,4]",
        title = "Common-effect estimates") +
   scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
 ggsave("xdiff_common_est.png", width = 10, height = 5, dpi = 300, units = "in")
