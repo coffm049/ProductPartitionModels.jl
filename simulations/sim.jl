@@ -20,7 +20,16 @@ using ProductPartitionModels
 using DPMM
 
 include("simFunctions.jl")
-include("salsoUtils.jl")
+# v2.0: include-safe SALSO (RCall macro expansion fails at parse time when R
+# is broken, which would otherwise kill the whole array task).
+try
+    include("salsoUtils.jl")
+catch e
+    @warn "salsoUtils unavailable; SALSO metrics will be missing." exception=e
+end
+if !isdefined(Main, :salso_ari)
+    salso_ari(C_mat, truth; loss::Symbol=:VI, nRuns::Int=16) = (ari=missing, nclusters=missing)
+end
 
 # read arguments from command line
 # N, nc, variance, interEffect, common, xdiff

@@ -34,29 +34,33 @@ under Binder loss (`loss=:binder`) or variation of information (`loss=:VI`).
 Returns an `N`-vector of cluster labels, or `nothing` if R/salso is unavailable.
 """
 function     salso_partition(C_mat::AbstractMatrix{<:Integer}; loss::Symbol=:VI, nRuns::Int=1000)
-    salso_available() ||
-        error("SALSO point estimate requested but RCall or the R 'salso' package is unavailable. ",
-              "Fix the environment: ensure RCall can find an R installation that has `salso` ",
-              "installed (in R: install.packages('salso')), then re-run the simulation. ",
-              "RCall.Rhome() shows which R is being used.")
+    # v2.0: graceful missing fallback (was hard error). Callers (sim.jl,
+    # salso_ari) treat `nothing` as missing so a broken R env degrades the
+    # SALSO columns instead of killing the whole simulation replicate.
+    salso_available() || return nothing
 
-    # RCall expects a 0-based? No - integer matrix; salso treats equal labels as same cluster.
-    CmatR = Int.(C_mat)
+    try
+        # RCall expects a 0-based? No - integer matrix; salso treats equal labels as same cluster.
+        CmatR = Int.(C_mat)
 
-    if loss == :binder
-        RCall.@rput CmatR
-        RCall.@rput nRuns
-        RCall.reval("part <- salso(CmatR, loss=binder(), nRuns=nRuns)")
-    elseif loss == :VI
-        RCall.@rput CmatR
-        RCall.@rput nRuns
-        RCall.reval("part <- salso(CmatR, loss=VI(), nRuns=nRuns)")
-    else
-        error("loss must be :binder or :VI")
+        if loss == :binder
+            RCall.@rput CmatR
+            RCall.@rput nRuns
+            RCall.reval("part <- salso(CmatR, loss=binder(), nRuns=nRuns)")
+        elseif loss == :VI
+            RCall.@rput CmatR
+            RCall.@rput nRuns
+            RCall.reval("part <- salso(CmatR, loss=VI(), nRuns=nRuns)")
+        else
+            error("loss must be :binder or :VI")
+        end
+
+        part = RCall.rcopy(RCall.reval("part"))
+        return Vector{Int}(vec(part))
+    catch e
+        @warn "SALSO point estimate failed; treating as missing." exception=e
+        return nothing
     end
-
-    part = RCall.rcopy(RCall.reval("part"))
-    return Vector{Int}(vec(part))
 end
 
 """

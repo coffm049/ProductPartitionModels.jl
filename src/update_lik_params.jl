@@ -20,6 +20,7 @@ struct TargetArgs_sliceSig_Reg{T<:Real} <: TargetArgs
     tau::T
     phi::Vector{T}
     psi::Vector{T}
+    prior_mean::Vector{T}
 end
 
 struct TargetArgs_sliceSig_noReg{T<:Real} <: TargetArgs
@@ -47,7 +48,9 @@ function llik_k_forSliceSig_Reg(sig_cand::Real, args::TargetArgs_sliceSig_Reg)
     lpri_beta = 0.0
     for ell in 1:length(args.beta)
         vv = prior_var_beta[ell]
-        lpri_beta += -0.5 * log(2π) - 0.5 * log(vv) - 0.5 * (args.beta[ell])^2 / vv # prior mean is 0
+        # v2.0: center the DL prior at the current global common effect so
+        # shrinkage pulls toward beta* (nominal coverage) instead of 0.
+        lpri_beta += -0.5 * log(2π) - 0.5 * log(vv) - 0.5 * (args.beta[ell] - args.prior_mean[ell])^2 / vv
     end
 
     llik_kk += lpri_beta
@@ -71,14 +74,13 @@ function update_lik_params!(model::Model_PPMx,
 
     if mixDPM
         clustCounts = countmap(model.state.C)
-        # nonsingle = values(clustCounts) .> 1
+        # v2.0: only occupied clusters contribute to the common effect.
+        # Empty/singleton labels carry prior draws that would dilute beta* toward 0.
+        occ_keys = sort([k for k in keys(clustCounts) if clustCounts[k] > 0])
         K = maximum(keys(clustCounts))
 
-        # [x] Update this as the average of betas (N-Jeffries)
-        # concatenate all of the betas across lik_params[j] into a matrix
-        # only clusters with sufficient observations
-        # Betas = [model.state.lik_params[k].beta for k in keys(clustCounts) if clustCounts[k] > 3]
-        Betas = [model.state.lik_params[k].beta for k in 1:K]
+        # concatenate all of the betas across occupied lik_params[j] into a matrix
+        Betas = [model.state.lik_params[k].beta for k in occ_keys]
         # convert the vector of vectos to a matrix (p x K)
         Betas = hcat(Betas...)'
         p = size(Betas)[2]
@@ -110,15 +112,16 @@ function update_lik_params!(model::Model_PPMx,
         beta_sigs = [model.state.lik_params[k].beta_hypers.tau^2 .* model.state.lik_params[k].sig^2 .*
                          model.state.baseline.tau0^2 .*
                          model.state.lik_params[k].beta_hypers.phi .^ 2 .*
-            model.state.lik_params[k].beta_hypers.psi for k in 1:K]
+            model.state.lik_params[k].beta_hypers.psi for k in occ_keys]
         beta_sigs = hcat(beta_sigs...)'
-        mu_sample, sigma2_sample = independent_sampler(Betas, beta_sigs, mu0, clustCounts, kappa0, alpha0, beta0, 2)
-        # mu_sample, sigma2_sample = NN_shrinkage(Betas, 0.0, 5e-3, kappa0, alpha0, beta0, 2)
+        # v2.0: draw the common effect from its Normal-IG posterior and keep
+        # the posterior median (robust, matches simFunctions reporting). The
+        # previous median(Betas) overwrite is removed so shrinkage no longer
+        # collapses beta* toward 0. nsamps=200 stabilizes the median.
+        mu_sample, sigma2_sample = independent_sampler(Betas, beta_sigs, mu0, clustCounts, kappa0, alpha0, beta0, 200)
         mu_sample = median(mu_sample, dims=2)
         sigma2_sample = median(sigma2_sample, dims=2)
         model.state.prior_mean_beta = mu_sample[:, 1]
-        model.state.prior_mean_beta = median(Betas, dims=1)[1, :]
-        # prior_mean_beta = zeros(model.p)
         prior_mean_beta = model.state.prior_mean_beta
 
 
@@ -187,7 +190,7 @@ function update_lik_params!(model::Model_PPMx,
                     llik_k_forSliceSig_Reg,
                     TargetArgs_sliceSig_Reg(model.y[indx_k], beta_upd_stats[:means], beta_upd_stats[:vars], model.state.lik_params[k].sig,
                         model.state.lik_params[k].beta, model.state.baseline.tau0, model.state.lik_params[k].beta_hypers.tau,
-                        model.state.lik_params[k].beta_hypers.phi, model.state.lik_params[k].beta_hypers.psi),
+                        model.state.lik_params[k].beta_hypers.phi, model.state.lik_params[k].beta_hypers.psi, prior_mean_beta),
                     sliceiter
                 ) # sig_old doesn't need to be updated during intermediate proposals of slice sampler--vars isn't updated either,
             # so each step evaluates against the same (original) set of target args. This allows us to use the generic slice sampler code.

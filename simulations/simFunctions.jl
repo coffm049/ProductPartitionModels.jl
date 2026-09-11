@@ -132,8 +132,45 @@ function simData(
 end
 
 # common = interEffect : promising
-# common < interEffect : 
+# common < interEffect :
 # common > interEffect : somewhat promising
+
+# v2.0: reverse-transform common-effect draws from within-cluster aux scale
+# to X scale. The likelihood regresses on ziO = (X - aux_mean) / aux_sd
+# (likelihood.jl: aux_moments_k), so stored cluster betas live on the ziO
+# scale while truth (+-common) lives on the X scale. Hence:
+#   beta_X[d] = beta_zio[d] / aux_sd_k[d],
+# with aux_sd recomputed exactly as in aux_moments_k from the draw's own
+# partition. The per-draw common effect is the median over occupied clusters
+# (label-switch-free, matches the unweighted mean(slopes) truth). Y is never
+# standardized in sims (lines below), so no Y transform is needed; the
+# grand simData standardization is baked into both Y generation and model X.
+function xscale_common_draws(sim, X_nointer::AbstractMatrix, m0::Real, s0::Real, dims::Int)
+    S = length(sim)
+    out = Matrix{Float64}(undef, dims, S)
+    for (si, s) in enumerate(sim)
+        C = s[:C]
+        liks = s[:lik_params]
+        for d in 1:dims
+            xd = view(X_nointer, :, d)
+            vals = Float64[]
+            for k in unique(C)
+                (k >= 1 && k <= length(liks)) || continue
+                idx = findall(C .== k)
+                isempty(idx) && continue
+                n = length(idx)
+                xv = xd[idx]
+                sumx = sum(xv)
+                xbar = sumx / n
+                ss = sum(xv .^ 2) - n * xbar^2
+                aux_sd = sqrt((s0 + ss + n * (xbar - m0)^2 / (n + 1)) / (n + 1))
+                push!(vals, liks[k][:beta][d+1] / aux_sd)
+            end
+            out[d, si] = median(vals)
+        end
+    end
+    return out
+end
 
 function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=[0.25, 0.25, 0.25, 0.25], variance::Real=1.0, interEffect::Float64=1.0, common::Float64=1.0, plotFit::Bool=false, niters::Int=1000, prec::Real=10.0, alph::Real=10.0, bet::Real=20.0, plotSim::Bool=false, xdiff::Real=2.0, dims::Int=2, massParams::Vector{Float64}=[1.0, 1.0], runDPM::Bool=false, DPMalpha::Float64=1.0, DPMiters::Int=200, returnC::Bool=false)
 
@@ -163,8 +200,10 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     model.prior.massParams = massParams # 1e-3 for  common 10, inter 5 
     #model.prior.massParams = [3.0, 3.0]
 
-    trimid = Int(niters * 3 / 5)
-    simid = Int(niters * 2 / 5)
+    # v2.0: round (was Int() truncation which threw InexactError unless
+    # niters is a multiple of 5).
+    trimid = max(round(Int, niters * 3 / 5), 1)
+    simid = max(niters - trimid, 1)
     model.state.baseline.tau0 = 1.0
     mcmc!(model, trimid; mixDPM=true)
     sim = mcmc!(model, simid; mixDPM=true)
@@ -277,7 +316,13 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
 
     commonBeta0 = [s[:prior_mean_beta][1] for s in sim]
     meanBeta0 = mean(commonBeta0)
-    commonBeta1 = [s[:prior_mean_beta][2] for s in sim]
+    # v2.0: X-scale common-effect draws (reverse within-cluster aux transform;
+    # see xscale_common_draws). Rows d=1:dims correspond to X1..Xdims with
+    # truth (-1)^(d-1) * common. Intercept [1] intentionally left on raw scale.
+    _xsim = model.state.similarity
+    _Xnoi = Matrix(df[:, ["X$d" for d in 1:dims]])
+    _commonX = xscale_common_draws(sim, _Xnoi, _xsim.m0, _xsim.sd^2, dims)
+    commonBeta1 = _commonX[1, :]
 
     # lineplot(commonBeta1)
     # dpmCI = quantile(commonBeta1[abs.(commonBeta1).<10], [0.05, 0.95])
@@ -287,7 +332,7 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     # vline!(dpmCI)
     # meanBeta1 = mean(commonBeta1[abs.(commonBeta1) .< 10])
     meanBeta1 = median(commonBeta1)
-    commonBeta2 = [s[:prior_mean_beta][3] for s in sim]
+    commonBeta2 = _commonX[2, :]
     dpmCI2 = quantile(commonBeta2, [0.05, 0.95])
     # dpmCI2 = quantile(commonBeta2[abs.(commonBeta2).<10], [0.05, 0.95])
     # lineplot(commonBeta2)
@@ -316,12 +361,14 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     zeroInDPM = dpmCI[1] < 0.0 < dpmCI[2]
     commonInDPM = dpmCI[1] < common < dpmCI[2]
     zeroInDPM2 = dpmCI2[1] < 0.0 < dpmCI2[2]
-    commonInDPM2 = dpmCI2[1] < common < dpmCI2[2]
+    # v2.0: truth for X2 is -common (alternating-sign slopes); was +common.
+    commonInDPM2 = dpmCI2[1] < -common < dpmCI2[2]
 
     # common-effect CI coverage averaged across all covariates. The true common
     # effect for covariate d is (-1)^(d-1) * common (see simData slope pattern).
+    # v2.0: coverage evaluated on X-scale draws (same transform as point est).
     commonCovAll = mean([
-        let ci = quantile([s[:prior_mean_beta][d+1] for s in sim], [0.05, 0.95])
+        let ci = quantile(_commonX[d, :], [0.05, 0.95])
             ci[1] < (-1)^(d-1) * common < ci[2]
         end for d in 1:dims
     ])
@@ -330,8 +377,9 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     # is each obs in the 0.05 0.95 quantiles of the posterior predictive?
     bayesPmix = median(mean(df.Y .<= Ypred1', dims=2))
     bayesPDPM = median(mean(df.Y .<= Ypred2', dims=2))
-    bayesPmixoos = median(mean(df.Y .<= Ypred1oos', dims=2))
-    bayesPDPMoos = median(mean(df.Y .<= Ypred2oos', dims=2))
+    # v2.0: OOS predictive check must compare against held-out outcomes.
+    bayesPmixoos = median(mean(dfoos.Y .<= Ypred1oos', dims=2))
+    bayesPDPMoos = median(mean(dfoos.Y .<= Ypred2oos', dims=2))
 
     # log predictive scores (reviewer: replace Bayesian p-values with proper
     # scoring rules). OOS expected log predictive density, evaluated at the
@@ -439,7 +487,8 @@ function simExperiment(rng::AbstractRNG; N::Int=100, fractions::Vector{Float64}=
     ncK = nclusts
 
     Mix_beta1_c1 = [s[:lik_params][1][:beta][2] for s in sim if maximum(s[:C]) == ncMix]
-    dpm_beta1_c1 = [s[:lik_params][1][:beta][1] for s in sim2 if maximum(s[:C]) == ncDPM]
+    # v2.0: was [:beta][1] (intercept); use [2] (X1 slope) to match Mix_beta1_c1.
+    dpm_beta1_c1 = [s[:lik_params][1][:beta][2] for s in sim2 if maximum(s[:C]) == ncDPM]
 
 
     result = DataFrame(

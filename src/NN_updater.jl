@@ -88,34 +88,36 @@ end
 # alpha, beta of IG
 
 function independent_sampler(Betas, beta_sigs, mu0, clustCounts, kappa0, alpha0, beta0, nsamps)
-
-    kappa_n = sum(1 ./ beta_sigs, dims= 1)[1,:]
-    bb = sum(Betas ./ beta_sigs, dims = 1)[1,:]
-    mu_n = bb ./ kappa_n
-    clustCounts = collect(values(clustCounts))
-    #nonsingle = clustCounts .> 3 
-    #clustCounts = clustCounts[nonsingle]
-    #Betas = Betas[nonsingle, :]
-    N, p = size(Betas)  # Number of observations and dimensions
-    # Betas_bar = sum(clustCounts .* Betas, dims=1) ./ sum(clustCounts)
-    Betas_bar = mean(Betas, dims=1)  # Sample means for each dimension
+    # v2.0: standard Normal-Inverse-Gamma conjugate update per dimension.
+    # Betas is K x p of cluster-specific coefficients. Only occupied clusters
+    # contribute (empty/singleton labels carry prior draws that would dilute
+    # the common effect toward zero). Equal weights over occupied clusters
+    # match the unweighted common-effect estimand mean(slopes).
+    # Prior: mu_j | sigma2_j ~ Normal(mu0[j], sigma2_j / kappa0[j]),
+    #        sigma2_j ~ InverseGamma(alpha0[j], beta0[j]).
+    occ_counts = collect(values(clustCounts))
+    occ_idx = findall(occ_counts .> 0)
+    Bo = Betas[occ_idx, :]
+    N, p = size(Bo)  # Number of occupied clusters and dimensions
+    Betas_bar = mean(Bo, dims=1)  # Sample means for each dimension (1 x p)
 
     # Storage for samples
     mu_samples = Matrix{Float64}(undef, p, nsamps)
     sigma2_samples = Matrix{Float64}(undef, p, nsamps)
-    
-    # alpha_n = alpha0 .+ N / 2
-    # beta_n = beta0 .+ 0.5 .* sum((Betas .- Betas_bar) .^ 2, dims = 1)[1,:] .+ (kappa0 .* N .* (Betas_bar[1,:] .- mu0).^2) ./ (2 .* kappa_n)
-    alpha_n = alpha0 .+ 1 / 2
+
+    kappa_n = kappa0 .+ N
+    mu_n = (kappa0 .* mu0 .+ N .* Betas_bar[1, :]) ./ kappa_n
+    alpha_n = alpha0 .+ N / 2
+    beta_n = beta0 .+ 0.5 .* sum((Bo .- Betas_bar) .^ 2, dims=1)[1, :] .+
+             (kappa0 .* N .* (Betas_bar[1, :] .- mu0) .^ 2) ./ (2 .* kappa_n)
     for j in 1:p
-        beta_n = beta0[j] .+ ((mu0[j] .- mu_samples[j, :]) .^ 2) ./2
         for i in 1:nsamps
-            # Sample σ_j^2 from Inverse-Gamma
-            sigma2 = rand(InverseGamma(alpha_n[j], beta_n[i]))
+            # Sample σ_j^2 from Inverse-Gamma (computed from data first)
+            sigma2 = rand(InverseGamma(alpha_n[j], beta_n[j]))
             sigma2_samples[j, i] = sigma2
 
-            # Sample μ_j from Normal
-            mu = rand(Normal(mu_n[j], sqrt(1 / kappa_n[j])))
+            # Sample μ_j from Normal, scaled by sampled variance
+            mu = rand(Normal(mu_n[j], sqrt(sigma2 / kappa_n[j])))
             mu_samples[j, i] = mu
         end
     end
