@@ -264,6 +264,78 @@ ggplot(estDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
 ggsave("xdiff_common_est.png", width = 10, height = 5, dpi = 300, units = "in")
 ```
 
+## Effects (dim2 legacy) {.scrollable}
+
+First two common effects only, from legacy `dim2` CSVs (pre-standardization runs for comparison).
+
+```{r}
+#| column: page
+#| fig-width: 10
+#| fig-height: 6
+#| message: false
+#| warning: false
+legacy_dir <- Sys.getenv("LEGACY_DIM2_DIR", unset = path.expand("~/papers/ProductPart2"))
+legacy_files <- c(
+  "N1000_c8_inter0.5_common1.0_xd1.0_v0.1_dim2_prec0.01alph1.0bet1.0_mass5.05.0.csv",
+  "N1000_c8_inter0.75_common1.0_xd1.0_v0.1_dim2_prec0.01alph1.0bet1.0_mass5.05.0.csv",
+  "N1000_c8_inter1.0_common1.0_xd0.0_v0.05_dim2_prec0.1alph1.0bet1.0_mass1.01.0_dpm1.0_500.csv",
+  "N1000_c8_inter1.0_common1.0_xd0.2_v0.05_dim2_prec0.1alph1.0bet1.0_mass1.01.0_dpm1.0_500.csv",
+  "N1000_c8_inter1.0_common1.0_xd0.4_v0.05_dim2_prec0.1alph1.0bet1.0_mass1.01.0.csv",
+  "N1000_c8_inter1.0_common1.0_xd0.4_v0.05_dim2_prec0.1alph1.0bet1.0_mass1.01.0_dpm1.0_500.csv",
+  "N1000_c8_inter1.0_common1.0_xd0.6_v0.05_dim2_prec0.1alph1.0bet1.0_mass1.01.0.csv",
+  "N1000_c8_inter1.0_common1.0_xd0.6_v0.05_dim2_prec0.1alph1.0bet1.0_mass1.01.0_dpm1.0_500.csv",
+  "N1000_c8_inter1.0_common1.0_xd0.8_v0.05_dim2_prec0.1alph1.0bet1.0_mass1.01.0.csv",
+  "N1000_c8_inter1.0_common1.0_xd0.8_v0.05_dim2_prec0.1alph1.0bet1.0_mass1.01.0_dpm1.0_500.csv",
+  "N1000_c8_inter1.0_common1.0_xd1.0_v0.05_dim2_prec0.1alph1.0bet1.0_mass1.01.0.csv",
+  "N1000_c8_inter1.0_common1.0_xd1.0_v0.05_dim2_prec0.1alph1.0bet1.0_mass1.01.0_dpm1.0_500.csv",
+  "N1000_c8_inter1.0_common1.0_xd1.0_v0.1_dim2_prec0.1alph1.0bet1.0_mass5.05.0.csv",
+  "N1000_c8_inter1.0_common1.0_xd1.0_v0.1_dim2_prec0.1alph1.0bet2.0_mass5.05.0.csv",
+  "N1000_c8_inter1.0_common1.0_xd1.0_v0.1_dim2_prec0.1alph2.0bet1.0_mass5.05.0.csv",
+  "N1000_c8_inter1.0_common1.0_xd1.0_v0.1_dim2_prec0.1alph2.0bet2.0_mass5.05.0.csv"
+)
+legacy_found <- legacy_files[file.exists(file.path(legacy_dir, legacy_files))]
+if (length(legacy_found) == 0) {
+  cat("No legacy dim2 files found in ", legacy_dir, "; set LEGACY_DIM2_DIR or copy CSVs there.\n")
+} else {
+  legDF <- data.frame(file = legacy_found) %>%
+    mutate(data = map(file, ~ suppressMessages(read_csv(file.path(legacy_dir, .x))))) %>%
+    unnest(data) %>%
+    select(
+      `ppmx-common_common1` = meanBeta1,
+      `ppmx-common_common2` = meanBeta2,
+      dpm_common1 = dpmBetaclust1,
+      dpm_common2 = dpmBetaclust2,
+      kmean_common1 = meanBetakclust1,
+      kmean_common2 = meanBetakclust2,
+      slr_common1 = meanBetaSLR,
+      slr_common2 = meanBetaSLR2,
+      Common = common, xdiff, interEffect, variance, dims, file
+    ) %>%
+    pivot_longer(-c(Common, xdiff, interEffect, variance, dims, file),
+      names_to = c(".value", "Metric"), names_pattern = "(.*)\\_(.*)") %>%
+    pivot_longer(c(`ppmx-common`, dpm, kmean, slr), names_to = "Model", values_to = "Statistic") %>%
+    filter(Metric %in% c("common1", "common2")) %>%
+    mutate(
+      Coef = ifelse(Metric == "common1", "common1 (β=+1)", "common2 (β=-1)"),
+      Truth = ifelse(Metric == "common1", 1, -1),
+      scenario = str_remove(file, "\\.csv$") %>%
+        str_replace("N1000_c8_", "") %>%
+        str_replace("_prec", "\nprec") %>%
+        str_trunc(48, side = "center")
+    )
+  ggplot(legDF, aes(x = scenario, y = Statistic, fill = Model)) +
+    geom_violin(alpha = 0.45, linewidth = 0.4, position = position_dodge(width = 0.85), scale = "width") +
+    stat_summary(aes(group = Model, color = Model), fun = median, geom = "point", size = 1.6, position = position_dodge(width = 0.85)) +
+    geom_hline(data = data.frame(Coef = c("common1 (β=+1)", "common2 (β=-1)"), y = c(1, -1)), aes(yintercept = y), linetype = "dashed", color = "grey40", inherit.aes = FALSE) +
+    facet_grid(rows = vars(Coef), scales = "free_x") +
+    labs(x = "scenario (dim2 legacy)", y = "Estimate (dashed = truth)",
+         title = "Common-effect estimates — dim2 legacy (first two only)") +
+    scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 9) +
+    theme(legend.position = "bottom", axis.text.x = element_text(angle = 45, hjust = 1, size = 7)) +
+    coord_cartesian(ylim = c(-4, 4))
+  ggsave("xdiff_common_est_dim2legacy.png", width = 12, height = 6, dpi = 300, units = "in")
+}
+
 ## Effects {.scrollable}
 
 ```{r}
