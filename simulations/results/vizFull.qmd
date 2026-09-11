@@ -260,9 +260,9 @@ estDist_dim5_ppmx <- longDF %>%
   ) %>%
   filter(abs(Statistic - Truth) <= 2, Statistic >= -4 & Statistic <= 4)
 # robust legacy discovery: env var, then candidate dirs, pattern match first, hardcoded fallback
-legacy_cands <- unique(c(Sys.getenv("LEGACY_DIM2_DIR", unset = ""), path.expand("~/papers/ProductPart2"), path.expand("~/papers")))
+legacy_cands <- unique(c(Sys.getenv("LEGACY_DIM2_DIR", unset = ""), path.expand("~/papers/ProductPart2/simRes"), path.expand("~/papers/ProductPart2"), path.expand("~/papers")))
 legacy_cands <- legacy_cands[legacy_cands != "" & dir.exists(legacy_cands)]
-legacy_dir <- if (length(legacy_cands) > 0) legacy_cands[1] else path.expand("~/papers/ProductPart2")
+legacy_dir <- if (length(legacy_cands) > 0) legacy_cands[1] else path.expand("~/papers/ProductPart2/simRes")
 legacy_found <- character(0)
 if (dir.exists(legacy_dir)) {
   patt <- list.files(legacy_dir, pattern = "inter1\\.0.*xd[0-9.]+.*v0\\.05.*dim2.*prec0\\.1.*mass1\\.01\\.0.*\\.csv$", full.names = FALSE)
