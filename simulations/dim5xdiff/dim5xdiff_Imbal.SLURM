@@ -42,13 +42,14 @@ export LD_LIBRARY_PATH="$R_HOME/lib:$LD_LIBRARY_PATH"
 export LD_PRELOAD="/projects/standard/gdc/public/envs/r-salso/lib/libstdc++.so.6"
 export PATH="$R_HOME/bin:$PATH"
 
-# v2.0 estimator: pin package version so reruns never mix with previous fits.
+# v2.0 estimator: use the manually-pulled v2.0 checkout (pull manually on HPC
+# before submitting; no auto fetch/pull here to avoid concurrent index.lock races).
 # Outputs go to results/v2.0/ (see sim.jl); previous results/*.csv untouched.
-cd ~/software/ProductPartitionModels.jl
-git fetch origin --quiet
-git checkout v2.0
-git pull --ff-only origin v2.0
-cd simulations
+if [ "$(git -C ~/software/ProductPartitionModels.jl rev-parse --abbrev-ref HEAD)" != "v2.0" ]; then
+  sleep $((RANDOM % 20))
+  git -C ~/software/ProductPartitionModels.jl checkout v2.0
+fi
+cd ~/software/ProductPartitionModels.jl/simulations
 
 # read arguments from command line
 # N = parse(Int, ARGS[1])
