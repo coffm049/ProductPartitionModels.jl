@@ -326,8 +326,6 @@ ggsave("xdiff_common_est.png", width = 10, height = 5, dpi = 300, units = "in")
 
 ## Prediction {.scrollable}
 
-> **Why LPS is only `ppmx` / `ppmx-common`:** `sim.jl:86-113` computes `lpsMixoos` / `lpsDPMoos` from the PPMx posterior-predictive density. Baselines `dpm` (single hard partition via `DPMM.jl`), `kmeans`, and `slr` are point estimators with no posterior predictive distribution, so `lps` is `NA` for those models by design (see `salsoUtils.jl:67` `missing` handling and `simExperiment.qmd` LPS averaging with `na.rm`). For a directly comparable out-of-sample prediction metric across *all* models, use OOS RMSE below (`midMixoos` / `dpmRMSEoos` / `kmean_MSEoos` / `slrRMSEoos`).
-
 ```{r}
 #| column: page
 #| fig-width: 10
