@@ -32,7 +32,7 @@ library(tidyverse)
 library(patchwork)
 library(ggsci)
 library(gt)
-dir.create("tables", showWarnings = FALSE, recursive = TRUE)
+dir.create("v2.0/tables", showWarnings = FALSE, recursive = TRUE)
 # helper: wrap gt in scrollable div (horizontal + vertical)
 gt_scroll <- function(gt_tbl, max_h = "500px") {
   htmltools::div(style = sprintf("overflow-x:auto; overflow-y:auto; max-height:%s; border:1px solid #ddd; padding:4px;", max_h), gt_tbl)
@@ -43,7 +43,8 @@ theme_update(
     scale_color = scale_color_npg(),
 )
 
-results_dir <- if (dir.exists("../results") && length(dir("../results", pattern="\\.csv$")) > 0) "../results" else "../results2"
+# v2.0: read versioned outputs; fall back to previous fits, then legacy.
+results_dir <- if (dir.exists("../results/v2.0") && length(dir("../results/v2.0", pattern="\\.csv$")) > 0) "../results/v2.0" else if (dir.exists("../results") && length(dir("../results", pattern="\\.csv$")) > 0) "../results" else "../results2"
 df <- data.frame("file" = dir(results_dir)) %>%
     filter(grepl(".csv$", file), !grepl("^covariates", file)) %>%
     mutate(
@@ -230,7 +231,7 @@ ggplot(clustDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
   labs(x = "xdiff", y = "ARI (higher = better)",
        title = "Clustering") +
   scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
-ggsave("xdiff_clustering_loss.png", width = 10, height = 5, dpi = 300, units = "in")
+ggsave("v2.0/xdiff_clustering_loss.png", width = 10, height = 5, dpi = 300, units = "in")
 ```
 
 
@@ -321,7 +322,7 @@ ggplot(estDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
   labs(x = "xdiff", y = "Estimate (dashed = truth)",
        title = "Common-effect estimates") +
   scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
-ggsave("xdiff_common_est.png", width = 10, height = 5, dpi = 300, units = "in")
+ggsave("v2.0/xdiff_common_est.png", width = 10, height = 5, dpi = 300, units = "in")
 ```
 
 ## Prediction {.scrollable}
@@ -345,7 +346,7 @@ ggplot(lpsDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
        caption = "Per-replicate; line = median",
        title = "Prediction") +
   scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
-ggsave("xdiff_lps.png", width = 10, height = 4, dpi = 300, units = "in")
+ggsave("v2.0/xdiff_lps.png", width = 10, height = 4, dpi = 300, units = "in")
 ```
 
 <!--
@@ -372,7 +373,7 @@ ggplot(rmseDistPlot, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
        caption = sprintf("90th pct = %.2f", rmseDist_q90),
        title = "RMSE") +
   scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
-ggsave("xdiff_rmse.png", width = 10, height = 4, dpi = 300, units = "in")
+ggsave("v2.0/xdiff_rmse.png", width = 10, height = 4, dpi = 300, units = "in")
 ```
 
 
@@ -410,7 +411,7 @@ longDF %>%
          caption = sprintf("RMSE truncated at 90th pct = %.2f", rmse_q90_imbal)) +
     ggtitle("Imbalanced-cluster scenarios, N = 1000, dims = 5") +
     theme_bw()
-ggsave("bigSimImbalanced.png", width = 8, dpi = 300, units = "in")
+ggsave("v2.0/bigSimImbalanced.png", width = 8, dpi = 300, units = "in")
 ```
 
 
@@ -432,8 +433,9 @@ ggsave("bigSimImbalanced.png", width = 8, dpi = 300, units = "in")
 ```{r}
 #| message: false
 #| warning: false
-if (file.exists("covariates.csv")) {
-  covs_raw <- read_csv("covariates.csv", show_col_types = FALSE)
+covpath <- if (file.exists("v2.0/covariates.csv")) "v2.0/covariates.csv" else "covariates.csv"
+if (file.exists(covpath)) {
+  covs_raw <- read_csv(covpath, show_col_types = FALSE)
   if (!"xdiff" %in% names(covs_raw) || nrow(covs_raw)==0) {
     cat("covariates.csv missing xdiff or empty; regenerate via julia --project=. ../covDist.jl\n")
   } else {
@@ -452,7 +454,7 @@ if (file.exists("covariates.csv")) {
             axis.title.x = element_text(margin = margin(t = 8))) +
       guides(fill = guide_legend(ncol = 1))
     print(p_cov)
-    ggsave("covariateDist.png", plot=p_cov, width = 10, height = 8, dpi = 300, units = "in")
+    ggsave("v2.0/covariateDist.png", plot=p_cov, width = 10, height = 8, dpi = 300, units = "in")
   }
 } else {
   cat("covariates.csv not found; run: julia --project=. ../covDist.jl from simulations/\n")
@@ -471,7 +473,7 @@ longDF %>%
     facet_grid(rows = vars(xdiff), cols = vars(Imbalanced)) +
     ggtitle("Rand index") +
     scale_fill_npg() + theme_bw()
-ggsave("bigSimRI.png", width = 6, dpi = 300, units = "in")
+ggsave("v2.0/bigSimRI.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
     filter(Metric %in% c("binder", "vi", "binderoos", "vioos"), N == 1000, dims == 5, Common == 1.0, xdiff %in% c(0.2,0.4,0.6,0.8,1.0)) %>%
@@ -482,7 +484,7 @@ longDF %>%
     facet_grid(rows = vars(Loss, Split), cols = vars(xdiff, Imbalanced)) +
     labs(x = "ARI (SALSO)") + ggtitle("SALSO ARI") +
     scale_fill_npg() + theme_bw()
-ggsave("bigSimSalso.png", width = 8, dpi = 300, units = "in")
+ggsave("v2.0/bigSimSalso.png", width = 8, dpi = 300, units = "in")
 ```
 
 ### Sensitivity & Imbalanced
@@ -502,7 +504,7 @@ if (nrow(dp2) > 0) {
       ggplot(aes(x = mass1, y = Statistic, color = Model, group = Model)) +
       geom_point(size = 2) + geom_line() + facet_wrap(~ Metric, scales = "free_y") +
       labs(x = "mass A", y = "Metric", title = "DP mass sensitivity") + theme_bw()
-  ggsave("bigSimDPhyperSens.png", width = 10, dpi = 300, units = "in")
+  ggsave("v2.0/bigSimDPhyperSens.png", width = 10, dpi = 300, units = "in")
   print(dpSensFig)
 }
 rmse_q90_imbal <- longDF %>% filter(dims == 5, Imbalanced == TRUE, N == 1000, Common == 1.0, Metric == "rmse") %>% pull(Statistic) %>% quantile(0.90, na.rm = TRUE)
@@ -513,7 +515,7 @@ longDF %>% filter(dims == 5, Imbalanced == TRUE, N == 1000, Common == 1.0, Metri
     geom_histogram(alpha = 0.3, color = "black") +
     facet_grid(rows = vars(Metric), cols = vars(xdiff), scales = "free") +
     labs(x = "Statistic", y = "Density") + ggtitle("Imbalanced") + theme_bw()
-ggsave("bigSimImbalanced.png", width = 8, dpi = 300, units = "in")
+ggsave("v2.0/bigSimImbalanced.png", width = 8, dpi = 300, units = "in")
 ```
 
 ## Sensitivity (M) {.scrollable}
@@ -530,7 +532,7 @@ ggplot(sensM, aes(x = interaction(Alpha, Beta), y = Statistic, color = Model, gr
   facet_wrap(~ Metric, scales = "free_y") +
   labs(x = "Gamma(a,b) for M (Alpha, Beta)", y = "Metric", title = "Sensitivity to total concentration M") +
   theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
-ggsave("sensitivity_M.png", width = 10, height = 5, dpi = 300, units = "in")
+ggsave("v2.0/sensitivity_M.png", width = 10, height = 5, dpi = 300, units = "in")
 ```
 
 ## Appendix: Tables {.scrollable}
@@ -556,7 +558,7 @@ locTbl <- modLoc |>
     group_by(group_label) |>
     select(-c(InterEffect, Alpha, Beta, Precision)) |>
     filter(xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0), dims == 5)
-locTbl |> write_csv("tables/table_local_interp.csv")
+locTbl |> write_csv("v2.0/tables/table_local_interp.csv")
 locTbl |>
   gt() |>
   tab_header(title = "Local interpretation: bias / RMSE by xdiff") |>
@@ -573,7 +575,7 @@ modCompTbl <- longDF %>%
     group_by(Metric, Model, Imbalanced) %>%
     summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
     pivot_wider(names_from = Model, values_from = Statistic)
-modCompTbl |> write_csv("tables/table_model_comparison.csv")
+modCompTbl |> write_csv("v2.0/tables/table_model_comparison.csv")
 modCompTbl |>
   gt() |>
   tab_header(title = "Model comparison (dims=5, xdiff grid)") |>
@@ -589,7 +591,7 @@ tempMetricsTbl <- longDF %>%
     group_by(Model, Metric) %>%
     summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
     pivot_wider(names_from = Metric, values_from = Statistic)
-tempMetricsTbl |> write_csv("tables/table_temp_metrics.csv")
+tempMetricsTbl |> write_csv("v2.0/tables/table_temp_metrics.csv")
 tempMetricsTbl |>
   gt() |>
   tab_header(title = "Metrics by model (dims=5)") |>
@@ -605,7 +607,7 @@ vsInterTbl <- longDF %>%
     group_by(Model, Metric, InterEffect) %>%
     summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
     pivot_wider(names_from = Metric, values_from = Statistic)
-vsInterTbl |> write_csv("tables/table_temp_vs_intereffects.csv")
+vsInterTbl |> write_csv("v2.0/tables/table_temp_vs_intereffects.csv")
 vsInterTbl |>
   gt() |>
   tab_header(title = "Metrics vs InterEffect (Alpha=3, Beta=3, dims=5)") |>
@@ -625,7 +627,7 @@ salsoTbl <- longDF %>%
     reframe(.by = c(Model, Loss, Split, xdiff, Imbalanced),
             ARI = mean(Statistic, na.rm = TRUE)) %>%
     pivot_wider(names_from = c(Loss, Split), values_from = ARI)
-salsoTbl |> write_csv("tables/table_salso_by_model.csv")
+salsoTbl |> write_csv("v2.0/tables/table_salso_by_model.csv")
 salsoTbl |>
   gt() |>
   tab_header(title = "SALSO ARI by model (Binder / VI, in-sample & OOS)") |>
@@ -641,7 +643,7 @@ lpsTbl <- longDF %>%
     reframe(.by = c(xdiff, Model, Imbalanced), Statistic = mean(Statistic, na.rm = TRUE)) %>%
     pivot_wider(names_from = Model, values_from = Statistic) %>%
     mutate(across(c(`ppmx-common`, ppmx), round, 3))
-lpsTbl |> write_csv("tables/table_lps_by_model.csv")
+lpsTbl |> write_csv("v2.0/tables/table_lps_by_model.csv")
 lpsTbl |>
   gt() |>
   tab_header(title = "OOS log predictive score by model (N=1000, dims=5)") |>
@@ -671,7 +673,7 @@ if (nrow(dp2) > 0) {
       group_by(mass1, Model, Metric) %>%
       summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
       pivot_wider(names_from = Metric, values_from = Statistic)
-  dpSens |> write_csv("tables/table_dp_hyperparameter_sensitivity.csv")
+  dpSens |> write_csv("v2.0/tables/table_dp_hyperparameter_sensitivity.csv")
   print(
     dpSens |>
       gt() |>
@@ -691,7 +693,7 @@ imbalTbl <- longDF %>%
     group_by(Metric, Model) %>%
     summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
     pivot_wider(names_from = Model, values_from = Statistic)
-imbalTbl |> write_csv("tables/table_model_comparison_imbalanced.csv")
+imbalTbl |> write_csv("v2.0/tables/table_model_comparison_imbalanced.csv")
 imbalTbl |>
   gt() |>
   tab_header(title = "Imbalanced-cluster scenarios (dims=5)") |>
@@ -706,7 +708,7 @@ commonCovTbl <- df %>%
     filter(N == 1000, dims == 5, Common == 1.0) %>%
     reframe(.by = c(xdiff, Imbalanced), `ppmx-common_ccov` = mean(`ppmx-common_ccov`, na.rm = TRUE)) %>%
     mutate(across(`ppmx-common_ccov`, round, 3))
-commonCovTbl |> write_csv("tables/table_common_effect_cov.csv")
+commonCovTbl |> write_csv("v2.0/tables/table_common_effect_cov.csv")
 commonCovTbl |>
   gt() |>
   tab_header(title = "Common-effect joint coverage (ppmx-common, N=1000, dims=5)") |>
@@ -761,7 +763,7 @@ longDF %>%
     ggtitle("Common effects, dims=5") +
     xlab("Common Estimate") +
     coord_cartesian(xlim = c(beta_q10, beta_q90))
-ggsave("bigSimcommon1.png", width = 6, dpi = 300, units = "in")
+ggsave("v2.0/bigSimcommon1.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
     filter(Metric == "common2", N== 1000, dims == 5, Common == 1.0) %>%
@@ -776,7 +778,7 @@ longDF %>%
     ggtitle("Common effects, dims=5") +
     xlab("Common Estimate") +
     coord_cartesian(xlim = c(beta_q10, beta_q90))
-ggsave("bigSimcommon2.png", width = 6, dpi = 300, units = "in")
+ggsave("v2.0/bigSimcommon2.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
     filter(Metric == "rind", N == 1000, dims == 5, Common == 1.0) %>%
@@ -784,7 +786,7 @@ longDF %>%
     geom_histogram(alpha = 0.3, color = "black") +
     facet_grid(rows = vars(xdiff), cols = vars(Imbalanced)) + #, labeller = labeller(.rows = label_both, .cols = label_both))
     ggtitle("Rand index, N = 1000, dims=5")
-ggsave("bigSimRI.png", width = 6, dpi = 300, units = "in")
+ggsave("v2.0/bigSimRI.png", width = 6, dpi = 300, units = "in")
 
 longDF %>%
     filter(Metric %in% c("binder", "vi", "binderoos", "vioos"), N == 1000, dims == 5, Common == 1.0) %>%
@@ -795,7 +797,7 @@ longDF %>%
     facet_grid(rows = vars(Loss, Split), cols = vars(xdiff, Imbalanced)) +
     labs(x = "Adjusted Rand Index (SALSO point estimate)") +
     ggtitle("SALSO ARI, N = 1000, dims=5")
-ggsave("bigSimSalso.png", width = 8, dpi = 300, units = "in")
+ggsave("v2.0/bigSimSalso.png", width = 8, dpi = 300, units = "in")
 
 ```
 

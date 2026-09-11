@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=dim5xdiff
-#SBATCH --output=../logs/dim5xdiff.out
-#SBATCH --error=../logs/dim5xdiff.err
+#SBATCH --job-name=dim5xdiff-v2
+#SBATCH --output=../logs/dim5xdiff-v2.out
+#SBATCH --error=../logs/dim5xdiff-v2.err
 #SBATCH --cpus-per-task=2
 #SBATCH --time=72:00:00
 #SBATCH --mem-per-cpu=4G
@@ -44,7 +44,13 @@ export LD_LIBRARY_PATH="$R_HOME/lib:$LD_LIBRARY_PATH"
 export LD_PRELOAD="/projects/standard/gdc/public/envs/r-salso/lib/libstdc++.so.6"
 export PATH="$R_HOME/bin:$PATH"
 
-cd ~/software/ProductPartitionModels.jl/simulations
+# v2.0 estimator: pin package version so reruns never mix with previous fits.
+# Outputs go to results/v2.0/ (see sim.jl); previous results/*.csv untouched.
+cd ~/software/ProductPartitionModels.jl
+git fetch origin --quiet
+git checkout v2.0
+git pull --ff-only origin v2.0
+cd simulations
 
 # read arguments from command line
 # N = parse(Int, ARGS[1])

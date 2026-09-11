@@ -59,8 +59,9 @@ baseName = "N$(N)_c$(nc)_inter$(interEffect)_common$(common)_xd$(xdiff)_v$(varia
 if imbalanced == 1
     baseName = "Imbal_" * baseName
 end
-outputName = "results/" * baseName
-mkpath("results")
+# v2.0 estimator: distinct output dir so reruns never overwrite previous fits.
+outputName = "results/v2.0/" * baseName
+mkpath("results/v2.0")
 if runDPM == 1
     outputName = outputName * "_dpm$(DPMalpha)_$(DPMiters)"
 end

@@ -46,5 +46,7 @@ for xd in XDIFFS
 end
 
 res = vcat(rows...)
-CSV.write("results/covariates.csv", res)
-println("wrote results/covariates.csv with ", nrow(res), " rows")
+# v2.0: distinct output dir (data generation unchanged, but keeps viz self-contained).
+mkpath("results/v2.0")
+CSV.write("results/v2.0/covariates.csv", res)
+println("wrote results/v2.0/covariates.csv with ", nrow(res), " rows")
