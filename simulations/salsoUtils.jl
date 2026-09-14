@@ -6,17 +6,10 @@
 # Relies on RCall + the R `salso` package. If either is unavailable the helpers
 # return `nothing` and callers should treat results as missing.
 
-# Load RCall eagerly (guarded) so that the docstrings below can be macroexpanded
-# by DocStringExtensions without hitting an undefined `RCall` reference.
-try
-    @eval using RCall
-catch e
-    @warn "RCall could not be loaded at include time; SALSO metrics will be missing." exception=e
-end
+using RCall
 
 function salso_available()
     try
-        @eval using RCall
         RCall.reval("suppressPackageStartupMessages(library(salso))")
         return true
     catch
