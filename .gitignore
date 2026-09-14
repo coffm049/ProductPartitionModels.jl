@@ -19,3 +19,5 @@ psychometrika/*
 **/archive/**
 ABCD-adhd/*
 **/old/**
+*.err
+*.out

@@ -114,11 +114,13 @@ function postPred(Xpred::Union{Matrix{T},Matrix{Union{T,Missing}}},
 
                 basenow = deepcopy(model.state.baseline)
 
-                if (:mu0 in update_params)
+                # v2.0: some saved chains do not monitor :mu0/:sig0; fall back to
+                # the fitted final-state baseline (new-cluster draws only).
+                if (:mu0 in update_params) && haskey(sims[ii][:baseline], :mu0)
                     basenow.mu0 = deepcopy(sims[ii][:baseline][:mu0])
                 end
 
-                if (:sig0 in update_params)
+                if (:sig0 in update_params) && haskey(sims[ii][:baseline], :sig0)
                     basenow.sig0 = deepcopy(sims[ii][:baseline][:sig0])
                 end
 
@@ -286,11 +288,12 @@ function postPredLogdens(Xpred::Union{Matrix{T},Matrix{Union{T,Missing}}},
 
             basenow = deepcopy(model.state.baseline)
 
-            if (:mu0 in update_params)
+            # v2.0: see note in postPred — fall back when :mu0/:sig0 were not monitored.
+            if (:mu0 in update_params) && haskey(sims[ii][:baseline], :mu0)
                 basenow.mu0 = deepcopy(sims[ii][:baseline][:mu0])
             end
 
-            if (:sig0 in update_params)
+            if (:sig0 in update_params) && haskey(sims[ii][:baseline], :sig0)
                 basenow.sig0 = deepcopy(sims[ii][:baseline][:sig0])
             end
 

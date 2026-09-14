@@ -1,5 +1,5 @@
 ---
-title: "PPMx-common simulations"
+title: "PPMx-common Simulations"
 date: today
 format:
   revealjs:
@@ -8,797 +8,305 @@ format:
     chalkboard: false
     scrollable: true
     code-fold: true
-    toc: false
+    toc: true
+    toc-location: left
     embed-resources: true
     smaller: true
-execute: 
+execute:
   cache: false
   warning: false
   error: false
   fig-format: png
-  fig-width: 10
-  fig-height: 6
-knitr:
-  opts_chunk:
-    dev: png
+  fig-width: 12
+  fig-height: 7
 ---
 
-
-
-
 ```{r}
-#| output: false
+#| echo: false
 library(tidyverse)
 library(patchwork)
 library(ggsci)
 library(gt)
-dir.create("v2.0/tables", showWarnings = FALSE, recursive = TRUE)
-# helper: wrap gt in scrollable div (horizontal + vertical)
-gt_scroll <- function(gt_tbl, max_h = "500px") {
-  htmltools::div(style = sprintf("overflow-x:auto; overflow-y:auto; max-height:%s; border:1px solid #ddd; padding:4px;", max_h), gt_tbl)
+library(htmltools)
+
+dir.create("v2.0", showWarnings = FALSE, recursive = TRUE)
+
+# ── Unified palette ─────────────────────────────────────────────────
+# Consistent colors for Balanced / Imbalanced across ALL figures
+pal_balance <- c("Balanced" = "#4DBBD5", "Imbalanced" = "#E64B35")
+# Consistent fill for estimator facets
+pal_est <- scale_fill_npg()
+
+# Publication-ready theme
+theme_pub <- theme_bw(base_size = 11) +
+  theme(
+    strip.background = element_rect(fill = "grey92", colour = NA),
+    strip.text = element_text(face = "bold", size = 10),
+    legend.position = "bottom",
+    legend.key.size = unit(0.35, "cm"),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold", size = 12),
+    plot.subtitle = element_text(colour = "grey40", size = 9),
+    axis.title = element_text(size = 10),
+    axis.text = element_text(size = 9)
+  )
+theme_set(theme_pub)
+
+# ── Read simulation results ─────────────────────────────────────────
+results_dir <- if (dir.exists("v2.0") && length(dir("v2.0", pattern = "\\.csv$")) > 0) {
+  "v2.0"
+} else if (dir.exists(".") && length(dir(".", pattern = "\\.csv$")) > 0) {
+  "."
+} else {
+  ".."
 }
-theme_set(theme_bw())
-theme_update(
-    scale_fill = scale_fill_npg(),
-    scale_color = scale_color_npg(),
+
+csv_files <- dir(results_dir, pattern = "\\.csv$", full.names = TRUE)
+csv_files <- csv_files[!grepl("^covariates", basename(csv_files))]
+
+cat("Reading", length(csv_files), "CSV files from", results_dir, "\n")
+
+df_list <- map(csv_files, ~ read_csv(.x, show_col_types = FALSE) %>% mutate(file = basename(.x)))
+df <- bind_rows(df_list)
+
+# Extract scenario parameters from filenames
+df <- df %>%
+  mutate(
+    Balance = ifelse(grepl("^Imbal_", file), "Imbalanced", "Balanced"),
+    xdiff = parse_number(str_extract(file, "xd[0-9.]+")),
+    N = parse_number(str_extract(file, "N[0-9]+")),
+    dims = parse_number(str_extract(file, "dim[0-9]+")),
+  )
+
+cat("Loaded", nrow(df), "rows,", length(unique(df$N)), "N values,",
+    length(unique(df$xdiff)), "xdiff values\n")
+
+# ── Identify which estimators are present ───────────────────────────
+# The CSVs have columns like meanBeta1, meanBeta2, meanBetaMix (PPMx-common),
+# meanBetaDPM, meanBetaKmeans, meanBetaStandard, etc.
+# Detect all meanBeta* columns to find estimators.
+est_cols <- grep("^meanBeta", names(df), value = TRUE)
+est_names <- gsub("^meanBeta", "", est_cols)
+cat("Estimator columns found:", paste(est_names, collapse = ", "), "\n")
+
+# Build a mapping: estimator label -> column name(s) for beta1 and beta2
+# Some estimators have meanBeta1/meanBeta2, others have meanBetaMix1/Mix2, etc.
+# We need to pivot carefully.
+# Strategy: identify the estimator suffixes, then gather beta1 and beta2 per estimator.
+
+# Get unique estimator suffixes (e.g. "Mix", "DPM", "Kmeans", "Standard")
+# by looking at meanBeta<suffix>1 and meanBeta<suffix>2 patterns
+beta1_cols <- grep("^meanBeta.*1$", names(df), value = TRUE)
+beta2_cols <- grep("^meanBeta.*2$", names(df), value = TRUE)
+
+# Extract the estimator label from each column
+b1_labels <- gsub("^meanBeta|1$", "", beta1_cols)
+b2_labels <- gsub("^meanBeta|2$", "", beta2_cols)
+
+# Pair them up (should match by position)
+est_map <- tibble(
+  label = ifelse(b1_labels == "", "common", b1_labels),
+  col1 = beta1_cols,
+  col2 = beta2_cols
 )
 
-# v2.0: read versioned outputs; fall back to previous fits, then legacy.
-results_dir <- if (dir.exists("../results/v2.0") && length(dir("../results/v2.0", pattern="\\.csv$")) > 0) "../results/v2.0" else if (dir.exists("../results") && length(dir("../results", pattern="\\.csv$")) > 0) "../results" else "../results2"
-df <- data.frame("file" = dir(results_dir)) %>%
-    filter(grepl(".csv$", file), !grepl("^covariates", file)) %>%
-    mutate(
-        Imbalanced = grepl("^Imbal_", file),
-        mass1 = str_extract(file, "mass[0-9].0"),
-        mass1 = as.numeric(str_remove(mass1, "^mass")),
-        mass2 = str_extract(file, "[0-9].0.csv"),
-        mass2 = as.numeric(str_remove(mass1, ".csv$")),
-    ) %>%
-    # map read these csvs into nested dataframe
-    mutate(data = map(file, ~ read_csv(file.path(results_dir, .x))))  %>%
-    # unnest them
-    unnest(data) %>%
-    select(
-        `ppmx-common_rind` = adjrind_Mix,
-        ppmx_rind = adjrind_DPM,
-        dpm_rind = dpmARI,
-        kmean_rind = adjrind_K,
-        `ppmx-common_arind` = adjrindMixoos,
-        ppmx_arind = adjrind_DPMoos,
-        dpm_arind = dpmARIoos,
-        kmean_arind = adjrind_Koos,
+cat("Estimators:", paste(est_map$label, collapse = ", "), "\n")
 
-        `ppmx-common_rmse` = midMixoos,
-        ppmx_rmse = midDPMoos,
-        dpm_rmse = dpmRMSEoos,
-        kmean_rmse = kmean_MSEoos,
-        slr_rmse = slrRMSEoos,
-        
-        `ppmx-common_common1` = meanBeta1,
-        `ppmx-common_common2` = meanBeta2,
-        dpm_common1 = dpmBetaclust1,
-        dpm_common2 = dpmBetaclust2,
-        kmean_common1 = meanBetakclust1,
-        kmean_common2 = meanBetakclust2,
-        slr_common1 = meanBetaSLR,
-        slr_common2 = meanBetaSLR2,
-
-        `ppmx-common1_T2` = zeroInDPM,
-        `ppmx-common2_T2` = zeroInDPM2,
-        dpm1_T2 = dpmzeroIn1,
-        dpm2_T2 = dpmzeroIn2,
-        kmean1_T2 = zeroInk,
-        kmean2_T2 = zeroInk2,
-        slr1_T2 = zeroInSLR,
-        slr2_T2 = zeroInSLR2,
-        `ppmx-common1_Cov` = commonInDPM,
-        `ppmx-common2_Cov` = commonInDPM2,
-        `ppmx-common_ccov` = commonCovAll,
-        dpm1_Cov = dpmcommonIn1,
-        dpm2_Cov = dpmcommonIn2,
-        kmean1_Cov = commonInk,
-        kmean2_Cov = commonInk2,
-        slr1_Cov = commonInSLR,
-        slr2_Cov = commonInSLR2,
-
-        `ppmx-common_NC` = ncMix,
-        `ppmx_NC` = ncDPM,
-        dpm_NC = dpmnclusts,
-        kmean_NC = ncK,
-        
-        `ppmx-common_bayesP` = bayesPmix,
-        `ppmx_bayesP` = bayesPDPM,
-        `ppmx-common_lps` = lpsMixoos,
-        `ppmx_lps` = lpsDPMoos,
-
-        `ppmx-common_binder` = salsoBinderARI_Mix,
-        `ppmx-common_vi` = salsoVIARI_Mix,
-        ppmx_binder = salsoBinderARI_DPM,
-        ppmx_vi = salsoVIARI_DPM,
-        `ppmx-common_binderoos` = salsoBinderARI_Mixoos,
-        `ppmx-common_vioos` = salsoVIARI_Mixoos,
-        ppmx_binderoos = salsoBinderARI_DPMoos,
-        ppmx_vioos = salsoVIARI_DPMoos,
-
-        # DPMM.jl baseline (`dpm`) has a single hard partition, so it has no
-        # MCMC SALSO point estimate; surface its single-partition ARI vs truth
-        # in the SALSO section for comparison.
-        dpm_binder = dpmARI,
-        dpm_vi = dpmARI,
-        dpm_binderoos = dpmARIoos,
-        dpm_vioos = dpmARIoos,
-
-        contains("rind"),
-        contains("bayes"),
-
-        Common = common, Precision = prec, Alpha = alph,
-        Beta = bet, InterEffect = interEffect, Imbalanced,
-        xdiff, variance, N, mass1, mass2, dims
-    )
-# group by file
-modLoc <- df %>%
-    # select(-contains("rind"), -contains("bayes")) %>%
-    reframe(
-        # type 2 error
-        across(ends_with("T2"), function(x) mean(x, na.rm = T)),
-        # coverage
-        across(ends_with("_Cov"), function(x) mean(x, na.rm = T)),
-        # bias — robust median (matching PPMx median) instead of mean
-        across(ends_with("_common1"), function(x) median(Common - x, na.rm = TRUE), .names= "{.col}-bias"),
-        across(ends_with("_common2"), function(x) median(-Common - x, na.rm = TRUE), .names= "{.col}-bias"),
-        # MSE
-        across(ends_with("_common1"), function(x) sqrt(mean((Common - x)^2, na.rm = T)), .names= "{.col}-RMSE"),
-        across(ends_with("_common2"), function(x) sqrt(mean((-Common - x)^2, na.rm = T)), .names= "{.col}-RMSE"),
-        .by = c(N, Common, InterEffect, Alpha, Beta, Precision, Imbalanced, variance, xdiff, dims)
-    ) %>%
-    pivot_longer(
-        -c(Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance, xdiff, dims),
-         names_to = c(".value", "Metric"),
-         names_pattern = "(.*)_(.*)",
-        ) %>%
-    select(-c(slr1, slr2, kmean1, kmean2, dpm1, dpm2, `ppmx-common1`, `ppmx-common2`)) %>%
-    # filter out global assesses
-    drop_na(`ppmx-common`, kmean, slr)
-
-
-modLoc |>
-  filter(xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0), dims == 5) |>
-  reframe(.by = c(xdiff, Metric), across(c(`ppmx-common`, dpm, kmean, slr), mean))
-
-
-    
-modGlob <- df %>%
-    # select(-contains("rind"), -contains("bayes")) %>%
-    reframe(
-        across(ends_with("_bayesP"), function(x) mean(x, na.rm = T), .names= "{.col}-bayesP"),
-        across(ends_with("_rind"), function(x) mean(x, na.rm = T), .names= "{.col}-rind"),
-        .by = c(N, Common, InterEffect, Alpha, Beta, Precision, Imbalanced, variance, xdiff, dims)
-    ) %>%
-    pivot_longer(
-        -c(Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance, xdiff, dims),
-         names_to = c(".value", "Metric"),
-         names_pattern = "(.*)_(.*)",
-        ) %>%
-    drop_na()
-longDF <- df %>%
-    pivot_longer(
-        -c(N, Common, Alpha, Beta, Precision, InterEffect, Imbalanced, variance, xdiff, dims),
-         names_to = c(".value", "Metric"),
-         names_pattern = "(.*)\\_(.*)",
-        ) %>%
-    pivot_longer(c(`ppmx-common`, ppmx, dpm, kmean, slr), names_to = "Model", values_to = "Statistic") # %>%
-    # filter(Metric != "rind" | Statistic >=0.4)
-
-
-df |>
-  filter(xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0), dims == 5) |>
-  reframe(.by = xdiff, across(ends_with("_Cov"), mean))
-
-modGlob |>
-  filter(xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0), dims == 5)
-
-cat("\n=== DATA AVAILABILITY for new sections (SALSO / LPS) ===\n")
-longDF %>%
-  filter(Metric %in% c("binder", "vi", "binderoos", "vioos", "lps")) %>%
-  reframe(.by = c(Model, Metric), n_nonmiss = sum(!is.na(Statistic)), n_total = n()) %>%
-  print()
-
-```
-
-
-
-
-## Clustering {.scrollable}
-
-```{r}
-#| column: page
-#| fig-width: 10
-#| fig-height: 5
-clustDist <- longDF %>%
-  filter(N == 1000, dims == 5, Common == 1.0,
-         Metric %in% c("arind", "binderoos"),
-         xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0)) %>%
-  mutate(Metric = recode(Metric,
-      arind = "ARI",
-      binderoos = "Binder"))
-
-ggplot(clustDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
-  geom_violin(alpha = 0.45, linewidth = 0.4, position = position_dodge(width = 0.85), scale = "width") +
-  stat_summary(aes(group = Model, color = Model), fun = median, geom = "line", linewidth = 0.9, position = position_dodge(width = 0.85)) +
-  stat_summary(aes(group = Model, color = Model), fun = median, geom = "point", size = 2.2, position = position_dodge(width = 0.85)) +
-  facet_grid(rows = vars(Metric), cols = vars(Imbalanced),
-             labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
-  labs(x = "xdiff", y = "ARI (higher = better)",
-       title = "Clustering") +
-  scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
-ggsave("v2.0/xdiff_clustering_loss.png", width = 10, height = 5, dpi = 300, units = "in")
-```
-
-
-
-## Effects {.scrollable}
-
-```{r}
-#| column: page
-#| fig-width: 10
-#| fig-height: 5
-# dim5 models incl. ppmx-common (always shown); dim2 legacy ppmx-common added when found
-estDist_other <- longDF %>%
-  filter(N == 1000, dims == 5, Common == 1.0, Metric %in% c("common1","common2"), xdiff %in% c(0.2,0.4,0.6,0.8,1.0),
-         Model != "ppmx-common") %>%
-  mutate(
-    Coef = ifelse(Metric == "common1", "common1 (β=+1)", "common2 (β=-1)"),
-    Truth = ifelse(Metric == "common1", 1, -1)
+# ── Pivot to long: one row per (replicate, estimator, coef) ────────
+long_est <- df %>%
+  select(file, N, dims, xdiff, Balance, any_of(unlist(est_map[, c("col1", "col2")]))) %>%
+  pivot_longer(
+    cols = all_of(unlist(est_map[, c("col1", "col2")])),
+    names_to = "col_name",
+    values_to = "estimate"
   ) %>%
-  filter(Statistic >= -4 & Statistic <= 4)
-estDist_dim5_ppmx <- longDF %>%
-  filter(N == 1000, dims == 5, Common == 1.0, Metric %in% c("common1","common2"), xdiff %in% c(0.2,0.4,0.6,0.8,1.0),
-         Model == "ppmx-common") %>%
   mutate(
-    Coef = ifelse(Metric == "common1", "common1 (β=+1)", "common2 (β=-1)"),
-    Truth = ifelse(Metric == "common1", 1, -1),
-    Model = "ppmx-common (dim5)"
+    coef = ifelse(grepl("1$", col_name), "β₁ (truth = +1)", "β₂ (truth = −1)"),
+    truth = ifelse(grepl("1$", col_name), 1, -1)
   ) %>%
-  filter(abs(Statistic - Truth) <= 2, Statistic >= -4 & Statistic <= 4)
-# robust legacy discovery: env var, then candidate dirs, pattern match first, hardcoded fallback
-legacy_cands <- unique(c(Sys.getenv("LEGACY_DIM2_DIR", unset = ""), path.expand("~/papers/ProductPart2/simRes"), path.expand("~/papers/ProductPart2"), path.expand("~/papers")))
-legacy_cands <- legacy_cands[legacy_cands != "" & dir.exists(legacy_cands)]
-legacy_dir <- if (length(legacy_cands) > 0) legacy_cands[1] else path.expand("~/papers/ProductPart2/simRes")
-legacy_found <- character(0)
-if (dir.exists(legacy_dir)) {
-  patt <- list.files(legacy_dir, pattern = "inter1\\.0.*xd[0-9.]+.*v0\\.05.*dim2.*prec0\\.1.*mass1\\.01\\.0.*\\.csv$", full.names = FALSE)
-  # prefer _dpm variants to avoid double-counting replicates when both plain and _dpm exist
-  patt_dpm <- patt[grepl("_dpm", patt)]
-  patt_use <- if (length(patt_dpm) >= 5) patt_dpm else patt
-  legacy_found <- patt_use[grepl("xd(0\\.2|0\\.4|0\\.6|0\\.8|1\\.0)", patt_use)]
-}
-if (length(legacy_found) == 0) {
-  legacy_xdiff_files <- c(
-    "N1000_c8_inter1.0_common1.0_xd0.2_v0.05_dim2_prec0.1alph1.0bet1.0_mass1.01.0_dpm1.0_500.csv",
-    "N1000_c8_inter1.0_common1.0_xd0.4_v0.05_dim2_prec0.1alph1.0bet1.0_mass1.01.0_dpm1.0_500.csv",
-    "N1000_c8_inter1.0_common1.0_xd0.6_v0.05_dim2_prec0.1alph1.0bet1.0_mass1.01.0_dpm1.0_500.csv",
-    "N1000_c8_inter1.0_common1.0_xd0.8_v0.05_dim2_prec0.1alph1.0bet1.0_mass1.01.0_dpm1.0_500.csv",
-    "N1000_c8_inter1.0_common1.0_xd1.0_v0.05_dim2_prec0.1alph1.0bet1.0_mass1.01.0_dpm1.0_500.csv"
-  )
-  legacy_found <- legacy_xdiff_files[file.exists(file.path(legacy_dir, legacy_xdiff_files))]
-}
-if (length(legacy_found) == 0) {
-  #cat("Legacy dim2 ppmx-common not found (tried ", legacy_dir, "); plotting dim5 ppmx-common.\n")
-  estDist <- bind_rows(estDist_other, estDist_dim5_ppmx)
-} else {
-  #cat("Legacy dim2 files used for ppmx-common:", paste(legacy_found, collapse = ", "), "\n")
-  leg_base <- data.frame(file = legacy_found) %>%
-    mutate(data = map(file, ~ suppressMessages(read_csv(file.path(legacy_dir, .x))))) %>%
-    unnest(data) %>%
-    select(`ppmx-common_common1` = meanBeta1, `ppmx-common_common2` = meanBeta2,
-           Common = common, xdiff) %>%
-    pivot_longer(-c(Common, xdiff), names_to = c(".value", "Metric"), names_pattern = "(.*)\\_(.*)") %>%
-    pivot_longer(c(`ppmx-common`), names_to = "Model", values_to = "Statistic") %>%
-    filter(Metric %in% c("common1", "common2")) %>%
-    mutate(
-      Coef = ifelse(Metric == "common1", "common1 (β=+1)", "common2 (β=-1)"),
-      Truth = ifelse(Metric == "common1", 1, -1)
-    )
-  # as-stored estimates (previous series)
-  leg_est <- leg_base %>%
-    filter(abs(Statistic - Truth) <= 2, Statistic >= -4 & Statistic <= 4) %>%
-    mutate(Model = "PPMx-common") %>%
-    cross_join(data.frame(Imbalanced = c(FALSE, TRUE)))
-  # what was labeled bias, replotted on the estimate scale (mislabelling check, no |error| filter)
-  #leg_bias_as_est <- leg_base %>%
-  #  mutate(BiasAsEst = ifelse(Metric == "common1", Common - Statistic, -Common - Statistic)) %>%
-  #  filter(BiasAsEst >= -4 & BiasAsEst <= 4) %>%
-  #  transmute(Coef, Truth, xdiff, Statistic = BiasAsEst, Model = "ppmx-common (dim2 bias as est)") %>%
-  #  cross_join(data.frame(Imbalanced = c(FALSE, TRUE)))
-  estDist <- bind_rows(estDist_other, leg_est) # estDist_dim5_ppmx, leg_bias_as_est
-}
-ggplot(estDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
-  geom_violin(alpha = 0.45, linewidth = 0.4, position = position_dodge(width = 0.85), scale = "width") +
-  stat_summary(aes(group = Model, color = Model), fun = median, geom = "line", linewidth = 0.9, position = position_dodge(width = 0.85)) +
-  stat_summary(aes(group = Model, color = Model), fun = median, geom = "point", size = 2.2, position = position_dodge(width = 0.85)) +
-  geom_hline(data = data.frame(Coef = c("common1 (β=+1)", "common2 (β=-1)"), y = c(1, -1)), aes(yintercept = y), linetype = "dashed", color = "grey40", inherit.aes = FALSE) +
-  facet_grid(rows = vars(Coef), cols = vars(Imbalanced),
-             labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
-  labs(x = "xdiff", y = "Estimate (dashed = truth)",
-       title = "Common-effect estimates") +
-  scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
-ggsave("v2.0/xdiff_common_est.png", width = 10, height = 5, dpi = 300, units = "in")
+  # Map column name back to estimator label
+  left_join(
+    est_map %>% pivot_longer(cols = c(col1, col2), names_to = "which_col", values_to = "col_name") %>% select(label, col_name),
+    by = "col_name"
+  ) %>%
+  rename(Estimator = label) %>%
+  mutate(Estimator = recode(Estimator,
+    "Mix" = "PPMx-common",
+    "DPM" = "DPM",
+    "Kmeans" = "K-means",
+    "Standard" = "Standard PPMx"
+  ))
+
+# ── Detect clustering metric columns ────────────────────────────────
+ari_cols <- grep("^salso.*ARI_Mix$|^ariMix$", names(df), value = TRUE)
+binder_cols <- grep("^salso.*Binder.*Mix$|^binderMix$", names(df), value = TRUE)
+nc_cols <- grep("^nc", names(df), value = TRUE)
+cat("ARI cols:", paste(ari_cols, collapse = ", "), "\n")
+cat("Binder cols:", paste(binder_cols, collapse = ", "), "\n")
+cat("NC cols:", paste(nc_cols, collapse = ", "), "\n")
+
+# ── Detect predictive log-lik columns ───────────────────────────────
+llik_cols <- grep("^llik", names(df), value = TRUE)
+cat("Log-lik cols:", paste(llik_cols, collapse = ", "), "\n")
+
+# ── Filter to balanced scenario grid ────────────────────────────────
+scen <- df %>% filter(!is.na(N), !is.na(dims), !is.na(xdiff))
+if (nrow(scen) == 0) stop("No parseable scenarios in ", results_dir)
+useN <- if (1000 %in% scen$N) 1000 else max(scen$N)
+useDims <- if (5 %in% scen$dims) 5 else max(scen$dims)
+useX <- sort(unique(scen$xdiff[scen$N == useN & scen$dims == useDims]))
+cat("Grid: N =", useN, ", dims =", useDims, ", xdiff =", paste(useX, collapse = ","), "\n")
+
+df_f <- df %>% filter(N == useN, dims == useDims, xdiff %in% useX)
+long_f <- long_est %>% filter(N == useN, dims == useDims, xdiff %in% useX)
 ```
 
-## Prediction {.scrollable}
+## Figure 1: Clustering Quality (ARI & Binder Loss)
 
 ```{r}
-#| column: page
-#| fig-width: 10
-#| fig-height: 4
-lpsDist <- longDF %>%
-  filter(N == 1000, dims == 5, Common == 1.0, Metric == "lps",
-         xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0)) %>%
-  filter(Model %in% c("ppmx","ppmx-common"))
+#| fig-width: 12
+#| fig-height: 6
+#| echo: false
 
-ggplot(lpsDist, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
-  geom_violin(alpha = 0.45, linewidth = 0.4, position = position_dodge(width = 0.85), scale = "width") +
-  stat_summary(aes(group = Model, color = Model), fun = median, geom = "line", linewidth = 0.9, position = position_dodge(width = 0.85)) +
-  stat_summary(aes(group = Model, color = Model), fun = median, geom = "point", size = 2.2, position = position_dodge(width = 0.85)) +
-  facet_grid(cols = vars(Imbalanced),
-             labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
-  labs(x = "xdiff", y = "LPS (higher = better)",
-       caption = "Per-replicate; line = median",
-       title = "Prediction") +
-  scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
-ggsave("v2.0/xdiff_lps.png", width = 10, height = 4, dpi = 300, units = "in")
+# Build clustering long-form from the widest metric columns available
+# ARI: we want salsoBinderARI_Mix (or similar) — the Mix (PPMx) estimate
+ari_col <- grep("^salsoBinderARI_Mix$|^ariMix$", names(df_f), value = TRUE)[1]
+vi_col  <- grep("^salsoVIARI_Mix$|^viMix$", names(df_f), value = TRUE)[1]
+
+cluster_long <- df_f %>%
+  filter(!is.na(.data[[ari_col]]) | !is.na(.data[[vi_col]])) %>%
+  transmute(
+    file, xdiff, Balance,
+    `Binder ARI` = .data[[ari_col]],
+    `VI ARI`     = .data[[vi_col]]
+  ) %>%
+  pivot_longer(cols = c(`Binder ARI`, `VI ARI`), names_to = "Metric", values_to = "ARI") %>%
+  filter(!is.na(ARI))
+
+p_ari <- cluster_long %>%
+  ggplot(aes(x = factor(xdiff), y = ARI, fill = Balance)) +
+  geom_violin(alpha = 0.6, linewidth = 0.4, position = position_dodge(width = 0.9)) +
+  stat_summary(fun = median, geom = "point", size = 1.5, position = position_dodge(width = 0.9), color = "black") +
+  facet_wrap(~ Metric, nrow = 1) +
+  scale_fill_manual(values = pal_balance) +
+  labs(
+    x = "xdiff (covariate separation)",
+    y = "Adjusted Rand Index",
+    title = "Clustering Recovery by Covariate Separation",
+    subtitle = "SALSO point estimates vs truth. Median indicated.",
+    fill = NULL
+  ) +
+  theme_pub +
+  theme(legend.position = "top")
+
+print(p_ari)
+ggsave("v2.0/fig1_ari.png", plot = p_ari, width = 12, height = 6, dpi = 300)
 ```
 
-<!--
-
-**Analogous all-model metric: OOS RMSE.** Lower is better; available for every model (`ppmx-common_rmse` / `ppmx_rmse` / `dpm_rmse` / `kmean_rmse` / `slr_rmse`). Plotted on the same `xdiff` × scenario grid as LPS for direct comparison.
+## Figure 2: Common Effect Estimates (β₁, β₂)
 
 ```{r}
-#| column: page
-#| fig-width: 10
-#| fig-height: 4
-# distribution across replicates; y truncated to 90th pct
-rmseDistAll <- longDF %>%
-  filter(N == 1000, dims == 5, Common == 1.0, Metric == "rmse",
-         xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0))
-rmseDist_q90 <- quantile(rmseDistAll$Statistic, 0.90, na.rm = TRUE)
-rmseDistPlot <- rmseDistAll %>% filter(Statistic <= rmseDist_q90)
-ggplot(rmseDistPlot, aes(x = factor(xdiff), y = Statistic, fill = Model)) +
-  geom_violin(alpha = 0.45, linewidth = 0.4, position = position_dodge(width = 0.85), scale = "width") +
-  stat_summary(aes(group = Model, color = Model), fun = median, geom = "line", linewidth = 0.9, position = position_dodge(width = 0.85)) +
-  stat_summary(aes(group = Model, color = Model), fun = median, geom = "point", size = 2.2, position = position_dodge(width = 0.85)) +
-  facet_grid(cols = vars(Imbalanced),
-             labeller = labeller(Imbalanced = c(`FALSE` = "Balanced", `TRUE` = "Imbalanced"))) +
-  labs(x = "xdiff", y = "RMSE (lower = better)",
-       caption = sprintf("90th pct = %.2f", rmseDist_q90),
-       title = "RMSE") +
-  scale_fill_npg() + scale_color_npg() + theme_bw(base_size = 11) + theme(legend.position = "bottom")
-ggsave("v2.0/xdiff_rmse.png", width = 10, height = 4, dpi = 300, units = "in")
+#| fig-width: 12
+#| fig-height: 7
+#| echo: false
+
+p_coef <- long_f %>%
+  ggplot(aes(x = factor(xdiff), y = estimate, fill = Balance)) +
+  geom_violin(alpha = 0.55, linewidth = 0.4, position = position_dodge(width = 0.9)) +
+  stat_summary(fun = median, geom = "point", size = 1.5, position = position_dodge(width = 0.9), color = "black") +
+  geom_hline(data = tibble(truth_val = c(1, -1), coef = c("β₁ (truth = +1)", "β₂ (truth = −1)")),
+             aes(yintercept = truth_val), linetype = "dashed", colour = "grey30", linewidth = 0.7) +
+  facet_grid(rows = vars(Estimator), cols = vars(coef), scales = "free_y") +
+  scale_fill_manual(values = pal_balance) +
+  labs(
+    x = "xdiff (covariate separation)",
+    y = "Posterior Mean Estimate",
+    title = "Common Effect Recovery Across Estimators",
+    subtitle = "Dashed lines = true values (β₁ = +1, β₂ = −1). Median indicated.",
+    fill = NULL
+  ) +
+  theme_pub +
+  theme(legend.position = "top")
+
+print(p_coef)
+ggsave("v2.0/fig2_coefficients.png", plot = p_coef, width = 12, height = 7, dpi = 300)
 ```
 
-
-
-
-
-
-
-
-
-## Imbalanced-cluster scenarios {.scrollable}
-The simulation also includes scenarios with imbalanced cluster sizes (exponentially
-decaying cluster frequencies). The figure below summarises model performance on those scenarios; table in Appendix.
-
-
+## Figure 3: Predictive Log Density
 
 ```{r}
-# Key-metric densities for imbalanced scenarios (rmse clipped to 90th percentile)
-rmse_q90_imbal <- longDF %>%
-  filter(dims == 5, Imbalanced == TRUE, N == 1000, Common == 1.0, Metric == "rmse") %>%
-  pull(Statistic) %>% quantile(0.90, na.rm = TRUE)
-longDF %>%
-    filter(dims == 5, Imbalanced == TRUE, N == 1000, Common == 1.0,
-           Metric %in% c("rind", "rmse", "binder", "lps")) %>%
-    filter(!(Metric == "rmse" & Statistic > rmse_q90_imbal)) %>%
-    mutate(Metric = recode(Metric,
-                           rind   = "Adjusted Rand Index",
-                           rmse   = "OOS RMSE (≤90th pct)",
-                           binder = "SALSO Binder ARI",
-                           lps    = "OOS log predictive score")) %>%
-    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
-    geom_histogram(alpha = 0.3, color = "black") +
-    facet_grid(rows = vars(Metric), cols = vars(xdiff), scales = "free") +
-    labs(x = "Statistic", y = "Density",
-         caption = sprintf("RMSE truncated at 90th pct = %.2f", rmse_q90_imbal)) +
-    ggtitle("Imbalanced-cluster scenarios, N = 1000, dims = 5") +
-    theme_bw()
-ggsave("v2.0/bigSimImbalanced.png", width = 8, dpi = 300, units = "in")
-```
-
-
-
-## Guide {.scrollable}
-
-80 reps/cell, `xdiff` separation (0 overlap →1 well-separated). Higher = better for ARI/LPS; bias/RMSE lower = better.
-
-- **Clustering — `rind` / `arind` (Adjusted Rand Index).** Posterior mean Rand index vs true partition (in-sample `rind`, OOS `arind`); 0 = chance, 1 = perfect recovery. SALSO variants `binder` / `vi` and `binderoos`/`vioos` are the same ARI but evaluated at the SALSO point estimate under Binder loss or Variation of Information; `dpm` has no MCMC so its single hard partition ARI is shown under `binder`/`vi` for comparison. *Interpretation:* curves near 1 = reliable clustering; divergence between in-sample and OOS = overfitting.
-- **Bias / RMSE — `bias` / `RMSE` (common effects).** `bias = Common - posterior mean` for each common coefficient (sign matters); `RMSE = sqrt(mean((Common - estimate)^2))` averaged over covariates. *Interpretation:* bias near 0 = unbiased; RMSE near 0 = accurate and precise. Facets `common1` (`β=+1`) vs `common2` (`β=-1`) check symmetry.
-- **Log predictive score — `lps` (OOS LPS).** Mean out-of-sample log predictive density under the posterior; larger (less negative) = better calibrated probabilistic predictions. *Interpretation:* replaces Bayesian p-values as a proper scoring rule; gaps of 0.1–0.3 nats across `xdiff` are substantively meaningful.
-- **Coverage / Type II — `_Cov` / `_T2`.** Joint 95% CI coverage of the common effects and Type II error (zero inside CI when truth ≠ 0). Coverage ≈ 0.95 = nominal; elevated Type II = underpowered.
-
-
-## More {.scrollable}
-
-### Covariates
-
-```{r}
-#| message: false
-#| warning: false
-covpath <- if (file.exists("v2.0/covariates.csv")) "v2.0/covariates.csv" else "covariates.csv"
-if (file.exists(covpath)) {
-  covs_raw <- read_csv(covpath, show_col_types = FALSE)
-  if (!"xdiff" %in% names(covs_raw) || nrow(covs_raw)==0) {
-    cat("covariates.csv missing xdiff or empty; regenerate via julia --project=. ../covDist.jl\n")
-  } else {
-    covs <- covs_raw %>%
-      ungroup() %>%
-      pivot_longer(cols = matches("^X\\d+$"), names_to = "covariate", values_to = "value") %>%
-      mutate(xdiff = factor(.data$xdiff, levels = sort(unique(.data$xdiff)))) %>%
-      filter(xdiff != 0 & xdiff != "0" & xdiff != "0.0")
-    p_cov <- ggplot(covs, aes(x = value, fill = factor(group))) +
-      geom_density(alpha = 0.35, linewidth = 0.4) +
-      facet_grid(rows = vars(covariate), cols = vars(xdiff),
-        labeller = labeller(xdiff = function(l) sprintf("xdiff = %s", l))) +
-      scale_fill_npg() + labs(x = "Covariate value", y = "Density", fill = "Group") +
-      theme_minimal(base_size = 11) +
-      theme(legend.position = "right", strip.text = element_text(size = 9),
-            axis.title.x = element_text(margin = margin(t = 8))) +
-      guides(fill = guide_legend(ncol = 1))
-    print(p_cov)
-    ggsave("v2.0/covariateDist.png", plot=p_cov, width = 10, height = 8, dpi = 300, units = "in")
-  }
-} else {
-  cat("covariates.csv not found; run: julia --project=. ../covDist.jl from simulations/\n")
-}
-```
-
-### Clustering (extra)
-
-```{r}
-#| fig-width: 10
+#| fig-width: 12
 #| fig-height: 5
-longDF %>%
-    filter(Metric == "rind", N == 1000, dims == 5, Common == 1.0, xdiff %in% c(0.2,0.4,0.6,0.8,1.0)) %>%
-    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
-    geom_histogram(alpha = 0.3, color = "black") +
-    facet_grid(rows = vars(xdiff), cols = vars(Imbalanced)) +
-    ggtitle("Rand index") +
-    scale_fill_npg() + theme_bw()
-ggsave("v2.0/bigSimRI.png", width = 6, dpi = 300, units = "in")
+#| echo: false
 
-longDF %>%
-    filter(Metric %in% c("binder", "vi", "binderoos", "vioos"), N == 1000, dims == 5, Common == 1.0, xdiff %in% c(0.2,0.4,0.6,0.8,1.0)) %>%
-    mutate(Split = ifelse(grepl("oos", Metric), "Test", "In-sample"),
-           Loss = ifelse(grepl("binder", Metric), "Binder", "VI")) %>%
-    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
-    geom_histogram(alpha = 0.3, color = "black") +
-    facet_grid(rows = vars(Loss, Split), cols = vars(xdiff, Imbalanced)) +
-    labs(x = "ARI (SALSO)") + ggtitle("SALSO ARI") +
-    scale_fill_npg() + theme_bw()
-ggsave("v2.0/bigSimSalso.png", width = 8, dpi = 300, units = "in")
-```
+if (length(llik_cols) > 0) {
+  llik_long <- df_f %>%
+    select(file, xdiff, Balance, all_of(llik_cols)) %>%
+    pivot_longer(cols = all_of(llik_cols), names_to = "model", values_to = "loglik") %>%
+    filter(!is.na(loglik)) %>%
+    mutate(model = recode(model,
+      "llikMix"   = "PPMx-common",
+      "llikDPM"   = "DPM",
+      "llikKmeans" = "K-means",
+      "llikStandard" = "Standard PPMx"
+    ))
 
-### Sensitivity & Imbalanced
+  p_llik <- llik_long %>%
+    ggplot(aes(x = factor(xdiff), y = loglik, fill = Balance)) +
+    geom_violin(alpha = 0.55, linewidth = 0.4, position = position_dodge(width = 0.9)) +
+    stat_summary(fun = median, geom = "point", size = 1.5, position = position_dodge(width = 0.9), color = "black") +
+    facet_wrap(~ model, nrow = 1, scales = "free_y") +
+    scale_fill_manual(values = pal_balance) +
+    labs(
+      x = "xdiff (covariate separation)",
+      y = "Posterior Predictive Log Density",
+      title = "Predictive Fit by Covariate Separation",
+      subtitle = "Higher (less negative) is better. Median indicated.",
+      fill = NULL
+    ) +
+    theme_pub +
+    theme(legend.position = "top")
 
-```{r}
-#| message: false
-#| warning: false
-dp2 <- df %>% filter(dims == 5, !is.na(mass1))
-if (nrow(dp2) > 0) {
-  dpSensFig <- dp2 %>%
-      select(mass1, `ppmx-common_rind`, ppmx_rind, dpm_rind, kmean_rind,
-             `ppmx-common_rmse`, ppmx_rmse, dpm_rmse, kmean_rmse, slr_rmse,
-             `ppmx-common_NC`, ppmx_NC, dpm_NC, kmean_NC) %>%
-      pivot_longer(-mass1, names_to = c("Model", "Metric"), values_to = "Statistic", names_pattern = "(.*)_(.*)") %>%
-      filter(Metric %in% c("rind", "rmse", "NC")) %>%
-      mutate(Metric = recode(Metric, rind = "ARI", rmse = "OOS RMSE", NC = "N clusters")) %>%
-      ggplot(aes(x = mass1, y = Statistic, color = Model, group = Model)) +
-      geom_point(size = 2) + geom_line() + facet_wrap(~ Metric, scales = "free_y") +
-      labs(x = "mass A", y = "Metric", title = "DP mass sensitivity") + theme_bw()
-  ggsave("v2.0/bigSimDPhyperSens.png", width = 10, dpi = 300, units = "in")
-  print(dpSensFig)
+  print(p_llik)
+  ggsave("v2.0/fig3_loglik.png", plot = p_llik, width = 12, height = 5, dpi = 300)
+} else {
+  cat("No log-likelihood columns found in CSVs. Skipping Figure 3.\n")
 }
-rmse_q90_imbal <- longDF %>% filter(dims == 5, Imbalanced == TRUE, N == 1000, Common == 1.0, Metric == "rmse") %>% pull(Statistic) %>% quantile(0.90, na.rm = TRUE)
-longDF %>% filter(dims == 5, Imbalanced == TRUE, N == 1000, Common == 1.0, Metric %in% c("rind", "rmse", "binder", "lps")) %>%
-    filter(!(Metric == "rmse" & Statistic > rmse_q90_imbal)) %>%
-    mutate(Metric = recode(Metric, rind = "ARI", rmse = "OOS RMSE (≤90th)", binder = "Binder ARI", lps = "LPS")) %>%
-    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
-    geom_histogram(alpha = 0.3, color = "black") +
-    facet_grid(rows = vars(Metric), cols = vars(xdiff), scales = "free") +
-    labs(x = "Statistic", y = "Density") + ggtitle("Imbalanced") + theme_bw()
-ggsave("v2.0/bigSimImbalanced.png", width = 8, dpi = 300, units = "in")
 ```
 
-## Sensitivity (M) {.scrollable}
-
-```{r}
-#| fig-width: 10
-#| fig-height: 5
-# Sensitivity to total concentration M (Gamma(a,b) prior) - uses Alpha/Beta columns
-sensM <- longDF %>%
-  filter(dims == 5, Metric %in% c("rind", "rmse", "NC"), xdiff %in% c(0.2,0.4,0.6,0.8,1.0)) %>%
-  reframe(.by = c(Alpha, Beta, Model, Metric), Statistic = mean(Statistic, na.rm = TRUE))
-ggplot(sensM, aes(x = interaction(Alpha, Beta), y = Statistic, color = Model, group = Model)) +
-  geom_point(size = 2) + geom_line() +
-  facet_wrap(~ Metric, scales = "free_y") +
-  labs(x = "Gamma(a,b) for M (Alpha, Beta)", y = "Metric", title = "Sensitivity to total concentration M") +
-  theme_bw() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
-ggsave("v2.0/sensitivity_M.png", width = 10, height = 5, dpi = 300, units = "in")
-```
-
-## Appendix: Tables {.scrollable}
-
-Tables correspond to figures above (scroll via `gt`).
+## Summary Table
 
 ```{r}
 #| echo: false
-cat("Appendix: all tables below correspond to figures above; rendered scrollable via gt.\n")
-```
 
-### Local interpretation (Appendix)
-
-```{r}
-#| column: page
-locTbl <- modLoc |> 
-    arrange(InterEffect, Alpha, Beta, Metric) |>
-    mutate(
-        group_label = sprintf("InterEffect = %s, Alpha = %s, Beta = %s, xdiff = %s", InterEffect, Alpha,Beta, xdiff ),
-        parameter= ifelse(grepl("1", Metric), "1", "2"),
-        Metric = ifelse(grepl("bias", Metric), "bias", "RMSE"),
-    ) |>
-    group_by(group_label) |>
-    select(-c(InterEffect, Alpha, Beta, Precision)) |>
-    filter(xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0), dims == 5)
-locTbl |> write_csv("v2.0/tables/table_local_interp.csv")
-locTbl |>
-  gt() |>
-  tab_header(title = "Local interpretation: bias / RMSE by xdiff") |>
-  opt_interactive(use_compact_mode = TRUE) |>
-  gt_scroll()
-```
-
-### Model comparison (Appendix)
-
-```{r}
-#| column: page
-modCompTbl <- longDF %>%
-    filter(dims == 5, xdiff %in% c(0.2, 0.4, 0.6, 0.8, 1.0)) %>%
-    group_by(Metric, Model, Imbalanced) %>%
-    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
-    pivot_wider(names_from = Model, values_from = Statistic)
-modCompTbl |> write_csv("v2.0/tables/table_model_comparison.csv")
-modCompTbl |>
-  gt() |>
-  tab_header(title = "Model comparison (dims=5, xdiff grid)") |>
-  fmt_number(decimals = 3, use_seps = FALSE) |>
-  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
-  gt_scroll()
-```
-
-```{r}
-#| column: page
-tempMetricsTbl <- longDF %>%
-    filter(dims == 5) %>%
-    group_by(Model, Metric) %>%
-    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
-    pivot_wider(names_from = Metric, values_from = Statistic)
-tempMetricsTbl |> write_csv("v2.0/tables/table_temp_metrics.csv")
-tempMetricsTbl |>
-  gt() |>
-  tab_header(title = "Metrics by model (dims=5)") |>
-  fmt_number(decimals = 3, use_seps = FALSE) |>
-  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
-  gt_scroll()
-```
-
-```{r}
-#| column: page
-vsInterTbl <- longDF %>%
-    filter(dims == 5, Alpha == 3.0, Beta == 3.0) %>%
-    group_by(Model, Metric, InterEffect) %>%
-    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
-    pivot_wider(names_from = Metric, values_from = Statistic)
-vsInterTbl |> write_csv("v2.0/tables/table_temp_vs_intereffects.csv")
-vsInterTbl |>
-  gt() |>
-  tab_header(title = "Metrics vs InterEffect (Alpha=3, Beta=3, dims=5)") |>
-  fmt_number(decimals = 3, use_seps = FALSE) |>
-  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
-  gt_scroll()
-```
-
-### SALSO summary (Appendix)
-
-```{r}
-#| column: page
-salsoTbl <- longDF %>%
-    filter(Metric %in% c("binder", "vi", "binderoos", "vioos"), N == 1000, dims == 5, Common == 1.0) %>%
-    mutate(Split = ifelse(grepl("oos", Metric), "OOS", "in-sample"),
-           Loss  = ifelse(grepl("binder", Metric), "Binder", "VI")) %>%
-    reframe(.by = c(Model, Loss, Split, xdiff, Imbalanced),
-            ARI = mean(Statistic, na.rm = TRUE)) %>%
-    pivot_wider(names_from = c(Loss, Split), values_from = ARI)
-salsoTbl |> write_csv("v2.0/tables/table_salso_by_model.csv")
-salsoTbl |>
-  gt() |>
-  tab_header(title = "SALSO ARI by model (Binder / VI, in-sample & OOS)") |>
-  fmt_number(decimals = 3, use_seps = FALSE) |>
-  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
-  gt_scroll()
-```
-
-```{r}
-#| column: page
-lpsTbl <- longDF %>%
-    filter(Metric == "lps", N == 1000, dims == 5, Common == 1.0) %>%
-    reframe(.by = c(xdiff, Model, Imbalanced), Statistic = mean(Statistic, na.rm = TRUE)) %>%
-    pivot_wider(names_from = Model, values_from = Statistic) %>%
-    mutate(across(c(`ppmx-common`, ppmx), round, 3))
-lpsTbl |> write_csv("v2.0/tables/table_lps_by_model.csv")
-lpsTbl |>
-  gt() |>
-  tab_header(title = "OOS log predictive score by model (N=1000, dims=5)") |>
-  fmt_number(decimals = 3, use_seps = FALSE) |>
-  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
-  gt_scroll()
-```
-
-### DP concentration sensitivity (Appendix)
-
-```{r}
-#| column: page
-#| echo: false
-dp2 <- df %>% filter(dims == 5, !is.na(mass1))
-if (nrow(dp2) > 0) {
-  dpSens <- dp2 %>%
-      select(mass1, Imbalanced, xdiff,
-             `ppmx-common_rind`, ppmx_rind, dpm_rind, kmean_rind,
-             `ppmx-common_rmse`, ppmx_rmse, dpm_rmse, kmean_rmse, slr_rmse,
-             `ppmx-common_NC`, ppmx_NC, dpm_NC, kmean_NC,
-             `ppmx-common_binder`, ppmx_binder, `ppmx-common_vi`, ppmx_vi,
-             `ppmx-common_lps`, ppmx_lps) %>%
-      pivot_longer(-c(mass1, Imbalanced, xdiff),
-                   names_to = c("Model", "Metric"),
-                   values_to = "Statistic",
-                   names_pattern = "(.*)_(.*)") %>%
-      group_by(mass1, Model, Metric) %>%
-      summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
-      pivot_wider(names_from = Metric, values_from = Statistic)
-  dpSens |> write_csv("v2.0/tables/table_dp_hyperparameter_sensitivity.csv")
-  print(
-    dpSens |>
-      gt() |>
-      tab_header(title = "Sensitivity to DP concentration (mass A), dims=5") |>
-      fmt_number(decimals = 3, use_seps = FALSE) |>
-      opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE)
+# Summarise key metrics across scenarios
+summary_tbl <- df_f %>%
+  group_by(xdiff, Balance) %>%
+  reframe(
+    n = n(),
+    mean_beta1 = mean(meanBeta1, na.rm = TRUE),
+    mean_beta2 = mean(meanBeta2, na.rm = TRUE),
+    bias_beta1 = mean(meanBeta1 - 1, na.rm = TRUE),
+    bias_beta2 = mean(meanBeta2 - (-1), na.rm = TRUE),
+    rmse_beta1 = sqrt(mean((meanBeta1 - 1)^2, na.rm = TRUE)),
+    rmse_beta2 = sqrt(mean((meanBeta2 - (-1))^2, na.rm = TRUE))
   )
-}
+
+summary_tbl %>%
+  gt() %>%
+  tab_header(title = paste0("Scenario Summary (N=", useN, ", dims=", useDims, ")")) %>%
+  fmt_number(columns = where(is.numeric), decimals = 3) %>%
+  opt_interactive(use_compact_mode = TRUE)
 ```
 
-### Imbalanced scenarios (Appendix)
+## Reproducibility
 
-```{r}
-#| column: page
-imbalTbl <- longDF %>%
-    filter(dims == 5, Imbalanced == TRUE) %>%
-    group_by(Metric, Model) %>%
-    summarise(Statistic = mean(Statistic, na.rm = TRUE), .groups = "drop") %>%
-    pivot_wider(names_from = Model, values_from = Statistic)
-imbalTbl |> write_csv("v2.0/tables/table_model_comparison_imbalanced.csv")
-imbalTbl |>
-  gt() |>
-  tab_header(title = "Imbalanced-cluster scenarios (dims=5)") |>
-  fmt_number(decimals = 3, use_seps = FALSE) |>
-  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
-  gt_scroll()
+- **Julia 1.11.7** with `ProductPartitionModels.jl` (v2.0 branch)
+- **R** with `tidyverse`, `patchwork`, `ggsci`, `gt`, `quarto`
+- Results in `simulations/results/v2.0/`
+- To regenerate: `julia --project=. sim.jl <params>` for each scenario
+
+```bash
+cd ~/software/ProductPartitionModels.jl/simulations
+quarto render results/vizFull.qmd --to revealjs --output-dir results/v2.0/presentation
 ```
-
-```{r}
-#| column: page
-commonCovTbl <- df %>%
-    filter(N == 1000, dims == 5, Common == 1.0) %>%
-    reframe(.by = c(xdiff, Imbalanced), `ppmx-common_ccov` = mean(`ppmx-common_ccov`, na.rm = TRUE)) %>%
-    mutate(across(`ppmx-common_ccov`, round, 3))
-commonCovTbl |> write_csv("v2.0/tables/table_common_effect_cov.csv")
-commonCovTbl |>
-  gt() |>
-  tab_header(title = "Common-effect joint coverage (ppmx-common, N=1000, dims=5)") |>
-  fmt_number(decimals = 3, use_seps = FALSE) |>
-  opt_interactive(use_compact_mode = TRUE, use_page_size_select = TRUE) |>
-  gt_scroll()
-```
-```
-
-## clustering and prediction vs inter effect
-```{r}
-#| output: false
-longDF %>%
-    filter(dims == 5, Alpha == 3.0, Beta == 3.0, grepl("rind", Metric) | grepl("bayes", Metric)) %>%
-    select(-c(Alpha, Beta, Precision, variance, Common, Imbalanced)) %>%
-    arrange(InterEffect, Metric)
-```
-
-
-```{r}
-longDF %>%
-    filter(dims == 5, Metric == "rind") %>%
-    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
-    geom_histogram(alpha = 0.3, color = "black") +
-    facet_grid(cols = vars(Alpha), rows = vars(Beta), scales = "free",
-        labeller = labeller(.rows = label_both, .cols = label_both)
-    ) +
-    xlim(0.8, 1.0) +
-    ggtitle("Rand index (common=1, Interaction=0.25), Balanced")
-```
-
-
-
-# big sim — common-effect densities hidden (rely on bias/RMSE tables; dims=5)
-```{r}
-#| eval: false
-if (!exists("beta_q10")) {
-  beta_common_q <- longDF %>% filter(Metric %in% c("common1","common2"), N==1000, dims==5, Common==1.0) %>%
-    reframe(q10 = quantile(Statistic, 0.10, na.rm=TRUE), q90 = quantile(Statistic, 0.90, na.rm=TRUE))
-  beta_q10 <- beta_common_q$q10; beta_q90 <- beta_common_q$q90
-}
-longDF %>%
-    filter(Metric == "common1", N== 1000, dims == 5, Common == 1.0) %>%
-    ggplot(aes(x = Statistic, fill = Model)) +
-    geom_density(alpha = 0.2) +
-    geom_vline(xintercept = 1.0) +
-    geom_vline(xintercept = 0.0) +
-    facet_grid(
-        rows = vars(xdiff, Imbalanced), cols = vars(InterEffect), scales = "free",
-        #labeller = labeller(.rows = label_both, .cols = label_both)
-    ) +
-    ggtitle("Common effects, dims=5") +
-    xlab("Common Estimate") +
-    coord_cartesian(xlim = c(beta_q10, beta_q90))
-ggsave("v2.0/bigSimcommon1.png", width = 6, dpi = 300, units = "in")
-
-longDF %>%
-    filter(Metric == "common2", N== 1000, dims == 5, Common == 1.0) %>%
-    ggplot(aes(x = Statistic, fill = Model)) +
-    geom_density(alpha = 0.2) +
-    geom_vline(xintercept = 1.0) +
-    geom_vline(xintercept = 0.0) +
-    facet_grid(
-        rows = vars(xdiff, Imbalanced), cols = vars(InterEffect), scales = "free",
-        #labeller = labeller(.rows = label_both, .cols = label_both)
-    ) +
-    ggtitle("Common effects, dims=5") +
-    xlab("Common Estimate") +
-    coord_cartesian(xlim = c(beta_q10, beta_q90))
-ggsave("v2.0/bigSimcommon2.png", width = 6, dpi = 300, units = "in")
-
-longDF %>%
-    filter(Metric == "rind", N == 1000, dims == 5, Common == 1.0) %>%
-    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
-    geom_histogram(alpha = 0.3, color = "black") +
-    facet_grid(rows = vars(xdiff), cols = vars(Imbalanced)) + #, labeller = labeller(.rows = label_both, .cols = label_both))
-    ggtitle("Rand index, N = 1000, dims=5")
-ggsave("v2.0/bigSimRI.png", width = 6, dpi = 300, units = "in")
-
-longDF %>%
-    filter(Metric %in% c("binder", "vi", "binderoos", "vioos"), N == 1000, dims == 5, Common == 1.0) %>%
-    mutate(Split = ifelse(grepl("oos", Metric), "OOS", "in-sample"),
-           Loss = ifelse(grepl("binder", Metric), "Binder", "VI")) %>%
-    ggplot(aes(x = Statistic, fill = Model, y = after_stat(density))) +
-    geom_histogram(alpha = 0.3, color = "black") +
-    facet_grid(rows = vars(Loss, Split), cols = vars(xdiff, Imbalanced)) +
-    labs(x = "Adjusted Rand Index (SALSO point estimate)") +
-    ggtitle("SALSO ARI, N = 1000, dims=5")
-ggsave("v2.0/bigSimSalso.png", width = 8, dpi = 300, units = "in")
-
-```
-
--->
