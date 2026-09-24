@@ -2,7 +2,8 @@
 .DS_Store
 .vscode/simulations/logs/sim_34488974_1.err
 simulations/logs/*
-psychometrika/*
+psychometrika/
+
 
 **/log/**
 **/logs/**
@@ -21,3 +22,8 @@ ABCD-adhd/*
 **/old/**
 *.err
 *.out
+
+# Exceptions: allow paper-ready outputs
+!simulations/results/v2.0/*.csv
+!simulations/results/*.png
+!simulations/results/v2.0/*.jld2
