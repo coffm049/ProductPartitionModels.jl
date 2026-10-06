@@ -3,40 +3,6 @@
 export postPred, postPredLogdens;
 
 """
-    common_effect(sims_entry) -> Vector or `nothing`
-
-The per-draw common effect `beta*`, or `nothing` when the chain does not carry
-one (standard PPMx, where the shrinkage center is zero by construction).
-
-PPMx-common (`mixDPM=true`) stores `lik_params[k][:beta]` as the cluster
-*deviation* from the common effect: `ellipSlice` updates it with a Dirichlet–
-Laplace prior centered on `prior_mean_beta` (`update_lik_params.jl`), and the
-sampler's own likelihood adds the common effect back when evaluating the prior.
-Predictive means must therefore reconstruct `beta* + delta_k`. Chains saved
-before `:prior_mean_beta` was monitored have no such key and are left alone.
-"""
-function common_effect(s_entry::AbstractDict)
-    haskey(s_entry, :prior_mean_beta) || return nothing
-    b = s_entry[:prior_mean_beta]
-    b === nothing && return nothing
-    return b
-end
-
-"""
-    cluster_beta(s_entry, k) -> Vector
-
-Population-level regression slope for cluster `k` in this posterior draw:
-the common effect plus the stored cluster deviation. Reduces to the stored
-`beta` for standard PPMx, whose common effect is zero.
-"""
-function cluster_beta(s_entry::AbstractDict, k::Int)
-    delta = s_entry[:lik_params][k][:beta]
-    beta_star = common_effect(s_entry)
-    beta_star === nothing && return delta
-    return beta_star .+ delta
-end
-
-"""
     new_cluster_params(s_entry, model, update_params)
 
 Draw the parameters of the `K+1` new-singleton component for one posterior
@@ -48,11 +14,6 @@ loop, so every observation in the same draw was scored against a *different*
 new-cluster parameter draw; that added Monte Carlo noise to the predictive
 density which is not part of the posterior and which grows with the number of
 observations.
-
-The new cluster's slope is drawn from the same Dirichlet–Laplace prior as an
-existing cluster, centered on the common effect when the chain has one, so
-PPMx-common does not give its new-singleton component a zero-centered slope
-while its fitted clusters are centered on `beta*`.
 """
 function new_cluster_params(s_entry::AbstractDict, model::Model_PPMx,
                             update_params::Vector{Symbol})
@@ -69,11 +30,6 @@ function new_cluster_params(s_entry::AbstractDict, model::Model_PPMx,
     lik_params_new = simpri_lik_params(basenow,
         model.p, model.state.lik_params[1], update_params
     )
-
-    beta_star = common_effect(s_entry)
-    if beta_star !== nothing && typeof(model.state.lik_params[1]) <: LikParams_PPMxReg
-        lik_params_new.beta = beta_star .+ lik_params_new.beta
-    end
 
     return lik_params_new
 end
@@ -180,7 +136,7 @@ function postPred(Xpred::Union{Matrix{T},Matrix{Union{T,Missing}}},
                 sig2_now = sims[ii][:lik_params][C_i][:sig]^2
 
                 if typeof(model.state.lik_params[1]) <: LikParams_PPMxReg
-                    beta_k = cluster_beta(sims[ii], C_i)
+                    beta_k = sims[ii][:lik_params][C_i][:beta]
                     if obsXIndx_pred[i].n_mis > 0
                         sig2_now += sum(beta_k[obsXIndx_pred[i].indx_mis] .^ 2)
                     end
@@ -344,7 +300,7 @@ function postPredLogdens(Xpred::Union{Matrix{T},Matrix{Union{T,Missing}}},
                 sig2_now[k] = sims[ii][:lik_params][k][:sig]^2
 
                 if typeof(model.state.lik_params[1]) <: LikParams_PPMxReg
-                    beta_k = cluster_beta(sims[ii], k)
+                    beta_k = sims[ii][:lik_params][k][:beta]
                     if obsXIndx_pred[i].n_mis > 0
                         sig2_now[k] += sum(beta_k[obsXIndx_pred[i].indx_mis] .^ 2)
                     end
