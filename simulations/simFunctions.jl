@@ -65,6 +65,7 @@ function simData(
     plotSim=false
 )
     nclusts = length(fractions)
+    @assert nclusts >= 2 "Expected at least 2 clusters from fractions, got nclusts=$nclusts, fractions=$fractions"
     # Step 1: Create DataFrame with X1, X2, ..., Xdims
     df = DataFrame()
     for d in 1:dims

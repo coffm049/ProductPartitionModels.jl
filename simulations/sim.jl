@@ -69,7 +69,7 @@ end
 # END user input
 #
 fractions = imbalanced == 1 ? exp.(-collect(0:(nc-1)) .* 0.8) ./ sum(exp.(-collect(0:(nc-1)) .* 0.8)) : repeat([1 / nc], nc)
-
+println("DEBUG: nc=$nc, imbalanced=$imbalanced, fractions length=$(length(fractions)), fractions=$fractions")
 # END other controls
 
 
