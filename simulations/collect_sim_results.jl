@@ -65,6 +65,11 @@ function collect_sim_results(results_dir="results/v2.0"; output_prefix="paper_si
                 :dpmRMSEoos => median => :rmse_dpmmoos_med,
                 :dpmARI => median => :ari_dpmm_med,
                 :dpmARIoos => median => :ari_dpmmoos_med,
+                # DPMM coverage (for cluster-specific slopes)
+                :dpmzeroIn1 => mean => :cov_dpmm_zero1,
+                :dpmcommonIn1 => mean => :cov_dpmm_common1,
+                :dpmzeroIn2 => mean => :cov_dpmm_zero2,
+                :dpmcommonIn2 => mean => :cov_dpmm_common2,
                 # SALSO ARI
                 :salsoBinderARI_Mix => median => :salso_binder_mix_med,
                 :salsoVIARI_Mix => median => :salso_vi_mix_med,
@@ -92,6 +97,7 @@ function collect_sim_results(results_dir="results/v2.0"; output_prefix="paper_si
             :lps_mixoos_med, :lps_dpmoos_med,
             :beta1_mix_med, :beta2_mix_med,
             :coverage_mix,
+            :cov_dpmm_zero1, :cov_dpmm_common1, :cov_dpmm_zero2, :cov_dpmm_common2,
             :k_mix_med, :k_dpm_med, :k_dpmm_med)
         CSV.write("$(output_prefix)paper_comparison.csv", paper_tbl)
         @info "Wrote $(output_prefix)paper_comparison.csv"
