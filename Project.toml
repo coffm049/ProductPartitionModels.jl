@@ -4,6 +4,7 @@ authors = ["Matt Heiner <heiner@stat.byu.edu>"]
 version = "0.8.5"
 
 [deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
@@ -14,6 +15,8 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 
 [compat]
+CSV = "1.1.0"
+StatsBase = "0.34.13"
 julia = "1.6"
 
 [extras]
