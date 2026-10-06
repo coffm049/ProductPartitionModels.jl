@@ -11,8 +11,13 @@ function collect_sim_results(results_dir="results/v2.0"; output_prefix="paper_si
     dfs = DataFrame[]
     for f in files
         try
-            df = CSV.read(f, DataFrame; silencewarnings=true)
-            push!(dfs, df)
+            df = CSV.read(f, DataFrame; on_error=:collect)
+            # Keep only current 50-rep runs (N=1000); skip old 100-rep or smoke runs
+            if hasproperty(df, :N) && all(df.N .== 1000)
+                push!(dfs, df)
+            else
+                @warn "Skipping $f - parameter mismatch (N=$(unique(df.N)))"
+            end
         catch e
             @warn "Failed to read $f" exception=e
         end
