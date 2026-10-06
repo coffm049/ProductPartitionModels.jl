@@ -94,10 +94,14 @@ Threads.@threads for i in 1:reps
         truthAll[i] = out.truth
         truthoosAll[i] = out.truthoos
     catch err
-        println("sim Failed")
+        println("sim $i Failed: ", err)
+        println(stacktrace(catch_backtrace()))
     end
 end
 defined_results = [results[i] for i in 1:reps if isassigned(results, i)]
+if isempty(defined_results)
+    error("All $reps replicates failed; no results to aggregate.")
+end
 df = vcat(defined_results...)
 definedIdx = findall(i -> isassigned(results, i), 1:reps)
 
