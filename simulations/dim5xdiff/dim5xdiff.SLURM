@@ -71,4 +71,4 @@ cd ~/software/ProductPartitionModels.jl/simulations
 # runDPM = parse(Int, ARGS[15])
 # DPMalpha = parse(Float64, ARGS[16])
 # DPMiters = parse(Int, ARGS[17])
-julia --project=. --threads=2 sim.jl 1000 8 0.05 1.0 1.0 $XDIFF 5 $PREC $ALPHA $BETA 80 1000 $MASS $MASS 1 1.0 500
+julia --project=. --threads=2 sim.jl 1000 8 0.05 1.0 1.0 $XDIFF 5 $PREC $ALPHA $BETA 50 1000 $MASS $MASS 1 1.0 500
