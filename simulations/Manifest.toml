@@ -301,7 +301,7 @@ version = "4.2.0"
 
 [[deps.DPMM]]
 deps = ["ColorBrewer", "Colors", "Distributed", "Distributions", "LinearAlgebra", "PDMats", "Random", "SharedArrays", "SparseArrays", "Statistics", "TimerOutputs"]
-git-tree-sha1 = "b5006aacbe9e2bdd9c62bc3e487fc64be4862a3e"
+git-tree-sha1 = "0d4e372c3fbb7ee5ec405618ad938db6c18e5880"
 repo-rev = "master"
 repo-url = "https://github.com/coffm049/DPMM.jl"
 uuid = "2487a4fc-3533-11e9-3ba1-bf2a1e587022"
