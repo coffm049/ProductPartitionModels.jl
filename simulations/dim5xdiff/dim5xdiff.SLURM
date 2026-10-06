@@ -3,7 +3,7 @@
 #SBATCH --output=../logs/dim5xdiff-v2.out
 #SBATCH --error=../logs/dim5xdiff-v2.err
 #SBATCH --cpus-per-task=2
-#SBATCH --time=72:00:00
+#SBATCH --time=18:00:00
 #SBATCH --mem-per-cpu=4G
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=coffm049@umn.edu
