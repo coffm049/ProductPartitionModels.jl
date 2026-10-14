@@ -61,7 +61,6 @@ end
 Generate paper-ready LaTeX tables from collected simulation results.
 Run on HPC after simulations complete and collect_sim_results.jl has been run.
 """
-
 function make_sim_table_paper(results_dir="results/v2.0"; output_file="paper_sim_table.tex")
     # Read raw data to compute Type II error and coverage properly
     raw_file = "paper_sim_raw.csv"
@@ -114,16 +113,16 @@ function make_sim_table_paper(results_dir="results/v2.0"; output_file="paper_sim
     
     # Build LaTeX table
     io = IOBuffer()
-    println(io, "\\begin{table}[ht!]")
-    println(io, "\\centering")
-    println(io, "\\fontsize{6.0pt}{8pt}\\selectfont")
-    println(io, "\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}} p{0.2cm}p{0.2cm}p{0.2cm}p{0.2cm}p{0.4cm}|")
-    println(io, " p{0.6cm}p{0.5cm}p{0.5cm}p{0.6cm}p{0.5cm}p{0.5cm}p{0.6cm}p{0.55cm}p{0.55cm}p{0.5cm}p{0.4cm}p{0.4cm}}")
-    println(io, "\\toprule")
-    println(io, " & & & & & \\multicolumn{3}{c}{T2} & \\multicolumn{3}{c}{Cov} & \\multicolumn{3}{c}{Bias} & \\multicolumn{3}{c}{RMSE} \\\\")
-    println(io, "\\cmidrule(lr){6-8} \\cmidrule(lr){9-11} \\cmidrule(lr){12-14} \\cmidrule(lr){15-17}")
-    println(io, "\\$\\Delta \\beta\$ & \\$a_{\\beta}\$ & \\$b_{\\beta}\$ & \\$\\sigma_{\\epsilon}^2\$ & \\$\\Delta X\$ & PPMx & LR & KM & PPMx & LR & KM & PPMx & LR & KM & PPMx & LR & KM \\\\")
-    println(io, "\\midrule\\addlinespace[2.5pt]")
+    println(io, raw"\begin{table}[ht!]")
+    println(io, raw"\centering")
+    println(io, raw"\fontsize{6.0pt}{8pt}\selectfont")
+    println(io, raw"\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}} p{0.2cm}p{0.2cm}p{0.2cm}p{0.2cm}p{0.4cm}|")
+    println(io, raw" p{0.6cm}p{0.5cm}p{0.5cm}p{0.6cm}p{0.5cm}p{0.5cm}p{0.6cm}p{0.55cm}p{0.55cm}p{0.5cm}p{0.4cm}p{0.4cm}}")
+    println(io, raw"\toprule")
+    println(io, raw" & & & & & \multicolumn{3}{c}{T2} & \multicolumn{3}{c}{Cov} & \multicolumn{3}{c}{Bias} & \multicolumn{3}{c}{RMSE} \\")
+    println(io, raw"\cmidrule(lr){6-8} \cmidrule(lr){9-11} \cmidrule(lr){12-14} \cmidrule(lr){15-17}")
+    println(io, raw"$\Delta \beta$ & $a_{\beta}$ & $b_{\beta}$ & $\sigma_{\epsilon}^2$ & $\Delta X$ & PPMx & LR & KM & PPMx & LR & KM & PPMx & LR & KM & PPMx & LR & KM \\")
+    println(io, raw"\midrule\addlinespace[2.5pt]")
     
     function fmt2(v1, v2)
         ismissing(v1) || ismissing(v2) ? "NA" : @sprintf("%.3f\\newline %.3f", v1, v2)
@@ -150,71 +149,11 @@ function make_sim_table_paper(results_dir="results/v2.0"; output_file="paper_sim
             fmt2(row.cov_km_1, row.cov_km_2), " \\\\")
     end
     
-    # Write to file
-    io = IOBuffer()
-    println(io, "\\begin{table}[ht!]")
-    println(io, "\\centering")
-    println(io, "\\fontsize{6.0pt}{8pt}\\selectfont")
-    println(io, "\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}} p{0.2cm}p{0.2cm}p{0.2cm}p{0.2cm}p{0.4cm}|")
-    println(io, " p{0.6cm}p{0.5cm}p{0.5cm}p{0.6cm}p{0.5cm}p{0.5cm}p{0.6cm}p{0.55cm}p{0.55cm}p{0.5cm}p{0.4cm}p{0.4cm}}")
-    println(io, "\\toprule")
-    println(io, " & & & & & \\multicolumn{3}{c}{T2} & \\multicolumn{3}{c}{Cov} & \\multicolumn{3}{c}{Bias} & \\multicolumn{3}{c}{RMSE} \\\\")
-    println(io, "\\cmidrule(lr){6-8} \\cmidrule(lr){9-11} \\cmidrule(lr){12-14} \\cmidrule(lr){15-17}")
-    println(io, "\\$\\Delta \\beta\$ & \\$a_{\\beta}\$ & \\$b_{\\beta}\$ & \\$\\sigma_{\\epsilon}^2\$ & \\$\\Delta X\$ & PPMx & LR & KM & PPMx & LR & KM & PPMx & LR & KM & PPMx & LR & KM \\\\")
-    println(io, "\\midrule\\addlinespace[2.5pt]")
-    
-    for row in eachrow(results)
-        dX = row.xdiff
-        dims = row.dims
-        inter = row.interEffect
-        common = row.common
-        var = row.variance
-        N = row.N
-        
-        println(io, "$(dims) & $(var) & $(inter) & $(var) & $(dX) & ", 
-            fmt2(row.t2_mix_1, row.t2_mix_2), " & ",
-            fmt2(row.t2_slr_1, row.t2_slr_2), " & ",
-            fmt2(row.t2_km_1, row.t2_km_2), " & ",
-            fmt2(row.cov_mix_1, row.cov_mix_2), " & ",
-            fmt2(row.cov_slr_1, row.cov_slr_2), " & ",
-            fmt2(row.cov_km_1, row.cov_km_2), " \\\\")
-    end
-    
-    # Write to file
-    io = IOBuffer()
-    println(io, "\\begin{table}[ht!]")
-    println(io, "\\centering")
-    println(io, "\\fontsize{6.0pt}{8pt}\\selectfont")
-    println(io, "\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}} p{0.2cm}p{0.2cm}p{0.2cm}p{0.2cm}p{0.4cm}|")
-    println(io, " p{0.6cm}p{0.5cm}p{0.5cm}p{0.6cm}p{0.5cm}p{0.5cm}p{0.6cm}p{0.55cm}p{0.55cm}p{0.5cm}p{0.4cm}p{0.4cm}}")
-    println(io, "\\toprule")
-    println(io, " & & & & & \\multicolumn{3}{c}{T2} & \\multicolumn{3}{c}{Cov} & \\multicolumn{3}{c}{Bias} & \\multicolumn{3}{c}{RMSE} \\\\")
-    println(io, "\\cmidrule(lr){6-8} \\cmidrule(lr){9-11} \\cmidrule(lr){12-14} \\cmidrule(lr){15-17}")
-    println(io, "\\$\\Delta \\beta\$ & \\$a_{\\beta}\$ & \\$b_{\\beta}\$ & \\$\\sigma_{\\epsilon}^2\$ & \\$\\Delta X\$ & PPMx & LR & KM & PPMx & LR & KM & PPMx & LR & KM & PPMx & LR & KM \\\\")
-    println(io, "\\midrule\\addlinespace[2.5pt]")
-    
-    for row in eachrow(results)
-        dX = row.xdiff
-        dims = row.dims
-        inter = row.interEffect
-        common = row.common
-        var = row.variance
-        N = row.N
-        
-        println(io, "$(dims) & $(var) & $(inter) & $(var) & $(dX) & ", 
-            fmt2(row.t2_mix_1, row.t2_mix_2), " & ",
-            fmt2(row.t2_slr_1, row.t2_slr_2), " & ",
-            fmt2(row.t2_km_1, row.t2_km_2), " & ",
-            fmt2(row.cov_mix_1, row.cov_mix_2), " & ",
-            fmt2(row.cov_slr_1, row.cov_slr_2), " & ",
-            fmt2(row.cov_km_1, row.cov_km_2), " \\\\")
-    end
-    
-    println(io, "\\bottomrule")
-    println(io, "\\end{tabular*}")
-    println(io, "    \\caption{Simulation performance summary of estimating the common effect \\$\\\\bm \\\\beta^*\\$ across PPMx-common, standard PPMx, DP-GMM, K-means, and linear regression methods. Shown are Type II error (T2), coverage (Cov), median bias (censored to [-3,3]), and RMSE (truncated at 90th pctl) for \\$\\\\beta_1^*\\$ and \\$\\\\beta_2^*\\$ (two values per cell). New baselines: standard PPMx and DP-GMM cluster-then-regression added per Reviewer 1. Bias/RMSE displayed with robust median/90th-pctl truncation; coverage for sign-alternating \\$\\\\beta_2^*\\$ correctly evaluates \\$-\\\\beta^*\\in\\text{CI}\\$.)")
-    println(io, "    \\label{tab:betaTuningTable}")
-    println(io, "\\end{table}")
+    println(io, raw"\bottomrule")
+    println(io, raw"\end{tabular*}")
+    println(io, raw"\caption{Simulation performance summary of estimating the common effect $\bm \beta^*$ across PPMx-common, standard PPMx, DP-GMM, K-means, and linear regression methods. Shown are Type II error (T2), coverage (Cov), median bias (censored to [-3,3]), and RMSE (truncated at 90th pctl) for $\beta_1^*$ and $\beta_2^*$ (two values per cell). New baselines: standard PPMx and DP-GMM cluster-then-regression added per Reviewer 1. Bias/RMSE displayed with robust median/90th-pctl truncation; coverage for sign-alternating $\beta_2^*$ correctly evaluates $-\beta^*\in\text{CI}$.}")
+    println(io, raw"\label{tab:betaTuningTable}")
+    println(io, raw"\end{table}")
     
     write(output_file, String(take!(io)))
     @info "Wrote $output_file"
@@ -245,15 +184,15 @@ function make_real_data_table(
     df = CSV.read(comparison_file, DataFrame)
     
     io = IOBuffer()
-    println(io, "\\begin{table}[!htp]")
-    println(io, "\\centering")
-    println(io, "\\caption{Real-data model comparison on the ABCD dataset, combined sample (test $n=3,149$ FRF-matched subjects). Four methods: PPMx-common, Standard PPMx, $k$-means, and DP-GMM. The RMSE, LPS, and ARI columns report the central 90\\% credible interval for the three Bayesian models (PPMx-common, Standard PPMx, DP-GMM); $k$-means is a deterministic point estimate with no posterior. Columns: test log predictive score (LPS), the ARI of the posterior modal partition and of the SALSO Binder point estimate against the FRF community labels (with 90\\% CI for the Bayesian models), the minimized Binder loss, and number of clusters. For the Bayesian models, point estimates and 90\\% intervals are 5\\%/95\\% quantiles over posterior draws.}")
-    println(io, "\\label{tab:realDataComparison}")
-    println(io, "\\resizebox{\\textwidth}{!}{%")
-    println(io, "\\begin{tabular}{lcccccc}")
-    println(io, "\\toprule")
-    println(io, "Model & RMSE & LPS & ARI (Modal) & ARI (SALSO Binder) & Binder Loss & nclusters \\\\")
-    println(io, "\\midrule")
+    println(io, raw"\begin{table}[!htp]")
+    println(io, raw"\centering")
+    println(io, raw"\caption{Real-data model comparison on the ABCD dataset, combined sample (test $n=3,149$ FRF-matched subjects). Four methods: PPMx-common, Standard PPMx, $k$-means, and DP-GMM. The RMSE, LPS, and ARI columns report the central 90\% credible interval for the three Bayesian models (PPMx-common, Standard PPMx, DP-GMM); $k$-means is a deterministic point estimate with no posterior. Columns: test log predictive score (LPS), the ARI of the posterior modal partition and of the SALSO Binder point estimate against the FRF community labels (with 90\% CI for the Bayesian models), the minimized Binder loss, and number of clusters. For the Bayesian models, point estimates and 90\% intervals are 5\%/95\% quantiles over posterior draws.}")
+    println(io, raw"\label{tab:realDataComparison}")
+    println(io, raw"\resizebox{\textwidth}{!}{%")
+    println(io, raw"\begin{tabular}{lcccccc}")
+    println(io, raw"\toprule")
+    println(io, raw"Model & RMSE & LPS & ARI (Modal) & ARI (SALSO Binder) & Binder Loss & nclusters \\")
+    println(io, raw"\midrule")
     
     for row in eachrow(df)
         model = row.model
@@ -279,10 +218,10 @@ function make_real_data_table(
         println(io, "$model & $rmse_str & $lps_str & $ari_modal_str & $ari_salso_str & $binder_str & $(Int(nclust)) \\\\")
     end
     
-    println(io, "\\bottomrule")
-    println(io, "\\end{tabular}}")
-    println(io, "\\caption*{RMSE: lower is better; LPS: higher is better; ARI: higher is better; Binder loss: lower is better. The three Bayesian models (PPMx-common, Standard PPMx, DP-GMM) propagate partition uncertainty (wider intervals = honesty, not flaw). $k$-means is a deterministic point estimate with no posterior credible intervals.}")
-    println(io, "\\end{table}")
+    println(io, raw"\bottomrule")
+    println(io, raw"\end{tabular}}")
+    println(io, raw"\caption*{RMSE: lower is better; LPS: higher is better; ARI: higher is better; Binder loss: lower is better. The three Bayesian models (PPMx-common, Standard PPMx, DP-GMM) propagate partition uncertainty (wider intervals = honesty, not flaw). $k$-means is a deterministic point estimate with no posterior credible intervals.}")
+    println(io, raw"\end{table}")
     
     write(output_file, String(take!(io)))
     @info "Wrote $output_file"
