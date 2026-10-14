@@ -219,3 +219,71 @@ function make_sim_table_paper(results_dir="results/v2.0"; output_file="paper_sim
     write(output_file, String(take!(io)))
     @info "Wrote $output_file"
 end
+
+# --- Real data table with CI intervals ---
+
+function fmt_val(v)
+    ismissing(v) ? "\textemdash" : @sprintf("%.3f", v)
+end
+
+function fmt_ci(v, l, u)
+    ismissing(v) || ismissing(l) || ismissing(u) ? fmt_val(v) : @sprintf("%.3f (%.3f--%.3f)", v, l, u)
+end
+
+"""
+Generate paper-ready LaTeX table for real data comparison (ABCD dataset).
+Reads the comparison CSV from the baselines analysis and formats with CI intervals.
+"""
+function make_real_data_table(
+    comparison_file="ppmx-analysis/analyses/output/baselines/frftotalComparison.csv";
+    output_file="paper_real_data_table.tex"
+)
+    if !isfile(comparison_file)
+        error("Comparison file not found: $comparison_file. Run 06-baselines-ABCD.jl first.")
+    end
+    
+    df = CSV.read(comparison_file, DataFrame)
+    
+    io = IOBuffer()
+    println(io, "\\begin{table}[!htp]")
+    println(io, "\\centering")
+    println(io, "\\caption{Real-data model comparison on the ABCD dataset, combined sample (test $n=3,149$ FRF-matched subjects). Four methods: PPMx-common, Standard PPMx, $k$-means, and DP-GMM. The RMSE, LPS, and ARI columns report the central 90\\% credible interval for the three Bayesian models (PPMx-common, Standard PPMx, DP-GMM); $k$-means is a deterministic point estimate with no posterior. Columns: test log predictive score (LPS), the ARI of the posterior modal partition and of the SALSO Binder point estimate against the FRF community labels (with 90\\% CI for the Bayesian models), the minimized Binder loss, and number of clusters. For the Bayesian models, point estimates and 90\\% intervals are 5\\%/95\\% quantiles over posterior draws.}")
+    println(io, "\\label{tab:realDataComparison}")
+    println(io, "\\resizebox{\\textwidth}{!}{%")
+    println(io, "\\begin{tabular}{lcccccc}")
+    println(io, "\\toprule")
+    println(io, "Model & RMSE & LPS & ARI (Modal) & ARI (SALSO Binder) & Binder Loss & nclusters \\\\")
+    println(io, "\\midrule")
+    
+    for row in eachrow(df)
+        model = row.model
+        
+        # RMSE with CI
+        rmse_str = fmt_ci(row.testRMSE, row.testRMSE_l, row.testRMSE_u)
+        
+        # LPS with CI
+        lps_str = fmt_ci(row.testLPS, row.testLPS_l, row.testLPS_u)
+        
+        # ARI (Modal partition) with CI
+        ari_modal_str = fmt_ci(row.testARI, row.testARI_l, row.testARI_u)
+        
+        # ARI (SALSO Binder) - this is the ARI of the SALSO point estimate vs FRF
+        ari_salso_str = fmt_val(row.testARISalsoBinder)
+        
+        # Binder loss
+        binder_str = fmt_val(row.testBinderLoss)
+        
+        # Number of clusters
+        nclust = row.nclusters
+        
+        println(io, "$model & $rmse_str & $lps_str & $ari_modal_str & $ari_salso_str & $binder_str & $(Int(nclust)) \\\\")
+    end
+    
+    println(io, "\\bottomrule")
+    println(io, "\\end{tabular}}")
+    println(io, "\\caption*{RMSE: lower is better; LPS: higher is better; ARI: higher is better; Binder loss: lower is better. The three Bayesian models (PPMx-common, Standard PPMx, DP-GMM) propagate partition uncertainty (wider intervals = honesty, not flaw). $k$-means is a deterministic point estimate with no posterior credible intervals.}")
+    println(io, "\\end{table}")
+    
+    write(output_file, String(take!(io)))
+    @info "Wrote $output_file"
+end
