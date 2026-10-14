@@ -186,10 +186,10 @@ function make_real_data_table(
     io = IOBuffer()
     println(io, raw"\begin{table}[!htp]")
     println(io, raw"\centering")
-    println(io, raw"\caption{Real-data model comparison on the ABCD dataset, combined sample (test $n=3,149$ FRF-matched subjects). Four methods: PPMx-common, Standard PPMx, $k$-means, and DP-GMM. The RMSE, LPS, and ARI columns report the central 90\% credible interval for the three Bayesian models (PPMx-common, Standard PPMx, DP-GMM); $k$-means is a deterministic point estimate with no posterior. Columns: test log predictive score (LPS), the ARI of the posterior modal partition and of the SALSO Binder point estimate against the FRF community labels (with 90\% CI for the Bayesian models), the minimized Binder loss, and number of clusters. For the Bayesian models, point estimates and 90\% intervals are 5\%/95\% quantiles over posterior draws.}")
+    println(io, raw"\caption{Real-data model comparison on the ABCD dataset, combined sample (test $n=3,149$ FRF-matched subjects). Four methods: PPMx-common, Standard PPMx, $k$-means, and DP-GMM. The RMSE, LPS, ARI, and Binder Loss columns report the central 90\% credible interval for the three Bayesian models (PPMx-common, Standard PPMx, DP-GMM); $k$-means is a deterministic point estimate with no posterior. Columns: test log predictive score (LPS), the ARI of the posterior modal partition and of the SALSO Binder point estimate against the FRF community labels (with 90\% CI for the Bayesian models), the minimized Binder loss (with 90\% CI for Bayesian models; point estimate for $k$-means), and number of clusters. For the Bayesian models, point estimates and 90\% intervals are 5\%/95\% quantiles over posterior draws.}")
     println(io, raw"\label{tab:realDataComparison}")
     println(io, raw"\resizebox{\textwidth}{!}{%")
-    println(io, raw"\begin{tabular}{lcccccc}")
+    println(io, raw"\begin{tabular}{lccccccc}")
     println(io, raw"\toprule")
     println(io, raw"Model & RMSE & LPS & ARI (Modal) & ARI (SALSO Binder) & Binder Loss & nclusters \\")
     println(io, raw"\midrule")
@@ -209,8 +209,8 @@ function make_real_data_table(
         # ARI (SALSO Binder) - this is the ARI of the SALSO point estimate vs FRF
         ari_salso_str = fmt_val(row.testARISalsoBinder)
         
-        # Binder loss
-        binder_str = fmt_val(row.testBinderLoss)
+        # Binder loss with CI
+        binder_str = fmt_ci(row.testBinderLoss, row.testBinderLoss_l, row.testBinderLoss_u)
         
         # Number of clusters
         nclust = row.nclusters
