@@ -1,0 +1,312 @@
+---
+title: "PPMx-common Simulations"
+date: today
+format:
+  revealjs:
+    theme: default
+    slide-number: true
+    chalkboard: false
+    scrollable: true
+    code-fold: true
+    toc: true
+    toc-location: left
+    embed-resources: true
+    smaller: true
+execute:
+  cache: false
+  warning: false
+  error: false
+  fig-format: png
+  fig-width: 12
+  fig-height: 7
+---
+
+```{r}
+#| echo: false
+library(tidyverse)
+library(patchwork)
+library(ggsci)
+library(gt)
+library(htmltools)
+
+dir.create("v2.0", showWarnings = FALSE, recursive = TRUE)
+
+# ── Unified palette ─────────────────────────────────────────────────
+# Consistent colors for Balanced / Imbalanced across ALL figures
+pal_balance <- c("Balanced" = "#4DBBD5", "Imbalanced" = "#E64B35")
+# Consistent fill for estimator facets
+pal_est <- scale_fill_npg()
+
+# Publication-ready theme
+theme_pub <- theme_bw(base_size = 11) +
+  theme(
+    strip.background = element_rect(fill = "grey92", colour = NA),
+    strip.text = element_text(face = "bold", size = 10),
+    legend.position = "bottom",
+    legend.key.size = unit(0.35, "cm"),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(face = "bold", size = 12),
+    plot.subtitle = element_text(colour = "grey40", size = 9),
+    axis.title = element_text(size = 10),
+    axis.text = element_text(size = 9)
+  )
+theme_set(theme_pub)
+
+# ── Read simulation results ─────────────────────────────────────────
+results_dir <- if (dir.exists("v2.0") && length(dir("v2.0", pattern = "\\.csv$")) > 0) {
+  "v2.0"
+} else if (dir.exists(".") && length(dir(".", pattern = "\\.csv$")) > 0) {
+  "."
+} else {
+  ".."
+}
+
+csv_files <- dir(results_dir, pattern = "\\.csv$", full.names = TRUE)
+csv_files <- csv_files[!grepl("^covariates", basename(csv_files))]
+
+cat("Reading", length(csv_files), "CSV files from", results_dir, "\n")
+
+df_list <- map(csv_files, ~ read_csv(.x, show_col_types = FALSE) %>% mutate(file = basename(.x)))
+df <- bind_rows(df_list)
+
+# Extract scenario parameters from filenames
+df <- df %>%
+  mutate(
+    Balance = ifelse(grepl("^Imbal_", file), "Imbalanced", "Balanced"),
+    xdiff = parse_number(str_extract(file, "xd[0-9.]+")),
+    N = parse_number(str_extract(file, "N[0-9]+")),
+    dims = parse_number(str_extract(file, "dim[0-9]+")),
+  )
+
+cat("Loaded", nrow(df), "rows,", length(unique(df$N)), "N values,",
+    length(unique(df$xdiff)), "xdiff values\n")
+
+# ── Identify which estimators are present ───────────────────────────
+# The CSVs have columns like meanBeta1, meanBeta2, meanBetaMix (PPMx-common),
+# meanBetaDPM, meanBetaKmeans, meanBetaStandard, etc.
+# Detect all meanBeta* columns to find estimators.
+est_cols <- grep("^meanBeta", names(df), value = TRUE)
+est_names <- gsub("^meanBeta", "", est_cols)
+cat("Estimator columns found:", paste(est_names, collapse = ", "), "\n")
+
+# Build a mapping: estimator label -> column name(s) for beta1 and beta2
+# Some estimators have meanBeta1/meanBeta2, others have meanBetaMix1/Mix2, etc.
+# We need to pivot carefully.
+# Strategy: identify the estimator suffixes, then gather beta1 and beta2 per estimator.
+
+# Get unique estimator suffixes (e.g. "Mix", "DPM", "Kmeans", "Standard")
+# by looking at meanBeta<suffix>1 and meanBeta<suffix>2 patterns
+beta1_cols <- grep("^meanBeta.*1$", names(df), value = TRUE)
+beta2_cols <- grep("^meanBeta.*2$", names(df), value = TRUE)
+
+# Extract the estimator label from each column
+b1_labels <- gsub("^meanBeta|1$", "", beta1_cols)
+b2_labels <- gsub("^meanBeta|2$", "", beta2_cols)
+
+# Pair them up (should match by position)
+est_map <- tibble(
+  label = ifelse(b1_labels == "", "common", b1_labels),
+  col1 = beta1_cols,
+  col2 = beta2_cols
+)
+
+cat("Estimators:", paste(est_map$label, collapse = ", "), "\n")
+
+# ── Pivot to long: one row per (replicate, estimator, coef) ────────
+long_est <- df %>%
+  select(file, N, dims, xdiff, Balance, any_of(unlist(est_map[, c("col1", "col2")]))) %>%
+  pivot_longer(
+    cols = all_of(unlist(est_map[, c("col1", "col2")])),
+    names_to = "col_name",
+    values_to = "estimate"
+  ) %>%
+  mutate(
+    coef = ifelse(grepl("1$", col_name), "β₁ (truth = +1)", "β₂ (truth = −1)"),
+    truth = ifelse(grepl("1$", col_name), 1, -1)
+  ) %>%
+  # Map column name back to estimator label
+  left_join(
+    est_map %>% pivot_longer(cols = c(col1, col2), names_to = "which_col", values_to = "col_name") %>% select(label, col_name),
+    by = "col_name"
+  ) %>%
+  rename(Estimator = label) %>%
+  mutate(Estimator = recode(Estimator,
+    "Mix" = "PPMx-common",
+    "DPM" = "DPM",
+    "Kmeans" = "K-means",
+    "Standard" = "Standard PPMx"
+  ))
+
+# ── Detect clustering metric columns ────────────────────────────────
+ari_cols <- grep("^salso.*ARI_Mix$|^ariMix$", names(df), value = TRUE)
+binder_cols <- grep("^salso.*Binder.*Mix$|^binderMix$", names(df), value = TRUE)
+nc_cols <- grep("^nc", names(df), value = TRUE)
+cat("ARI cols:", paste(ari_cols, collapse = ", "), "\n")
+cat("Binder cols:", paste(binder_cols, collapse = ", "), "\n")
+cat("NC cols:", paste(nc_cols, collapse = ", "), "\n")
+
+# ── Detect predictive log-lik columns ───────────────────────────────
+llik_cols <- grep("^llik", names(df), value = TRUE)
+cat("Log-lik cols:", paste(llik_cols, collapse = ", "), "\n")
+
+# ── Filter to balanced scenario grid ────────────────────────────────
+scen <- df %>% filter(!is.na(N), !is.na(dims), !is.na(xdiff))
+if (nrow(scen) == 0) stop("No parseable scenarios in ", results_dir)
+useN <- if (1000 %in% scen$N) 1000 else max(scen$N)
+useDims <- if (5 %in% scen$dims) 5 else max(scen$dims)
+useX <- sort(unique(scen$xdiff[scen$N == useN & scen$dims == useDims]))
+cat("Grid: N =", useN, ", dims =", useDims, ", xdiff =", paste(useX, collapse = ","), "\n")
+
+df_f <- df %>% filter(N == useN, dims == useDims, xdiff %in% useX)
+long_f <- long_est %>% filter(N == useN, dims == useDims, xdiff %in% useX)
+```
+
+## Figure 1: Clustering Quality (ARI & Binder Loss)
+
+```{r}
+#| fig-width: 12
+#| fig-height: 6
+#| echo: false
+
+# Build clustering long-form from the widest metric columns available
+# ARI: we want salsoBinderARI_Mix (or similar) — the Mix (PPMx) estimate
+ari_col <- grep("^salsoBinderARI_Mix$|^ariMix$", names(df_f), value = TRUE)[1]
+vi_col  <- grep("^salsoVIARI_Mix$|^viMix$", names(df_f), value = TRUE)[1]
+
+cluster_long <- df_f %>%
+  filter(!is.na(.data[[ari_col]]) | !is.na(.data[[vi_col]])) %>%
+  transmute(
+    file, xdiff, Balance,
+    `Binder ARI` = .data[[ari_col]],
+    `VI ARI`     = .data[[vi_col]]
+  ) %>%
+  pivot_longer(cols = c(`Binder ARI`, `VI ARI`), names_to = "Metric", values_to = "ARI") %>%
+  filter(!is.na(ARI))
+
+p_ari <- cluster_long %>%
+  ggplot(aes(x = factor(xdiff), y = ARI, fill = Balance)) +
+  geom_violin(alpha = 0.6, linewidth = 0.4, position = position_dodge(width = 0.9)) +
+  stat_summary(fun = median, geom = "point", size = 1.5, position = position_dodge(width = 0.9), color = "black") +
+  facet_wrap(~ Metric, nrow = 1) +
+  scale_fill_manual(values = pal_balance) +
+  labs(
+    x = "xdiff (covariate separation)",
+    y = "Adjusted Rand Index",
+    title = "Clustering Recovery by Covariate Separation",
+    subtitle = "SALSO point estimates vs truth. Median indicated.",
+    fill = NULL
+  ) +
+  theme_pub +
+  theme(legend.position = "top")
+
+print(p_ari)
+ggsave("v2.0/fig1_ari.png", plot = p_ari, width = 12, height = 6, dpi = 300)
+```
+
+## Figure 2: Common Effect Estimates (β₁, β₂)
+
+```{r}
+#| fig-width: 12
+#| fig-height: 7
+#| echo: false
+
+p_coef <- long_f %>%
+  ggplot(aes(x = factor(xdiff), y = estimate, fill = Balance)) +
+  geom_violin(alpha = 0.55, linewidth = 0.4, position = position_dodge(width = 0.9)) +
+  stat_summary(fun = median, geom = "point", size = 1.5, position = position_dodge(width = 0.9), color = "black") +
+  geom_hline(data = tibble(truth_val = c(1, -1), coef = c("β₁ (truth = +1)", "β₂ (truth = −1)")),
+             aes(yintercept = truth_val), linetype = "dashed", colour = "grey30", linewidth = 0.7) +
+  facet_grid(rows = vars(Estimator), cols = vars(coef), scales = "free_y") +
+  scale_fill_manual(values = pal_balance) +
+  labs(
+    x = "xdiff (covariate separation)",
+    y = "Posterior Mean Estimate",
+    title = "Common Effect Recovery Across Estimators",
+    subtitle = "Dashed lines = true values (β₁ = +1, β₂ = −1). Median indicated.",
+    fill = NULL
+  ) +
+  theme_pub +
+  theme(legend.position = "top")
+
+print(p_coef)
+ggsave("v2.0/fig2_coefficients.png", plot = p_coef, width = 12, height = 7, dpi = 300)
+```
+
+## Figure 3: Predictive Log Density
+
+```{r}
+#| fig-width: 12
+#| fig-height: 5
+#| echo: false
+
+if (length(llik_cols) > 0) {
+  llik_long <- df_f %>%
+    select(file, xdiff, Balance, all_of(llik_cols)) %>%
+    pivot_longer(cols = all_of(llik_cols), names_to = "model", values_to = "loglik") %>%
+    filter(!is.na(loglik)) %>%
+    mutate(model = recode(model,
+      "llikMix"   = "PPMx-common",
+      "llikDPM"   = "DPM",
+      "llikKmeans" = "K-means",
+      "llikStandard" = "Standard PPMx"
+    ))
+
+  p_llik <- llik_long %>%
+    ggplot(aes(x = factor(xdiff), y = loglik, fill = Balance)) +
+    geom_violin(alpha = 0.55, linewidth = 0.4, position = position_dodge(width = 0.9)) +
+    stat_summary(fun = median, geom = "point", size = 1.5, position = position_dodge(width = 0.9), color = "black") +
+    facet_wrap(~ model, nrow = 1, scales = "free_y") +
+    scale_fill_manual(values = pal_balance) +
+    labs(
+      x = "xdiff (covariate separation)",
+      y = "Posterior Predictive Log Density",
+      title = "Predictive Fit by Covariate Separation",
+      subtitle = "Higher (less negative) is better. Median indicated.",
+      fill = NULL
+    ) +
+    theme_pub +
+    theme(legend.position = "top")
+
+  print(p_llik)
+  ggsave("v2.0/fig3_loglik.png", plot = p_llik, width = 12, height = 5, dpi = 300)
+} else {
+  cat("No log-likelihood columns found in CSVs. Skipping Figure 3.\n")
+}
+```
+
+## Summary Table
+
+```{r}
+#| echo: false
+
+# Summarise key metrics across scenarios
+summary_tbl <- df_f %>%
+  group_by(xdiff, Balance) %>%
+  reframe(
+    n = n(),
+    mean_beta1 = mean(meanBeta1, na.rm = TRUE),
+    mean_beta2 = mean(meanBeta2, na.rm = TRUE),
+    bias_beta1 = mean(meanBeta1 - 1, na.rm = TRUE),
+    bias_beta2 = mean(meanBeta2 - (-1), na.rm = TRUE),
+    rmse_beta1 = sqrt(mean((meanBeta1 - 1)^2, na.rm = TRUE)),
+    rmse_beta2 = sqrt(mean((meanBeta2 - (-1))^2, na.rm = TRUE))
+  )
+
+summary_tbl %>%
+  gt() %>%
+  tab_header(title = paste0("Scenario Summary (N=", useN, ", dims=", useDims, ")")) %>%
+  fmt_number(columns = where(is.numeric), decimals = 3) %>%
+  opt_interactive(use_compact_mode = TRUE)
+```
+
+## Reproducibility
+
+- **Julia 1.11.7** with `ProductPartitionModels.jl` (v2.0 branch)
+- **R** with `tidyverse`, `patchwork`, `ggsci`, `gt`, `quarto`
+- Results in `simulations/results/v2.0/`
+- To regenerate: `julia --project=. sim.jl <params>` for each scenario
+
+```bash
+cd ~/software/ProductPartitionModels.jl/simulations
+quarto render results/vizFull.qmd --to revealjs --output-dir results/v2.0/presentation
+```

@@ -1,0 +1,24 @@
+\begin{table}[!htp]
+\centering
+\fontsize{8.0pt}{10pt}\selectfont
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}llrrrrrrr}
+\toprule
+ & & \multicolumn{4}{c}{Clustering (ARI)} & \multicolumn{2}{c}{Prediction (LPS)} \\
+\cmidrule(lr){3-6} \cmidrule(lr){7-8}
+Design & $\Delta X$ & PPMx-common & Standard PPMx & K-means & DPMM & PPMx-common & Standard PPMx \\
+\midrule\addlinespace[2.5pt]
+Balanced & 0.0 & 0.205 & 0.355 & 0.000 & -0.000 & -3.302 & -2.874 \\
+Balanced & 0.2 & 0.486 & 0.638 & 0.202 & 0.000 & -2.414 & -1.915 \\
+Balanced & 0.4 & 0.555 & 0.677 & 0.453 & 0.169 & -2.098 & -1.615 \\
+Balanced & 0.6 & 0.550 & 0.658 & 0.704 & 0.175 & -2.249 & -1.779 \\
+Balanced & 1.0 & 0.556 & 0.652 & 0.884 & 0.189 & -2.073 & -1.747 \\
+Imbalanced & 0.0 & 0.687 & 0.687 & -0.000 & -0.001 & -0.632 & -0.632 \\
+Imbalanced & 0.4 & 0.734 & 0.734 & 0.186 & 0.309 & -1.066 & -1.066 \\
+Imbalanced & 0.6 & 0.603 & 0.603 & 0.324 & 0.411 & -1.545 & -1.545 \\
+Imbalanced & 0.8 & 0.500 & 0.500 & 0.409 & 0.648 & -1.758 & -1.758 \\
+Imbalanced & 1.0 & 0.479 & 0.479 & 0.506 & 0.808 & -1.714 & -1.714 \\
+\bottomrule
+\end{tabular*}
+\caption{Second simulation grid, 80 replicates per cell. Clustering columns report the adjusted Rand index for PPMx-common, Standard PPMx, K-means, and DPMM. Prediction columns report the test log predictive score (LPS), available only for the two Bayesian models because the point-estimator baselines have no posterior predictive distribution. LPS is higher (less negative) is better. For the imbalanced design only the common-effect model was fitted, so the Standard PPMx column duplicates PPMx-common. At $\Delta X=0$ the covariates carry no information about the generating partition. Imbalanced has fractions fractions $0.552, 0.248, 0.111, 0.050, 0.022, 0.010, 0.005, 0.002$.
+\label{tab:v2grid}
+\end{table}
