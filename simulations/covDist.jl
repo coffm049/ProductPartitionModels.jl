@@ -47,6 +47,6 @@ end
 
 res = vcat(rows...)
 # v2.0: distinct output dir (data generation unchanged, but keeps viz self-contained).
-mkpath("results/v2.0")
-CSV.write("results/v2.0/covariates.csv", res)
-println("wrote results/v2.0/covariates.csv with ", nrow(res), " rows")
+mkpath("results/v3-dl-centered")
+CSV.write("results/v3-dl-centered/covariates.csv", res)
+println("wrote results/v3-dl-centered/covariates.csv with ", nrow(res), " rows")

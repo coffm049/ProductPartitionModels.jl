@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 
-results_dir = Path("C:/Users/coffm049/research/04-projects/ppmx/ProductPartitionModels.jl/simulations/results/v2.0")
+results_dir = Path("C:/Users/coffm049/research/04-projects/ppmx/ProductPartitionModels.jl/simulations/results/v3-dl-centered")
 
 # Parse filename to extract parameters
 def parse_filename(fname):

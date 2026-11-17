@@ -1,10 +1,10 @@
 using CSV, DataFrames, Statistics, StatsBase, DataFramesMeta
 
 """
-Collect all simulation result CSVs from results/v2.0/ and produce
+Collect all simulation result CSVs from results/v3-dl-centered/ and produce
 paper-ready summary tables.
 """
-function collect_sim_results(results_dir="results/v2.0"; output_prefix="paper_sim_")
+function collect_sim_results(results_dir="results/v3-dl-centered"; output_prefix="paper_sim_")
     files = filter(f -> endswith(f, ".csv"), readdir(results_dir, join=true))
     isempty(files) && error("No CSV files found in $results_dir")
 

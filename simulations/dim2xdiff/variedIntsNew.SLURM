@@ -33,12 +33,12 @@ export PATH="$R_HOME/bin:$PATH"
 
 # v2.0 estimator: use the manually-pulled v2.0 checkout (pull manually on HPC
 # before submitting; no auto fetch/pull here to avoid concurrent index.lock races).
-# Outputs go to results/v2.0/ (see sim.jl); previous results/*.csv untouched.
+# Outputs go to results/v3-dl-centered/ (see sim.jl); previous results/*.csv untouched.
 if [ "$(git -C ~/software/ProductPartitionModels.jl rev-parse --abbrev-ref HEAD)" != "v2.0" ]; then
   sleep $((RANDOM % 20))
   git -C ~/software/ProductPartitionModels.jl checkout v2.0
 fi
-cd ~/software/ProductPartitionModels.jl/simulations
+cd ~/software/ProductPartitionModels.jl/simulations_v3-dl-centered
 
 # read arguments from command line
 # N = parse(Int, ARGS[1])

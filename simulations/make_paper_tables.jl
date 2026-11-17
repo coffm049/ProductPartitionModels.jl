@@ -61,7 +61,7 @@ end
 Generate paper-ready LaTeX tables from collected simulation results.
 Run on HPC after simulations complete and collect_sim_results.jl has been run.
 """
-function make_sim_table_paper(results_dir="results/v2.0"; output_file="paper_sim_table.tex")
+function make_sim_table_paper(results_dir="results/v3-dl-centered"; output_file="paper_sim_table.tex")
     # Read raw data to compute Type II error and coverage properly
     raw_file = "paper_sim_raw.csv"
     if !isfile(raw_file)
@@ -174,7 +174,7 @@ Generate paper-ready LaTeX table for real data comparison (ABCD dataset).
 Reads the comparison CSV from the baselines analysis and formats with CI intervals.
 """
 function make_real_data_table(
-    comparison_file="ppmx-analysis/analyses/output/baselines/frftotalComparison.csv";
+    comparison_file="ppmx-analysis/analyses/output_v3-dl-centered/baselines/frftotalComparison.csv";
     output_file="paper_real_data_table.tex"
 )
     if !isfile(comparison_file)

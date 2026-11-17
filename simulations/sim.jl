@@ -60,8 +60,8 @@ if imbalanced == 1
     baseName = "Imbal_" * baseName
 end
 # v2.0 estimator: distinct output dir so reruns never overwrite previous fits.
-outputName = "results/v2.0/" * baseName
-mkpath("results/v2.0")
+outputName = "results/v3-dl-centered/" * baseName
+mkpath("results/v3-dl-centered")
 if runDPM == 1
     outputName = outputName * "_dpm$(DPMalpha)_$(DPMiters)"
 end

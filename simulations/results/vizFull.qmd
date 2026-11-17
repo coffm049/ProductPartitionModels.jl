@@ -303,10 +303,10 @@ summary_tbl %>%
 
 - **Julia 1.11.7** with `ProductPartitionModels.jl` (v2.0 branch)
 - **R** with `tidyverse`, `patchwork`, `ggsci`, `gt`, `quarto`
-- Results in `simulations/results/v2.0/`
+- Results in `simulations/results/v3-dl-centered/`
 - To regenerate: `julia --project=. sim.jl <params>` for each scenario
 
 ```bash
-cd ~/software/ProductPartitionModels.jl/simulations
-quarto render results/vizFull.qmd --to revealjs --output-dir results/v2.0/presentation
+cd ~/software/ProductPartitionModels.jl/simulations_v3-dl-centered
+quarto render results/vizFull.qmd --to revealjs --output-dir results/v3-dl-centered/presentation
 ```
