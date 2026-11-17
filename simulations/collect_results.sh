@@ -10,7 +10,7 @@
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate julia
 
-cd ~/papers/ABCD-adhd/simulations
+cd ~/software/ProductPartitionModels.jl/simulations_v3-dl-centered
 julia --project=. collect_sim_results.jl
 
 echo "Simulation results collected"
