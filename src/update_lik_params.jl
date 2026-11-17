@@ -159,17 +159,22 @@ function update_lik_params!(model::Model_PPMx,
                 )
 
                 ## update beta hypers (could customize a function here to accommodate different shrinkage priors)
+                z = (model.state.lik_params[k].beta .- prior_mean_beta) ./
+                    model.state.baseline.tau0 ./
+                    model.state.lik_params[k].sig
+                z[z .== 0.0] .= eps(eltype(z))
+
                 model.state.lik_params[k].beta_hypers.psi = update_ψ(model.state.lik_params[k].beta_hypers.phi,
-                    model.state.lik_params[k].beta ./ model.state.baseline.tau0 ./ model.state.lik_params[k].sig,
+                    z,
                     model.state.lik_params[k].beta_hypers.tau
                 )
 
                 model.state.lik_params[k].beta_hypers.tau = update_τ(model.state.lik_params[k].beta_hypers.phi,
-                    model.state.lik_params[k].beta ./ model.state.baseline.tau0 ./ model.state.lik_params[k].sig,
+                    z,
                     12.5 / model.p
                 )
 
-                model.state.lik_params[k].beta_hypers.phi = update_ϕ(model.state.lik_params[k].beta ./ model.state.baseline.tau0 ./ model.state.lik_params[k].sig,
+                model.state.lik_params[k].beta_hypers.phi = update_ϕ(z,
                     12.5 / model.p
                 )
             else

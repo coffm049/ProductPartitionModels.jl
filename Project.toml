@@ -1,10 +1,11 @@
 name = "ProductPartitionModels"
 uuid = "dc94b787-0653-43d5-ba3f-631bd51a31aa"
-authors = ["Matt Heiner <heiner@stat.byu.edu>"]
 version = "0.8.5"
+authors = ["Matt Heiner <heiner@stat.byu.edu>"]
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
@@ -16,6 +17,7 @@ StatsFuns = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
 
 [compat]
 CSV = "1.1.0"
+DataFrames = "1.8.2"
 StatsBase = "0.34.13"
 julia = "1.6"
 
