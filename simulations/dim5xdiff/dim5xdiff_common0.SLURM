@@ -3,12 +3,14 @@
 #SBATCH --output=../logs/dim5common0-v2.out
 #SBATCH --error=../logs/dim5common0-v2.err
 #SBATCH --cpus-per-task=2
-#SBATCH --time=18:00:00
+##SBATCH --time=18:00:00
+#SBATCH --time=48:00:00
 #SBATCH --mem-per-cpu=4G
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=coffm049@umn.edu
-# Full grid 0-5 for rerun (overwrite results/); previous subset 0-1 was for remaining shards.
-#SBATCH --array=0-5
+# array = xdiff index. Only task 0 timed out in the previous run.
+##SBATCH --array=0-5
+#SBATCH --array=0
 
 
 

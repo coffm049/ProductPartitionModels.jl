@@ -3,14 +3,14 @@
 #SBATCH --output=../logs/dim5xdiff-v2.out
 #SBATCH --error=../logs/dim5xdiff-v2.err
 #SBATCH --cpus-per-task=2
-#SBATCH --time=18:00:00
+##SBATCH --time=18:00:00
+#SBATCH --time=48:00:00
 #SBATCH --mem-per-cpu=4G
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=coffm049@umn.edu
-# array = xdiff index (0-5) x mass index (0-2) = 18 tasks.
-# task id -> xi = id / 3, mi = id % 3; see MASSES below.
-# Full grid 0-17 for rerun (overwrite results/); previous 2026-08-29 subset 1,2,5 completed.
-#SBATCH --array=0-17
+# array = xdiff index x mass index. Only tasks 0-2 timed out in the previous run.
+##SBATCH --array=0-17
+#SBATCH --array=0-2
 
 
 
