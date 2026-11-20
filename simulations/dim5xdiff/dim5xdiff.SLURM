@@ -8,9 +8,10 @@
 #SBATCH --mem-per-cpu=4G
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=coffm049@umn.edu
-# array = xdiff index x mass index. Only tasks 0-2 timed out in the previous run.
-##SBATCH --array=0-17
-#SBATCH --array=0-2
+# array = xdiff index for the single remaining timed-out task.
+##SBATCH --array=0-2
+#SBATCH --array=2
+#SBATCH --time=96:00:00
 
 
 
