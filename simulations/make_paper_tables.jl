@@ -186,7 +186,7 @@ function make_real_data_table(
     io = IOBuffer()
     println(io, raw"\begin{table}[!htp]")
     println(io, raw"\centering")
-    println(io, raw"\caption{Real-data model comparison on the ABCD dataset, combined sample (test $n=3,149$ FRF-matched subjects). Four methods: PPMx-common, Standard PPMx, $k$-means, and DP-GMM. The RMSE, LPS, ARI, and Binder Loss columns report the central 90\% credible interval for the three Bayesian models (PPMx-common, Standard PPMx, DP-GMM); $k$-means is a deterministic point estimate with no posterior. Columns: test log predictive score (LPS), the ARI of the posterior modal partition and of the SALSO Binder point estimate against the FRF community labels (with 90\% CI for the Bayesian models), the minimized Binder loss (with 90\% CI for Bayesian models; point estimate for $k$-means), and number of clusters. For the Bayesian models, point estimates and 90\% intervals are 5\%/95\% quantiles over posterior draws.}")
+    println(io, raw"\caption{Real-data model comparison on the ABCD dataset, combined sample (test $n=3,149$ FRF-matched subjects). Three methods: PPMx-common, $k$-means, and DP-GMM. The RMSE, LPS, ARI, and Binder Loss columns report the central 90\% credible interval for the two Bayesian models (PPMx-common, DP-GMM); $k$-means is a deterministic point estimate with no posterior. Columns: test log predictive score (LPS), the ARI of the posterior modal partition and of the SALSO Binder point estimate against the FRF community labels (with 90\% CI for the Bayesian models), the minimized Binder loss (with 90\% CI for Bayesian models; point estimate for $k$-means), and number of clusters. For the Bayesian models, point estimates and 90\% intervals are 5\%/95\% quantiles over posterior draws.}")
     println(io, raw"\label{tab:realDataComparison}")
     println(io, raw"\resizebox{\textwidth}{!}{%")
     println(io, raw"\begin{tabular}{lccccccc}")
@@ -220,7 +220,7 @@ function make_real_data_table(
     
     println(io, raw"\bottomrule")
     println(io, raw"\end{tabular}}")
-    println(io, raw"\caption*{RMSE: lower is better; LPS: higher is better; ARI: higher is better; Binder loss: lower is better. The three Bayesian models (PPMx-common, Standard PPMx, DP-GMM) propagate partition uncertainty (wider intervals = honesty, not flaw). $k$-means is a deterministic point estimate with no posterior credible intervals.}")
+    println(io, raw"\caption*{RMSE: lower is better; LPS: higher is better; ARI: higher is better; Binder loss: lower is better. The two Bayesian models (PPMx-common, DP-GMM) propagate partition uncertainty (wider intervals = honesty, not flaw). $k$-means is a deterministic point estimate with no posterior credible intervals.}")
     println(io, raw"\end{table}")
     
     write(output_file, String(take!(io)))
