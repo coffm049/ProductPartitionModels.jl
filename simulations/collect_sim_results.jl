@@ -45,7 +45,7 @@ function collect_sim_results(results_dir="results/v3-dl-centered"; output_prefix
     isempty(dfs) && error("No valid simulation CSV files read")
     alldf = vcat(dfs...; cols=:union)
 
-    missing_grp = setdiff(grp_cols, names(alldf))
+    missing_grp = setdiff(grp_cols, propertynames(alldf))
     if !isempty(missing_grp)
         error("Incomplete simulation schema: missing required columns $(join(missing_grp, ", ")) in $(results_dir)")
     end
