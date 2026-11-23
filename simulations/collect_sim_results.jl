@@ -31,6 +31,15 @@ function collect_sim_results(results_dir="results/v3-dl-centered"; output_prefix
         if !isempty(bad_n)
             error("Incomplete/mismatched results in $f: expected N=1000 for every row; found N=$(join(bad_n, ", "))")
         end
+
+        base = basename(f)
+        m_nc = match(r"_c(\d+)_", base)
+        m_mass = match(r"_mass(\d+\.\d+)(\d+\.\d+)(?:_|\.csv$)", base)
+        isnothing(m_nc) && error("Incomplete results in $f: cannot parse nc from filename")
+        isnothing(m_mass) && error("Incomplete results in $f: cannot parse massParams from filename")
+        df[!, :nc] = fill(parse(Int, m_nc.captures[1]), nrow(df))
+        df[!, :massParams] = fill(string(m_mass.captures[1], ",", m_mass.captures[2]), nrow(df))
+
         push!(dfs, df)
     end
     isempty(dfs) && error("No valid simulation CSV files read")
