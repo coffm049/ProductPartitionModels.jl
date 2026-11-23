@@ -30,6 +30,7 @@ function collect_sim_results(results_dir="results/v3-dl-centered"; output_prefix
     @info "Wrote $(output_prefix)raw.csv ($(nrow(alldf)) rows)"
 
     # 2. Summary by condition (group by simulation parameters)
+    summary = DataFrame()
     grp_cols = [:N, :nc, :variance, :interEffect, :common, :xdiff, :dims, :prec, :alph, :bet, :massParams]
     existing_grp = [c for c in grp_cols if c in names(alldf)]
     if !isempty(existing_grp)
