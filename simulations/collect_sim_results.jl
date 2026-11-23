@@ -100,11 +100,11 @@ function collect_sim_results(results_dir="results/v3-dl-centered"; output_prefix
         )
     end
 
-    missing_summary = setdiff(required_metric_cols, names(summary))
+    missing_summary = setdiff(required_metric_cols, propertynames(summary))
     isempty(missing_summary) || error("Incomplete simulation summary: missing output columns $(join(missing_summary, ", "))")
 
     key_cols = [:xdiff, :dims, :common, :interEffect, :N]
-    missing_key = setdiff(key_cols, names(summary))
+    missing_key = setdiff(key_cols, propertynames(summary))
     isempty(missing_key) || error("Incomplete simulation summary: missing key columns $(join(missing_key, ", "))")
 
     paper_cols = [key_cols...,
@@ -117,11 +117,11 @@ function collect_sim_results(results_dir="results/v3-dl-centered"; output_prefix
         :coverage_mix,
         :cov_dpmm_zero1, :cov_dpmm_common1, :cov_dpmm_zero2, :cov_dpmm_common2,
         :k_mix_med, :k_dpm_med, :k_dpmm_med]
-    missing_paper = setdiff(paper_cols, names(summary))
+    missing_paper = setdiff(paper_cols, propertynames(summary))
     isempty(missing_paper) || error("Incomplete simulation comparison: missing columns $(join(missing_paper, ", "))")
     paper_tbl = select(summary, paper_cols...)
 
-    missing_salso = setdiff([:salsoBinderARI_Mix, :salsoVIARI_Mix, :salsoBinderARI_Mixoos, :salsoVIARI_Mixoos], names(summary))
+    missing_salso = setdiff([:salso_binder_mix_med, :salso_vi_mix_med, :salso_binder_mixoos_med, :salso_vi_mixoos_med], propertynames(summary))
     isempty(missing_salso) || error("Incomplete simulation summary: missing SALSO columns $(join(missing_salso, ", "))")
     salso_tbl = select(summary, key_cols..., :salsoBinderARI_Mix, :salsoVIARI_Mix, :salsoBinderARI_Mixoos, :salsoVIARI_Mixoos)
 
