@@ -100,7 +100,19 @@ function collect_sim_results(results_dir="results/v3-dl-centered"; output_prefix
         )
     end
 
-    missing_summary = setdiff(required_metric_cols, propertynames(summary))
+    expected_summary_cols = [
+        :n_reps,
+        :rmse_mix_med, :rmse_mixoos_med, :ari_mix_med, :ari_mixoos_med, :lps_mixoos_med,
+        :beta1_mix_med, :beta2_mix_med, :coverage_mix,
+        :rmse_dpm_med, :rmse_dpmoos_med, :ari_dpm_med, :ari_dpmoos_med, :lps_dpmoos_med,
+        :rmse_km_med, :rmse_kmoos_med, :ari_km_med, :ari_kmoos_med,
+        :rmse_slr_med, :rmse_slroos_med,
+        :rmse_dpmm_med, :rmse_dpmmoos_med, :ari_dpmm_med, :ari_dpmmoos_med,
+        :cov_dpmm_zero1, :cov_dpmm_common1, :cov_dpmm_zero2, :cov_dpmm_common2,
+        :salso_binder_mix_med, :salso_vi_mix_med, :salso_binder_mixoos_med, :salso_vi_mixoos_med,
+        :k_mix_med, :k_dpm_med, :k_dpmm_med,
+    ]
+    missing_summary = setdiff(expected_summary_cols, propertynames(summary))
     isempty(missing_summary) || error("Incomplete simulation summary: missing output columns $(join(missing_summary, ", "))")
 
     key_cols = [:xdiff, :dims, :common, :interEffect, :N]
@@ -121,9 +133,10 @@ function collect_sim_results(results_dir="results/v3-dl-centered"; output_prefix
     isempty(missing_paper) || error("Incomplete simulation comparison: missing columns $(join(missing_paper, ", "))")
     paper_tbl = select(summary, paper_cols...)
 
-    missing_salso = setdiff([:salso_binder_mix_med, :salso_vi_mix_med, :salso_binder_mixoos_med, :salso_vi_mixoos_med], propertynames(summary))
+    salso_cols = [:salso_binder_mix_med, :salso_vi_mix_med, :salso_binder_mixoos_med, :salso_vi_mixoos_med]
+    missing_salso = setdiff(salso_cols, propertynames(summary))
     isempty(missing_salso) || error("Incomplete simulation summary: missing SALSO columns $(join(missing_salso, ", "))")
-    salso_tbl = select(summary, key_cols..., :salsoBinderARI_Mix, :salsoVIARI_Mix, :salsoBinderARI_Mixoos, :salsoVIARI_Mixoos)
+    salso_tbl = select(summary, key_cols..., salso_cols...)
 
     CSV.write("$(output_prefix)raw.csv", alldf)
     @info "Wrote $(output_prefix)raw.csv ($(nrow(alldf)) rows)"
