@@ -162,11 +162,15 @@ end
 # --- Real data table with CI intervals ---
 
 function fmt_val(v)
-    ismissing(v) ? "\textemdash" : @sprintf("%.3f", v)
+    (ismissing(v) || (v isa Number && isnan(v))) ? "\\textemdash" : @sprintf("%.3f", v)
 end
 
 function fmt_ci(v, l, u)
-    ismissing(v) || ismissing(l) || ismissing(u) ? fmt_val(v) : @sprintf("%.3f (%.3f--%.3f)", v, l, u)
+    if ismissing(v) || (v isa Number && isnan(v))
+        return "\\textemdash"
+    end
+    (ismissing(l) || ismissing(u) || (l isa Number && isnan(l)) || (u isa Number && isnan(u))) && return fmt_val(v)
+    @sprintf("%.3f (%.3f--%.3f)", v, l, u)
 end
 
 """
@@ -175,54 +179,52 @@ Reads the comparison CSV from the baselines analysis and formats with CI interva
 """
 function make_real_data_table(
     comparison_file="ppmx-analysis/analyses/output_v3-dl-centered/baselines/frftotalComparison.csv";
-    output_file="paper_real_data_table.tex"
+    output_file="paper_real_data_table.tex",
+    n_test::Union{Int,Nothing}=nothing
 )
     if !isfile(comparison_file)
         error("Comparison file not found: $comparison_file. Run 06-baselines-ABCD.jl first.")
     end
-    
+
     df = CSV.read(comparison_file, DataFrame)
-    
+    sort!(df, :model)
+    nstr = isnothing(n_test) ? "FRF-matched test subjects" : "$(n_test) FRF-matched test subjects"
+
     io = IOBuffer()
     println(io, raw"\begin{table}[!htp]")
     println(io, raw"\centering")
-    println(io, raw"\caption{Real-data model comparison on the ABCD dataset, combined sample (test $n=3,149$ FRF-matched subjects). Three methods: PPMx-common, $k$-means, and DP-GMM. The RMSE, LPS, ARI, and Binder Loss columns report the central 90\% credible interval for the two Bayesian models (PPMx-common, DP-GMM); $k$-means is a deterministic point estimate with no posterior. Columns: test log predictive score (LPS), the ARI of the posterior modal partition and of the SALSO Binder point estimate against the FRF community labels (with 90\% CI for the Bayesian models), the minimized Binder loss (with 90\% CI for Bayesian models; point estimate for $k$-means), and number of clusters. For the Bayesian models, point estimates and 90\% intervals are 5\%/95\% quantiles over posterior draws.}")
+    println(io, "\\caption{Real-data model comparison on the ABCD dataset, combined sample (test \$n=$(nstr)\$). Three methods: PPMx-common, \$k\$-means, and DP-GMM. Bayesian models report the central 90\\% posterior interval (5\\%/95\\% quantiles across draws); \$k\$-means is a deterministic point estimate. RMSE is reported as-is from the baseline comparison output.}")
     println(io, raw"\label{tab:realDataComparison}")
     println(io, raw"\resizebox{\textwidth}{!}{%")
-    println(io, raw"\begin{tabular}{lccccccc}")
+    println(io, raw"\begin{tabular}{lcccccc}")
     println(io, raw"\toprule")
-    println(io, raw"Model & RMSE & LPS & ARI (Modal) & ARI (SALSO Binder) & Binder Loss & nclusters \\")
+    println(io, raw"Model & RMSE & LPS & ARI (Modal) & ARI (SALSO Binder) & Binder Loss & $n_{\mathrm{clusters}}$ \\")
     println(io, raw"\midrule")
-    
+
     for row in eachrow(df)
         model = row.model
-        
-        # RMSE with CI
         rmse_str = fmt_ci(row.testRMSE, row.testRMSE_l, row.testRMSE_u)
-        
-        # LPS with CI
         lps_str = fmt_ci(row.testLPS, row.testLPS_l, row.testLPS_u)
-        
-        # ARI (Modal partition) with CI
         ari_modal_str = fmt_ci(row.testARI, row.testARI_l, row.testARI_u)
-        
-        # ARI (SALSO Binder) - this is the ARI of the SALSO point estimate vs FRF
         ari_salso_str = fmt_val(row.testARISalsoBinder)
-        
-        # Binder loss with CI
-        binder_str = fmt_ci(row.testBinderLoss, row.testBinderLoss_l, row.testBinderLoss_u)
-        
-        # Number of clusters
-        nclust = row.nclusters
-        
-        println(io, "$model & $rmse_str & $lps_str & $ari_modal_str & $ari_salso_str & $binder_str & $(Int(nclust)) \\\\")
+        binder_str = fmt_ci(row.testBinderLoss, get(row, :testBinderLoss_l, missing), get(row, :testBinderLoss_u, missing))
+        nclust = Int(row.nclusters)
+        println(io, "$model & $rmse_str & $lps_str & $ari_modal_str & $ari_salso_str & $binder_str & $nclust \\\\")
     end
-    
+
     println(io, raw"\bottomrule")
     println(io, raw"\end{tabular}}")
-    println(io, raw"\caption*{RMSE: lower is better; LPS: higher is better; ARI: higher is better; Binder loss: lower is better. The two Bayesian models (PPMx-common, DP-GMM) propagate partition uncertainty (wider intervals = honesty, not flaw). $k$-means is a deterministic point estimate with no posterior credible intervals.}")
+    println(io, raw"\caption*{RMSE and Binder loss: lower is better; LPS and ARI: higher is better. Bayesian intervals propagate partition uncertainty; $k$-means has no posterior.}")
     println(io, raw"\end{table}")
-    
+
     write(output_file, String(take!(io)))
     @info "Wrote $output_file"
+    output_file
+end
+
+if abspath(PROGRAM_FILE) == @__FILE__
+    comparison_file = get(ARGS, 1, "ppmx-analysis/analyses/output_v3-dl-centered/baselines/frftotalComparison.csv")
+    output_file = get(ARGS, 2, "paper_real_data_table.tex")
+    n_test = length(ARGS) >= 3 ? parse(Int, ARGS[3]) : nothing
+    make_real_data_table(comparison_file; output_file=output_file, n_test=n_test)
 end
